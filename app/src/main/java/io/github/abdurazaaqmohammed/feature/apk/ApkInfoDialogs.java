@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
-import io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterDetector;
 import io.github.abdurazaaqmohammed.feature.apk.flutter.FlutterToolsDialog;
 import io.github.abdurazaaqmohammed.feature.apk.frida.FridaGadgetDialog;
 
@@ -15,7 +14,6 @@ import io.github.abdurazaaqmohammed.feature.apk.SignatureInfoDialog;
 import io.github.abdurazaaqmohammed.feature.apk.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.feature.apk.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.feature.apk.ApkOptimizer;
-import io.github.abdurazaaqmohammed.feature.apk.ApkSignatureInfo;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.FastDexPatch;
@@ -109,7 +107,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -131,7 +128,6 @@ import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
@@ -150,8 +146,10 @@ public class ApkInfoDialogs {
     private final ApkManifestEditor manifestEditor;
     private final ApkSignatureTools signatures;
     private final ApkOverlayTools overlay;
-    /** Memoized {APK has libil2cpp.so, APK has any lib/*.so} for nativeScanFile. */
+    /** file identity + availability triple shared by the info loader and More menu. */
     private File nativeScanFile;
+    private long nativeScanSize;
+    private long nativeScanModified;
     private boolean[] nativeScanResult;
 
     public ApkInfoDialogs(MainActivity context,
@@ -179,30 +177,54 @@ public class ApkInfoDialogs {
     }
 
     /**
-     * Memoized availability scan for the two native-lib More entries:
+     * Last known availability for the native/Flutter More entries:
      * [0] = APK contains libil2cpp.so (il2cppdumper), [1] = APK contains any
-     * lib/*.so (LibPatcher). Warmed from the info loader, awaited on demand.
+     * lib/*.so (LibPatcher), [2] = Flutter artifacts. Published by the info
+     * loader, or refreshed in the background by {@link #nativeScanAsync(File, Consumer)}
+     * when the More menu is opened before the loader has finished.
      */
-    private synchronized boolean[] nativeScan(File file) {
-        if (nativeScanResult != null && nativeScanFile != null && nativeScanFile.equals(file)) {
+    private synchronized boolean[] nativeScanCached(File file) {
+        if (nativeScanResult != null && nativeScanFile != null && nativeScanFile.equals(file)
+                && nativeScanSize == file.length() && nativeScanModified == file.lastModified()) {
             return nativeScanResult;
         }
-        boolean[] r = new boolean[3];
-        try {
-            r[0] = Il2CppDumperUtil.hasIl2Cpp(file);
-        } catch (Exception ignored) {
-        }
-        try {
-            r[1] = NativeLibPatcher.hasNativeLibs(file);
-        } catch (Exception ignored) {
-        }
-        try {
-            r[2] = FlutterDetector.isFlutterApk(file);
-        } catch (Exception ignored) {
-        }
+        return null;
+    }
+
+    /** Records a fresh triple with the file identity it was derived from. */
+    private synchronized void setNativeScan(File file, boolean[] result) {
         nativeScanFile = file;
-        nativeScanResult = r;
-        return r;
+        nativeScanSize = file.length();
+        nativeScanModified = file.lastModified();
+        nativeScanResult = result;
+    }
+
+    /**
+     * Ensures {@link #nativeScanCached(File)} has a result for {@code file}
+     * without doing ZIP I/O on the caller's thread. The scan reuses the info
+     * loader's single central-directory pass, so detection stays identical to
+     * the info dialog. {@code onDone} always runs on the main thread, whether
+     * the result was already cached or a fresh scan was needed.
+     */
+    private void nativeScanAsync(File file, Consumer<boolean[]> onDone) {
+        boolean[] cached = nativeScanCached(file);
+        if (cached != null) {
+            context.handler.post(() -> onDone.accept(cached));
+            return;
+        }
+        new Thread(() -> {
+            boolean[] r = new boolean[3];
+            try {
+                ApkInfoLoader.ArchiveFacts facts = ApkInfoLoader.scanArchive(file);
+                r[0] = facts.il2cpp;
+                r[1] = facts.nativeLibs;
+                r[2] = facts.flutter;
+            } catch (Exception ignored) {
+                // Keep all-false fallback, same as the previous synchronous scan.
+            }
+            setNativeScan(file, r);
+            context.handler.post(() -> onDone.accept(r));
+        }, "apk-more-native-scan").start();
     }
 
     /**
@@ -510,7 +532,11 @@ public class ApkInfoDialogs {
             if (!hidden.contains(id)) visibleActions.add(id);
         }
 
-        boolean[] nativeState = nativeScan(file);
+        // Use the loader-warmed state when available; otherwise show the menu
+        // immediately and refresh the native row states after a background scan.
+        boolean[] cachedState = nativeScanCached(file);
+        final boolean[] nativeState = cachedState != null
+                ? cachedState : new boolean[]{false, false, false};
 
         final AlertDialog[] dialogHolder = new AlertDialog[1];
 
@@ -522,7 +548,7 @@ public class ApkInfoDialogs {
         }
 
         recyclerView.setLayoutManager(new LinearLayoutManager(context));
-        recyclerView.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        final RecyclerView.Adapter<?> menuAdapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             @NonNull
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -563,7 +589,8 @@ public class ApkInfoDialogs {
             public int getItemCount() {
                 return visibleActions.size();
             }
-        });
+        };
+        recyclerView.setAdapter(menuAdapter);
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setView(dialogView)
@@ -571,6 +598,15 @@ public class ApkInfoDialogs {
         dialogHolder[0] = dialog;
         dialog.show();
         dialogUtil.styleAlertDialog(dialog);
+
+        if (cachedState == null) {
+            nativeScanAsync(file, scanned -> {
+                // Late result: only repaint while this dialog is still live.
+                if (dialogHolder[0] != dialog || !dialog.isShowing()) return;
+                System.arraycopy(scanned, 0, nativeState, 0, scanned.length);
+                menuAdapter.notifyDataSetChanged();
+            });
+        }
     }
 
     private void dispatchApkMoreAction(String actionId, File file, String fileName, String filePath, boolean pane1) {
@@ -1518,182 +1554,151 @@ public class ApkInfoDialogs {
             moreBtn.setAlpha(0.4f);
         }
 
-        new Thread(() -> {
-            final boolean[] loaded = {false};
-            final String[] appMeta = new String[]{"", ""}; // [0]: label, [1]: verName
-            try {
-                PackageManager pm = context.getPackageManager();
-                PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
-                final ApplicationInfo appInfo;
-                if (packageInfo == null || (appInfo = packageInfo.applicationInfo) == null) {
-                    context.handler.post(() -> {
-                        ad.dismiss();
-                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
-                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW)
-                                .setDataAndType(uri, context.getContentResolver().getType(uri))
-                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Open " + fileName));
-                    });
-                    return;
-                }
-                if (TextUtils.isEmpty(appInfo.sourceDir) || TextUtils.isEmpty(appInfo.publicSourceDir)) {
-                    appInfo.sourceDir = filePath;
-                    appInfo.publicSourceDir = filePath;
-                }
-                Drawable icon = appInfo.loadIcon(pm);
-                String label = appInfo.loadLabel(pm).toString();
-                String verName = packageInfo.versionName;
-                appMeta[0] = label;
-                long versionCode = ApkInfoUtil.getVersionCode(packageInfo);
-                String vCode = versionCode > 0 ? String.valueOf(versionCode) : "";
-                String pkg = packageInfo.packageName;
-                // Warm the native-lib availability scan for the More dialog.
-                nativeScan(file);
-
-                ApkSignatureInfo sigInfo;
+        // Basic rows are published first; heavier extractors publish independently.
+        // Identity changes (APK replaced while the dialog is open) cancel stale writes.
+        final String[] appMeta = new String[]{"", ""}; // [0]: label, [1]: version+code
+        final boolean[] sigClickable = {false};
+        final ApkInfoLoader loader = new ApkInfoLoader(context, file, new ApkInfoLoader.Listener() {
+            @Override
+            public void onBasic(ApkInfoLoader.Basic basic) {
+                long candVerCode = basic.versionCode;
+                // Installed-package state is live and must be read on every open.
+                PackageInfo installed = null;
                 try {
-                    sigInfo = ApkSignatureInfo.analyze(file);
-                } catch (Exception e) {
-                    sigInfo = null;
-                }
-                final String[] certFp = {""};
-                if (sigInfo != null) {
-                    X509Certificate primary = sigInfo.getPrimaryCertificate();
-                    if (primary != null) certFp[0] = CertUtil.getSha256(primary);
-                }
-                String signatureStr = sigInfo == null
-                        ? context.rss.getString(android.R.string.unknownName) : sigInfo.getStatusLabel();
-                final ApkSignatureInfo finalSigInfo = sigInfo;
-
-                ApkProtectionDetector.Result protResult = ApkProtectionDetector.detect(file);
-                final boolean isAppProtected = protResult.isProtected;
-                final String finalProtectedStr = isAppProtected
-                        ? "⚠️ " + protResult.getSummary()
-                        : context.getString(R.string.protection_not_found);
-                // Version comparison analysis: display only the status badge
-                PackageInfo installedPkgInfo = null;
-                try {
-                    installedPkgInfo = context.getPackageManager().getPackageInfo(pkg, 0);
-                } catch (Exception ignored) {}
-
-                final PackageInfo finalInstalledInfo = installedPkgInfo;
-                final PackageInfo candidatePkgInfo = packageInfo;
-                final SpannableStringBuilder comparisonSpannable = new SpannableStringBuilder();
-
-                if (finalInstalledInfo == null) {
-                    comparisonSpannable.append(context.getString(R.string.not_installed));
+                    installed = context.getPackageManager().getPackageInfo(basic.packageName, 0);
+                } catch (Exception ignored) { }
+                final SpannableStringBuilder comparison = new SpannableStringBuilder();
+                if (installed == null) {
+                    comparison.append(context.getString(R.string.not_installed));
                 } else {
-                    String instVerName = finalInstalledInfo.versionName == null ? "" : finalInstalledInfo.versionName;
-                    long instVerCode = ApkInfoUtil.getVersionCode(finalInstalledInfo);
-                    comparisonSpannable.append(instVerName).append(" (").append(String.valueOf(instVerCode)).append(")");
-
-                    long candVerCode = ApkInfoUtil.getVersionCode(candidatePkgInfo);
+                    String instVerName = installed.versionName == null ? "" : installed.versionName;
+                    long instVerCode = ApkInfoUtil.getVersionCode(installed);
+                    comparison.append(instVerName).append(" (").append(String.valueOf(instVerCode)).append(")");
                     if (instVerCode > candVerCode) {
-                        comparisonSpannable.append(" ");
-                        int start = comparisonSpannable.length();
-                        comparisonSpannable.append("(").append(context.getString(R.string.downgrade)).append(")");
-                        int end = comparisonSpannable.length();
-                        comparisonSpannable.setSpan(new ForegroundColorSpan(0xFFFF4444),
-                                start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        int start = comparison.length();
+                        comparison.append(" (").append(context.getString(R.string.downgrade)).append(")");
+                        comparison.setSpan(new ForegroundColorSpan(0xFFFF4444), start,
+                                comparison.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     } else if (candVerCode > instVerCode) {
-                        comparisonSpannable.append(" ");
-                        int start = comparisonSpannable.length();
-                        comparisonSpannable.append("(").append(context.getString(R.string.upgrade)).append(")");
-                        int end = comparisonSpannable.length();
-                        comparisonSpannable.setSpan(new ForegroundColorSpan(0xFF4CAF50),
-                                start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        int start = comparison.length();
+                        comparison.append(" (").append(context.getString(R.string.upgrade)).append(")");
+                        comparison.setSpan(new ForegroundColorSpan(0xFF4CAF50), start,
+                                comparison.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }
                 }
-
-                final CharSequence comparison = comparisonSpannable;
-                final String finalVerName = (TextUtils.isEmpty(verName)
-                        ? context.getString(R.string.version_name_unset) : verName)
-                        + (TextUtils.isEmpty(vCode) ? "" : " (" + vCode + ")");
+                final String finalVerName = (TextUtils.isEmpty(basic.versionName)
+                        ? context.getString(R.string.version_name_unset) : basic.versionName)
+                        + (basic.versionCode > 0 ? " (" + basic.versionCode + ")" : "");
+                final CharSequence finalComparison = comparison;
+                appMeta[0] = basic.label;
                 appMeta[1] = finalVerName;
                 context.handler.post(() -> {
-                    apkIcon.setImageDrawable(icon);
-                    apkTitle.setText(label);
+                    if (!ad.isShowing()) return;
+                    if (basic.icon != null) apkIcon.setImageDrawable(basic.icon);
+                    apkTitle.setText(basic.label);
                     apkVersionName.setText(finalVerName);
-                    verCode.setText(TextUtils.isEmpty(vCode) ? "—" : vCode);
-                    pkgName.setText(pkg);
+                    verCode.setText(basic.versionCode > 0 ? String.valueOf(basic.versionCode) : "—");
+                    pkgName.setText(basic.packageName);
                     uiHelper.scrollTextView(pkgName);
-                    signaturesInApk.setText(signatureStr);
-                    protectedDisplay.setText(finalProtectedStr);
-                    if (isAppProtected) {
-                        protectedDisplay.setTextColor(0xFFFF9800);
-                    }
-                    fileSize.setText(context.getString(R.string.fs_entries, Formatter.formatFileSize(context, file.length()), ApkInfoUtil.getEntryCount(file)));
-                    int target = packageInfo.applicationInfo.targetSdkVersion;
-                    apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(target));
-                    int min = ApkInfoUtil.getMinSdk(packageInfo);
-                    apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : ApkInfoUtil.getAndroidVersionName(min));
-
-                    apkInstalled.setText(comparison);
+                    // Entry count arrives separately; show only the size until
+                    // onEntries supplies the real count (avoid a misleading 0).
+                    fileSize.setText(Formatter.formatFileSize(context, file.length()));
+                    int target = basic.targetSdk;
+                    apkTargetSdk.setText(target <= 0 ? context.getString(R.string.unknown_sdk)
+                            : ApkInfoUtil.getAndroidVersionName(target));
+                    int min = basic.minSdk;
+                    apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk)
+                            : ApkInfoUtil.getAndroidVersionName(min));
+                    apkInstalled.setText(finalComparison);
                     uiHelper.scrollTextView(apkInstalled);
                 });
-                loaded[0] = true;
-                context.handler.post(() -> signaturesInApk.setOnClickListener(v -> {
-                    if (finalSigInfo != null) {
-                        ad.dismiss();
-                        SignatureInfoDialog.show(context, dialogUtil, file);
-                    }
-                }));
-            } catch (Exception e) {
-                loaded[0] = false;
-                new ErrorUtil(context).showError(e);
             }
-            // Only a failed load falls back to placeholders; on success this would
-            // wipe the values that were just written into the rows.
-            if (!loaded[0]) {
-                context.handler.post(() -> showPlaceholders(ad, context.getString(R.string.apk_info_unavailable)));
-            }
-            View.OnLongClickListener lcl = v -> {
-                if(v instanceof TextView tv) CopyUtil.copyToClipboard(ad, tv.getText());
-                return true;
-            };
-            context.handler.post(() -> {
-                apkIcon.setOnLongClickListener(v -> {
-                    exportApkIconZip(file, appMeta[0], appMeta[1]);
-                    return true;
+
+            @Override
+            public void onEntries(int entryCount) {
+                final String sizeText = context.getString(R.string.fs_entries,
+                        Formatter.formatFileSize(context, file.length()), entryCount);
+                context.handler.post(() -> {
+                    if (!ad.isShowing()) return;
+                    fileSize.setText(sizeText);
                 });
-                signaturesInApk.setOnLongClickListener(lcl);
-                protectedDisplay.setOnLongClickListener(lcl);
-                pkgName.setOnLongClickListener(lcl);
-                apkTitle.setOnLongClickListener(lcl);
-                apkVersionName.setOnLongClickListener(lcl);
-                verCode.setOnLongClickListener(lcl);
-                fileSize.setOnLongClickListener(lcl);
-                apkTargetSdk.setOnLongClickListener(lcl);
-                apkMinSdk.setOnLongClickListener(lcl);
-                apkInstalled.setOnLongClickListener(lcl);
-                apkPermissions.setOnLongClickListener(lcl);
-            });
-        }).start();
+            }
+
+            @Override
+            public void onSignature(String label, boolean analyzed, String certSha256, boolean clickable) {
+                sigClickable[0] = analyzed && clickable;
+                context.handler.post(() -> {
+                    if (!ad.isShowing()) return;
+                    signaturesInApk.setText(analyzed ? label : context.rss.getString(android.R.string.unknownName));
+                });
+            }
+
+            @Override
+            public void onProtection(boolean protectedApk, String summary) {
+                context.handler.post(() -> {
+                    if (!ad.isShowing()) return;
+                    protectedDisplay.setText(protectedApk ? "⚠️ " + summary
+                            : context.getString(R.string.protection_not_found));
+                    protectedDisplay.setTextColor(protectedApk ? 0xFFFF9800
+                            : MaterialColors.getColor(protectedDisplay, android.R.attr.textColorPrimary));
+                });
+            }
+
+            @Override
+            public void onNative(boolean il2cpp, boolean nativeLibs, boolean flutter) {
+                // Loader publishes from a pool thread; mirror the other rows and
+                // touch dialog/scan state on the main thread only.
+                context.handler.post(() -> {
+                    if (!ad.isShowing()) return;
+                    setNativeScan(file, new boolean[]{il2cpp, nativeLibs, flutter});
+                });
+            }
+
+            @Override
+            public void onInvalid() {
+                context.handler.post(() -> {
+                    if (!ad.isShowing()) return;
+                    ad.dismiss();
+                    Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+                    context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW)
+                            .setDataAndType(uri, context.getContentResolver().getType(uri))
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Open " + fileName));
+                });
+            }
+        });
+        ad.setOnDismissListener(d -> loader.cancel());
+
+        signaturesInApk.setOnClickListener(v -> {
+            if (sigClickable[0]) {
+                ad.dismiss();
+                SignatureInfoDialog.show(context, dialogUtil, file);
+            }
+        });
+        View.OnLongClickListener lcl = v -> {
+            if (v instanceof TextView tv) CopyUtil.copyToClipboard(ad, tv.getText());
+            return true;
+        };
+        apkIcon.setOnLongClickListener(v -> {
+            exportApkIconZip(file, appMeta[0], appMeta[1]);
+            return true;
+        });
+        signaturesInApk.setOnLongClickListener(lcl);
+        protectedDisplay.setOnLongClickListener(lcl);
+        pkgName.setOnLongClickListener(lcl);
+        apkTitle.setOnLongClickListener(lcl);
+        apkVersionName.setOnLongClickListener(lcl);
+        verCode.setOnLongClickListener(lcl);
+        fileSize.setOnLongClickListener(lcl);
+        apkTargetSdk.setOnLongClickListener(lcl);
+        apkMinSdk.setOnLongClickListener(lcl);
+        apkInstalled.setOnLongClickListener(lcl);
+        apkPermissions.setOnLongClickListener(lcl);
+        loader.start();
     }
 
     private void openZipFile(File file) {
         context.loadZipFolderInPane(file, "", pane1, true);
     }
-
-    /**
-     * Fills every value row with {@code placeholder}. Without this a failure
-     * half-way through the loader left the dialog showing "Loading…" forever,
-     * which is what users reported as empty fields.
-     */
-    private void showPlaceholders(AlertDialog ad, CharSequence placeholder) {
-        try {
-            if (ad.getWindow() == null) return;
-            View root = ad.getWindow().getDecorView();
-            int[] ids = {R.id.apkTitle, R.id.apkVersionName, R.id.verCode, R.id.pkgName,
-                    R.id.signaturesInApk, R.id.protectedDisplay, R.id.fileSize,
-                    R.id.apkTargetSdk, R.id.apkMinSdk, R.id.apkInstalled};
-            for (int id : ids) {
-                TextView tv = root.findViewById(id);
-                if (tv != null) tv.setText(placeholder);
-            }
-        } catch (Exception ignored) {
-        }
-    }
-
 
     private void addRootInfoRow(LinearLayout parent, String label, String value, String tapPath, AlertDialog ad) {
         LinearLayout row = new LinearLayout(context);
