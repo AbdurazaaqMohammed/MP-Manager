@@ -46,22 +46,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class RootManager {
 
     private static volatile RootManager instance;
     private final Context context;
     private volatile Boolean rootAvailable = null;
-    private Process suProcess;
-    private DataOutputStream suStdin;
-    private BufferedReader suStdout;
     private final Object lock = new Object();
+    private final PersistentRootShell queryShell;
 
     /** Shared with {@link ShizukuManager}, whose shell fallback parses the same output. */
     static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}-\\d{2}|[A-Z][a-z]{2}\\s+\\d{1,2})\\s+\\S+|\\d{2}-\\d{2}-\\d{4}|\\d{4}-\\d{2}-\\d{2})\\s+(.*)$");
 
     private RootManager(Context context) {
         this.context = context.getApplicationContext();
+        this.queryShell = new PersistentRootShell(globalNs -> {
+            String[] cmd = globalNs
+                    ? new String[]{suBinary(), "-c", "exec nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh"}
+                    : new String[]{suBinary()};
+            return Runtime.getRuntime().exec(cmd);
+        });
     }
 
     public static RootManager getInstance(Context context) {
@@ -153,6 +158,8 @@ public class RootManager {
 
     public void refreshRootCache() {
         rootAvailable = null;
+        queryShell.reset();
+        NativeRootManager.resetServe();
         notifyDocumentRootsChanged();
     }
 
@@ -374,6 +381,10 @@ public class RootManager {
             global = getInstance(context).prefersGlobalNs();
         } catch (Exception ignored) {
         }
+        return suCommandForNs(context, shellCommand, global);
+    }
+
+    static String[] suCommandForNs(Context context, String shellCommand, boolean global) {
         String su = getInstance(context).suBinary();
         if (global) {
             return new String[]{su, "-c",
@@ -402,6 +413,9 @@ public class RootManager {
         if (!isRootMode()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
+        if (progress == null && control == null) {
+            return queryShell.exec(command, timeoutSeconds, true);
+        }
         String wrapped = "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + ShellQuote.quoteForSh(command);
         return spawnSu(wrapped, timeoutSeconds, progress, control);
     }
@@ -418,7 +432,7 @@ public class RootManager {
             }
         }
         if (!start) return;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean global = false;
             try {
                 global = probeNamespaces();
@@ -428,7 +442,7 @@ public class RootManager {
                 nsWinner = global ? 2 : 1;
                 nsProbing = false;
             }
-        }).start();
+        });
     }
 
     public boolean prefersGlobalNs() {
@@ -477,6 +491,9 @@ public class RootManager {
         try {
             global = prefersGlobalNs();
         } catch (Exception ignored) {
+        }
+        if (progress == null && control == null) {
+            return queryShell.exec(command, timeoutSeconds, global);
         }
         if (global) return executeGlobalNs(command, timeoutSeconds, progress, control);
         return spawnSu(command, timeoutSeconds, progress, control);
@@ -569,6 +586,8 @@ public class RootManager {
     }
 
     public boolean exists(String path) {
+        RootEntry nativeStat = NativeRootManager.stat(context, path);
+        if (nativeStat != null) return nativeStat.exists();
         ShellResult result = executeFs("test -e " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output().trim().equals("yes");
     }
@@ -580,16 +599,22 @@ public class RootManager {
             if (f.exists() && f.isDirectory()) return true;
         } catch (Exception ignored) {}
         if (!isRootAvailable()) return false;
+        RootEntry nativeStat = NativeRootManager.stat(context, path);
+        if (nativeStat != null) return nativeStat.isDirectory();
         ShellResult result = executeFs("( [ -d " + ShellQuote.escapeShellArg(path) + " ] || [ -d " + ShellQuote.escapeShellArg(path) + "/ ] ) && echo yes || echo no", 15);
         return result.isSuccess() && result.output() != null && result.output().trim().equals("yes");
     }
 
     public boolean isFile(String path) {
+        RootEntry nativeStat = NativeRootManager.stat(context, path);
+        if (nativeStat != null) return nativeStat.isFile();
         ShellResult result = executeFs("test -f " + ShellQuote.escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output().trim().equals("yes");
     }
 
     public long getFileSize(String path) {
+        RootEntry nativeStat = NativeRootManager.stat(context, path);
+        if (nativeStat != null) return nativeStat.exists() ? nativeStat.length() : -1L;
         ShellResult result = executeFs("stat -c %s " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
         if (result.isSuccess()) {
             try {
@@ -611,6 +636,8 @@ public class RootManager {
     }
 
     public String getPermissions(String path) {
+        RootEntry nativeStat = NativeRootManager.stat(context, path);
+        if (nativeStat != null) return nativeStat.exists() ? nativeStat.mode() : null;
         ShellResult result = executeFs("stat -c %a " + ShellQuote.escapeShellArg(emulatedAlias(path)), 30);
         if (!result.isSuccess() && !path.equals(emulatedAlias(path))) {
             result = executeFs("stat -c %a " + ShellQuote.escapeShellArg(path), 30);
@@ -1730,6 +1757,8 @@ public class RootManager {
         if (path == null || path.isEmpty() || !isRootMode()) {
             return new RootEntry(path, false, false, false, 0L, 0L, null);
         }
+        RootEntry nativeStat = NativeRootManager.stat(context, path);
+        if (nativeStat != null) return nativeStat;
         try {
             ShellResult r = executeFs("stat -L -c '%n\037%F\037%s\037%Y\037%a' "
                     + ShellQuote.escapeShellArg(emulatedAlias(path)) + " 2>/dev/null", 30);
@@ -1837,30 +1866,29 @@ public class RootManager {
     }
 
     private File[] listRootFilesFresh(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
         String actual = emulatedAlias(dirPath);
-        File[] primary = listRootFilesLsLong(actual);
+        File[] nativeFiles = NativeRootManager.listDir(context, dirPath);
         if (!isAppDataDir(actual)) {
-            if (primary != null && primary.length > 0) return remapParent(primary, dirPath);
-            // One shell call that reports name/type/size/mtime per entry. Preferred
-            // over the name-only fallback, which left every row with a 0 date and
-            // so queued one extra stat per visible row just to draw it.
+            if (nativeFiles != null) return nativeFiles;
+            File[] primary = listRootFilesLsLong(actual);
+            if (primary != null) return remapParent(primary, dirPath);
+            // Only fall back when listing actually failed (null), never for valid empty folders.
             File[] detailed = listRootFilesDetailed(actual);
-            if (detailed != null && detailed.length > 0) return remapParent(detailed, dirPath);
+            if (detailed != null) return remapParent(detailed, dirPath);
             File[] portable = listRootFilesPortable(actual);
-            if (portable != null && portable.length > 0) return remapParent(portable, dirPath);
-            return primary != null ? remapParent(primary, dirPath) : portable;
+            return portable != null ? remapParent(portable, dirPath) : null;
         }
         // The real directory listing is authoritative no matter how small it is.
-        // A short /data/data on a test device, or a ROM that only exposes part of
-        // it, is still more truthful than the package-manager reconstruction
-        // below. The old >= 30 threshold threw away a valid listing and replaced
-        // it with only the handful of packages visible to this app.
-        if (primary != null && primary.length > 0) return remapParent(primary, dirPath);
+        File[] primary = nativeFiles != null ? nativeFiles : listRootFilesLsLong(actual);
+        if (primary != null && primary.length > 0) {
+            return nativeFiles != null ? primary : remapParent(primary, dirPath);
+        }
         File[] explicit = listAppDataDirsExplicit(actual);
         File[] merged = unionRootFiles(primary, explicit);
         if (merged != null && merged.length > 0) return remapParent(merged, dirPath);
         File[] detailed = listRootFilesDetailed(actual);
-        if (detailed != null && detailed.length > 0) return remapParent(detailed, dirPath);
+        if (detailed != null) return remapParent(detailed, dirPath);
         File[] portable = listRootFilesPortable(actual);
         return remapParent(unionRootFiles(merged, portable), dirPath);
     }
@@ -1886,72 +1914,9 @@ public class RootManager {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
-        String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
-        ShellResult result = executeFs("LC_ALL=C ls -la -- " + ShellQuote.escapeShellArg(listTarget) + " 2>/dev/null", 15);
+        ShellResult result = executeFs(LsListingSupport.buildSingleCallLsCommand(cleanPath), 15);
         if (!result.isSuccess() || result.output() == null) return null;
-        List<File> files = new ArrayList<>();
-        List<Integer> linkIdx = new ArrayList<>();
-        List<String> linkNames = new ArrayList<>();
-        for (String line : result.output().split("\\r?\\n")) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty() || trimmed.startsWith("total ")) continue;
-            Matcher matcher = LS_LONG_LINE.matcher(line);
-            if (!matcher.matches()) continue;
-            char type = matcher.group(1).charAt(0);
-            if (type != '-' && type != 'd' && type != 'l') continue;
-            String name = matcher.group(4);
-            int arrow = name.indexOf(" -> ");
-            if (arrow > 0) name = name.substring(0, arrow);
-            if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
-            long size;
-            try {
-                size = Long.parseLong(matcher.group(2));
-            } catch (NumberFormatException ignored) {
-                size = 0L;
-            }
-            long mtime = parseLsDateTimeFlexible(matcher.group(3));
-            String mode = matcher.group(1).length() > 1 ? matcher.group(1).substring(1) : null;
-            if (type == 'l') {
-                linkIdx.add(files.size());
-                linkNames.add(name);
-            }
-            files.add(new RootFile(cleanPath, name, true, type == 'd', type == '-',
-                    type == 'd' ? 0L : Math.max(0L, size), mtime, mode, type == 'l'));
-        }
-        if (!linkNames.isEmpty()) {
-            StringBuilder cmd = new StringBuilder();
-            for (int i = 0; i < linkNames.size(); i++) {
-                if (i > 0) cmd.append(' ');
-                String p = ShellQuote.escapeShellArg(cleanPath.equals("/") ? "/" + linkNames.get(i) : cleanPath + "/" + linkNames.get(i));
-                cmd.append("if [ -d ").append(p).append(" ] || [ -d ").append(p).append("/ ]; then echo LINK_DIR_").append(i).append("; elif [ -e ").append(p).append(" ] || [ -L ").append(p).append(" ]; then echo LINK_FILE_").append(i).append("; fi;");
-            }
-            try {
-                ShellResult r = executeFs(cmd.toString(), 15);
-                if (r.isSuccess() && r.output() != null) {
-                    List<Boolean> linkIsDir = new ArrayList<>();
-                    List<Boolean> linkIsFile = new ArrayList<>();
-                    for (int i = 0; i < linkNames.size(); i++) {
-                        linkIsDir.add(Boolean.FALSE);
-                        linkIsFile.add(Boolean.FALSE);
-                    }
-                    for (String l : r.output().split("\\r?\\n")) {
-                        String t = l.trim();
-                        if (t.startsWith("LINK_DIR_")) {
-                            linkIsDir.set(Integer.parseInt(t.substring("LINK_DIR_".length())), Boolean.TRUE);
-                        } else if (t.startsWith("LINK_FILE_")) {
-                            linkIsFile.set(Integer.parseInt(t.substring("LINK_FILE_".length())), Boolean.TRUE);
-                        }
-                    }
-                    for (int i = 0; i < linkNames.size(); i++) {
-                        File old = files.get(linkIdx.get(i));
-                        boolean isDir = linkIsDir.get(i);
-                        files.set(linkIdx.get(i), new RootFile(old.getParent(), old.getName(), true, isDir, linkIsFile.get(i), 0L, old.lastModified(), null, true));
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        return files.toArray(new File[0]);
+        return LsListingSupport.parseLsWithLinksOutput(cleanPath, result.output(), false);
     }
 
     private static long parseLsTime(String month, String day, String time) {

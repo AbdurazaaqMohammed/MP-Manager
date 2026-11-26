@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.system.shell;
 
+
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 
 import android.content.ClipData;
@@ -21,7 +23,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -117,6 +118,17 @@ public class CommandShellActivity extends BaseActivity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private Process activeProcess = null;
     private boolean isProcessRunning = false;
+
+    @Override
+    protected void onDestroy() {
+        mainHandler.removeCallbacksAndMessages(null);
+        if (activeProcess != null) {
+            activeProcess.destroy();
+            activeProcess = null;
+        }
+        executor.shutdownNow();
+        super.onDestroy();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -383,10 +395,10 @@ public class CommandShellActivity extends BaseActivity {
     private void toggleBookmark(String cmd) {
         if (bookmarkSet.contains(cmd)) {
             bookmarkSet.remove(cmd);
-            Toast.makeText(this, getString(R.string.bookmark_removed_message, cmd), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, getString(R.string.bookmark_removed_message, cmd));
         } else {
             bookmarkSet.add(cmd);
-            Toast.makeText(this, getString(R.string.bookmark_added_message, cmd), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, getString(R.string.bookmark_added_message, cmd));
         }
         saveBookmarks();
         updateCommandBoxState(commandEdit.getText() != null ? commandEdit.getText().toString() : "");
@@ -419,7 +431,7 @@ public class CommandShellActivity extends BaseActivity {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText("Shell Output", sb.toString()));
-            Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, R.string.copied);
         }
     }
 
@@ -658,9 +670,9 @@ public class CommandShellActivity extends BaseActivity {
                     fos.write((line + "\n").getBytes());
                 }
             }
-            Toast.makeText(this, "Saved to " + logFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
+            Extensions.showMessage(this, "Saved to " + logFile.getAbsolutePath());
         } catch (Exception e) {
-            Toast.makeText(this, "Failed to save: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Failed to save: " + e.getMessage());
         }
     }
 
@@ -869,7 +881,7 @@ public class CommandShellActivity extends BaseActivity {
                     })
                     .show();
         } else {
-            Toast.makeText(this, file.getName(), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, file.getName());
         }
     }
 

@@ -1,7 +1,9 @@
 package io.github.abdurazaaqmohammed.feature.sqlite;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 
 
@@ -216,7 +218,7 @@ public class SqliteViewerActivity extends BaseActivity {
     }
 
     private void loadDatabase() {
-        new Thread(() -> {
+        io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
             try {
                 // Open database in read-write mode so edits work
                 db = SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READWRITE);
@@ -229,7 +231,7 @@ public class SqliteViewerActivity extends BaseActivity {
                     }
                 }
 
-                runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
                     if (tableList.isEmpty()) {
                         infoTextView.setText("No user tables found in database");
                         return;
@@ -251,7 +253,7 @@ public class SqliteViewerActivity extends BaseActivity {
                     });
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
                     new MaterialAlertDialogBuilder(SqliteViewerActivity.this)
                             .setTitle("Database Error")
                             .setMessage("Failed to open SQLite database:\n" + e.getMessage())
@@ -259,7 +261,7 @@ public class SqliteViewerActivity extends BaseActivity {
                             .show();
                 });
             }
-        }).start();
+        });
     }
 
     private void loadTableData() {
@@ -268,7 +270,7 @@ public class SqliteViewerActivity extends BaseActivity {
         progressBar.setVisibility(View.VISIBLE);
         tableLayout.removeAllViews();
 
-        new Thread(() -> {
+        io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
             try {
                 // Get total rows count
                 try (Cursor countCursor = db.rawQuery("SELECT count(*) FROM " + escapeName(currentTable), null)) {
@@ -316,14 +318,15 @@ public class SqliteViewerActivity extends BaseActivity {
                     }
                 }
 
-                runOnUiThread(() -> renderTableUi(columnNames, rows, rowIds, offset));
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(
+                        this, () -> renderTableUi(columnNames, rows, rowIds, offset));
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(SqliteViewerActivity.this, "Query error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(SqliteViewerActivity.this, "Query error: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private void renderTableUi(List<String> columns, List<String[]> rows, List<Long> rowIds, int offset) {
@@ -438,7 +441,7 @@ public class SqliteViewerActivity extends BaseActivity {
     }
 
     private void updateCell(long rowId, String columnName, String newValue) {
-        new Thread(() -> {
+        io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
             try {
                 ContentValues cv = new ContentValues();
                 if (newValue == null) {
@@ -450,15 +453,16 @@ public class SqliteViewerActivity extends BaseActivity {
                 int affected = db.update(currentTable, cv, "rowid = ?", new String[]{String.valueOf(rowId)});
                 if (affected > 0) {
                     markModifiedAndSync();
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Updated successfully", Toast.LENGTH_SHORT).show();
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
+                        Extensions.showMessage(this, "Updated successfully");
                         loadTableData();
                     });
                 }
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "Update failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(
+                        this, () -> Extensions.showMessage(this, "Update failed: " + e.getMessage()));
             }
-        }).start();
+        });
     }
 
     private void showRowActionDialog(long rowId, List<String> columns, String[] rowData) {
@@ -482,20 +486,21 @@ public class SqliteViewerActivity extends BaseActivity {
                 .setTitle("Delete Row")
                 .setMessage("Are you sure you want to delete row with ID: " + rowId + "?")
                 .setPositiveButton("Delete", (d, w) -> {
-                    new Thread(() -> {
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
                         try {
                             int deleted = db.delete(currentTable, "rowid = ?", new String[]{String.valueOf(rowId)});
                             if (deleted > 0) {
                                 markModifiedAndSync();
-                                runOnUiThread(() -> {
-                                    Toast.makeText(this, "Row deleted", Toast.LENGTH_SHORT).show();
+                                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
+                                    Extensions.showMessage(this, "Row deleted");
                                     loadTableData();
                                 });
                             }
                         } catch (Exception e) {
-                            runOnUiThread(() -> Toast.makeText(this, "Delete failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                            io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(
+                                    this, () -> Extensions.showMessage(this, "Delete failed: " + e.getMessage()));
                         }
-                    }).start();
+                    });
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -557,30 +562,31 @@ public class SqliteViewerActivity extends BaseActivity {
     }
 
     private void executeCustomSql(String query) {
-        new Thread(() -> {
+        io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
             try {
                 if (query.toUpperCase().startsWith("SELECT") || query.toUpperCase().startsWith("PRAGMA")) {
-                    runOnUiThread(() -> {
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
                         // Display results or reload
                         loadTableData();
-                        Toast.makeText(this, "Query executed", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Query executed");
                     });
                 } else {
                     db.execSQL(query);
                     markModifiedAndSync();
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "SQL executed successfully", Toast.LENGTH_SHORT).show();
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
+                        Extensions.showMessage(this, "SQL executed successfully");
                         loadTableData();
                     });
                 }
             } catch (Exception e) {
-                runOnUiThread(() -> new MaterialAlertDialogBuilder(this)
-                        .setTitle("SQL Error")
-                        .setMessage(e.getMessage())
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show());
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(
+                        this, () -> new MaterialAlertDialogBuilder(this)
+                                .setTitle("SQL Error")
+                                .setMessage(e.getMessage())
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show());
             }
-        }).start();
+        });
     }
 
     private void markModifiedAndSync() {
@@ -608,12 +614,11 @@ public class SqliteViewerActivity extends BaseActivity {
             }
             final boolean saved = ok;
             final String failure = error;
-            new Handler(Looper.getMainLooper()).post(() -> {
+            AppExecutors.runOnUiIfAlive(this, () -> {
                 if (saved) {
-                    Toast.makeText(this, R.string.sqlite_saved_to_original, Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, R.string.sqlite_saved_to_original);
                 } else {
-                    Toast.makeText(this, getString(R.string.sqlite_save_failed, failure),
-                            Toast.LENGTH_LONG).show();
+                    Extensions.showMessage(this, getString(R.string.sqlite_save_failed, failure));
                 }
             });
         });
@@ -623,7 +628,7 @@ public class SqliteViewerActivity extends BaseActivity {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText("SQL Data", text));
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, msg);
         }
     }
 

@@ -35,6 +35,8 @@ public class OverlaySmaliAuditTest {
     private static final String RGB = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpRgb;";
     private static final String TICK = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpRgbTick;";
     private static final String FONTWALK = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpFontWalk;";
+    private static final String DRAG = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpDrag;";
+    private static final String VIDEO = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpVideo;";
 
     @Test
     public void regularDialogAnimatedBorder() {
@@ -339,6 +341,54 @@ public class OverlaySmaliAuditTest {
         auditMethod(OverlayInjectorUtil.dismissSmali(DISMISS), "dismissListener");
         auditMethod(OverlayInjectorUtil.blinkSmali(BLINK), "blinkListener");
         auditMethod(OverlayInjectorUtil.fontWalkSmali(FONTWALK), "fontWalk");
+        auditMethod(OverlayInjectorUtil.dragListenerSmali(DRAG), "dragListener");
+        auditMethod(OverlayInjectorUtil.videoViewSmali(VIDEO), "videoView");
+    }
+
+    @Test
+    public void regularDialogShowOnceDraggableAndVideo() {
+        OverlayInjectorUtil.DialogOptions o = new OverlayInjectorUtil.DialogOptions();
+        o.title = "T";
+        o.message = "M";
+        o.positive = "OK";
+        o.showOnce = true;
+        o.draggable = true;
+        o.videoPath = "/tmp/sample.mp4";
+        o.bgEnabled = true;
+        o.bgColor1 = 0xFF101010;
+        String smali = OverlayInjectorUtil.dialogHelperSmali(
+                CLS, o, null, null, null, null, null, new HashMap<>(), null, DRAG, VIDEO);
+        auditMethod(smali, "regularDialogShowOnceDraggableAndVideo");
+        assertTrue(smali, smali.contains(OverlayInjectorUtil.SHOWONCE_KEY));
+        assertTrue(smali, smali.contains("apply()V"));
+        assertTrue(smali, smali.contains(DRAG));
+        assertTrue(smali, smali.contains("setOnTouchListener"));
+        assertTrue(smali, smali.contains(VIDEO));
+        assertTrue(smali, smali.contains(OverlayInjectorUtil.VIDEO_ASSET_NAME));
+        assertFalse(smali, smali.contains(".catch"));
+    }
+
+    @Test
+    public void advancedDialogShowOnceDraggableAndVideo() {
+        OverlayInjectorUtil.DialogOptions o = new OverlayInjectorUtil.DialogOptions();
+        o.advanced = true;
+        o.showOnce = true;
+        o.draggable = true;
+        o.videoPath = "/tmp/sample.mp4";
+        o.widgets = new ArrayList<>();
+        OverlayInjectorUtil.AdvWidget btn = new OverlayInjectorUtil.AdvWidget();
+        btn.kind = "button";
+        btn.text = "Close";
+        btn.leftDp = 12;
+        btn.topDp = 12;
+        o.widgets.add(btn);
+        String smali = OverlayInjectorUtil.dialogHelperSmali(
+                CLS, o, null, null, null, null, DISMISS, new HashMap<>(), null, DRAG, VIDEO);
+        auditMethod(smali, "advancedDialogShowOnceDraggableAndVideo");
+        assertTrue(smali, smali.contains(OverlayInjectorUtil.SHOWONCE_KEY));
+        assertTrue(smali, smali.contains(DRAG));
+        assertTrue(smali, smali.contains(VIDEO));
+        assertTrue(smali, smali.contains(DISMISS));
     }
 
     // ---------- audit engine ----------

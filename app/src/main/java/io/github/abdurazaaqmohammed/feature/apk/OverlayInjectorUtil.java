@@ -50,6 +50,9 @@ public class OverlayInjectorUtil {
     public static final String TOAST_HELPER = "showMPManagerToast";
     public static final String DIALOG_HELPER = "showMPManagerDialog";
     public static final String DONTSHOW_KEY = "mpmanager_overlay_dontshow";
+    public static final String SHOWONCE_KEY = "mpmanager_overlay_shown_once";
+    public static final String VIDEO_ASSET_NAME = "mpvid.mp4";
+    public static final long MAX_VIDEO_BYTES = 25L * 1024L * 1024L;
 
     public static class ToastOptions {
         public String message = "";
@@ -99,7 +102,10 @@ public class OverlayInjectorUtil {
         public boolean html;
         public boolean base64;
         public boolean dontShowAgain;
+        public boolean showOnce;
+        public boolean draggable;
         public String imageBase64;
+        public String videoPath;
         public boolean bgEnabled;
         public int bgColor1 = -1;
         public int bgColor2;
@@ -190,6 +196,19 @@ public class OverlayInjectorUtil {
                         fos.write(fe.getValue());
                     }
                     additions.put("assets/" + assetName, tmp);
+                }
+                if (hasVideo(dialog)) {
+                    File vid = new File(dialog.videoPath);
+                    if (!vid.isFile() || vid.length() <= 0) {
+                        throw new IOException("Selected video file does not exist: " + dialog.videoPath);
+                    }
+                    if (vid.length() > MAX_VIDEO_BYTES) {
+                        throw new IOException("Selected video exceeds 25 MB limit");
+                    }
+                    additions.put("assets/" + VIDEO_ASSET_NAME, vid);
+                    if (logger != null) {
+                        logger.logMessage(context.getString(R.string.logger_embedding_video, vid.getName()));
+                    }
                 }
                 BaksmaliOptions baksmaliOptions =
                         FastDexPatch.defaultBaksmaliOptions();
@@ -407,6 +426,19 @@ public class OverlayInjectorUtil {
                                     String noshowListener, String blinkListener,
                                     String dismissListener, Map<String, String> fontAssets,
                                     String waveRgb) {
+        String base = classDescriptor.substring(0, classDescriptor.length() - 1);
+        String dragListener = opts != null && opts.draggable ? base + "$mpDrag;" : null;
+        String videoHelper = hasVideo(opts) ? base + "$mpVideo;" : null;
+        return dialogHelperSmali(classDescriptor, opts, urlListener, urlViewListener,
+                noshowListener, blinkListener, dismissListener, fontAssets, waveRgb,
+                dragListener, videoHelper);
+    }
+
+    static String dialogHelperSmali(String classDescriptor, DialogOptions opts,
+                                    String urlListener, String urlViewListener,
+                                    String noshowListener, String blinkListener,
+                                    String dismissListener, Map<String, String> fontAssets,
+                                    String waveRgb, String dragListener, String videoHelper) {
         boolean titleColored = opts.titleColor != 0;
         boolean msgColored = opts.msgColor != 0;
         boolean btnColored = opts.btnColor != 0;
@@ -419,9 +451,11 @@ public class OverlayInjectorUtil {
         if (opts.animBorder && borderDp <= 0) borderDp = 2f;
         boolean useWave = opts.animBorder && borderDp > 0 && waveRgb != null;
         boolean useAnim = !useWave && opts.animBorder && blinkListener != null && borderDp > 0;
-        boolean useImage = opts.imageBase64 != null && !opts.imageBase64.isEmpty();
+        boolean useVideo = hasVideo(opts) && videoHelper != null;
+        boolean useImage = !useVideo && opts.imageBase64 != null && !opts.imageBase64.isEmpty();
         boolean useAdvanced = opts.advanced && opts.widgets != null && !opts.widgets.isEmpty();
         boolean useDlgFont = needsFontWalk(opts);
+        boolean useDrag = opts.draggable && dragListener != null;
         StringBuilder sb = new StringBuilder();
         sb.append(".method private ").append(DIALOG_HELPER).append("()V\n");
         sb.append("    .locals ").append(useAdvanced ? 8 : (useAnim || useDlgFont || useWave) ? 6 : 5).append("\n");
@@ -436,10 +470,27 @@ public class OverlayInjectorUtil {
             sb.append("    return-void\n");
             sb.append("    :show_dlg\n");
         }
+        if (opts.showOnce) {
+            sb.append("    invoke-static {p0}, Landroid/preference/PreferenceManager;->getDefaultSharedPreferences(Landroid/content/Context;)Landroid/content/SharedPreferences;\n");
+            sb.append("    move-result-object v0\n");
+            sb.append("    const-string v1, \"").append(SHOWONCE_KEY).append("\"\n");
+            sb.append("    const/4 v2, 0x0\n");
+            sb.append("    invoke-interface {v0, v1, v2}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z\n");
+            sb.append("    move-result v2\n");
+            sb.append("    if-eqz v2, :mp_show_once\n");
+            sb.append("    return-void\n");
+            sb.append("    :mp_show_once\n");
+            sb.append("    invoke-interface {v0}, Landroid/content/SharedPreferences;->edit()Landroid/content/SharedPreferences$Editor;\n");
+            sb.append("    move-result-object v2\n");
+            sb.append("    const/4 v3, 0x1\n");
+            sb.append("    invoke-interface {v2, v1, v3}, Landroid/content/SharedPreferences$Editor;->putBoolean(Ljava/lang/String;Z)Landroid/content/SharedPreferences$Editor;\n");
+            sb.append("    move-result-object v2\n");
+            sb.append("    invoke-interface {v2}, Landroid/content/SharedPreferences$Editor;->apply()V\n");
+        }
         sb.append("    new-instance v0, Landroid/app/AlertDialog$Builder;\n");
         sb.append("    invoke-direct {v0, p0}, Landroid/app/AlertDialog$Builder;-><init>(Landroid/content/Context;)V\n");
         if (useAdvanced) {
-            sb.append(advancedViewSmali(opts, urlViewListener, dismissListener, blinkListener, fontAssets, waveRgb));
+            sb.append(advancedViewSmali(opts, urlViewListener, dismissListener, blinkListener, fontAssets, waveRgb, videoHelper));
         } else {
             if (title != null && !title.isEmpty()) {
             sb.append(loadTextSmali(title, opts.base64, titleHtml, 1, 2));
@@ -511,7 +562,13 @@ public class OverlayInjectorUtil {
             }
             }
         }
-        if (useImage && !useAdvanced) {
+        if (useVideo && !useAdvanced) {
+            sb.append("    const-string v1, \"").append(VIDEO_ASSET_NAME).append("\"\n");
+            sb.append("    invoke-static {p0, v1}, ").append(videoHelper).append("->create(Landroid/content/Context;Ljava/lang/String;)Landroid/view/View;\n");
+            sb.append("    move-result-object v2\n");
+            sb.append("    invoke-virtual {v0, v2}, Landroid/app/AlertDialog$Builder;->setView(Landroid/view/View;)Landroid/app/AlertDialog$Builder;\n");
+            sb.append("    move-result-object v0\n");
+        } else if (useImage && !useAdvanced) {
             sb.append("    const-string v1, \"").append(opts.imageBase64).append("\"\n");
             sb.append("    const/4 v2, 0x0\n");
             sb.append("    invoke-static {v1, v2}, Landroid/util/Base64;->decode(Ljava/lang/String;I)[B\n");
@@ -536,7 +593,7 @@ public class OverlayInjectorUtil {
             sb.append("    sput-object v5, ").append(dismissListener).append("->dlg:Landroid/content/DialogInterface;\n");
             resultTaken = true;
         }
-        if ((useDlgFont || useBg) && !resultTaken) {
+        if ((useDlgFont || useBg || useDrag) && !resultTaken) {
             sb.append("    move-result-object v0\n");
         }
         if (useDlgFont) {
@@ -563,6 +620,18 @@ public class OverlayInjectorUtil {
             sb.append("    invoke-virtual {v2}, Landroid/view/Window;->getDecorView()Landroid/view/View;\n");
             sb.append("    move-result-object v2\n");
             sb.append("    invoke-static {v2, v1}, ").append(fontWalkType(classDescriptor)).append("->applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
+        }
+        if (useDrag) {
+            sb.append("    invoke-virtual {v0}, Landroid/app/AlertDialog;->getWindow()Landroid/view/Window;\n");
+            sb.append("    move-result-object v1\n");
+            sb.append("    if-eqz v1, :mp_drag_skip\n");
+            sb.append("    invoke-virtual {v1}, Landroid/view/Window;->getDecorView()Landroid/view/View;\n");
+            sb.append("    move-result-object v2\n");
+            sb.append("    if-eqz v2, :mp_drag_skip\n");
+            sb.append("    new-instance v3, ").append(dragListener).append("\n");
+            sb.append("    invoke-direct {v3, v1}, ").append(dragListener).append("-><init>(Landroid/view/Window;)V\n");
+            sb.append("    invoke-virtual {v2, v3}, Landroid/view/View;->setOnTouchListener(Landroid/view/View$OnTouchListener;)V\n");
+            sb.append("    :mp_drag_skip\n");
         }
         if (useBg) {
             sb.append("    invoke-virtual {v0}, Landroid/app/AlertDialog;->getWindow()Landroid/view/Window;\n");
@@ -845,6 +914,12 @@ public class OverlayInjectorUtil {
     static String advancedViewSmali(DialogOptions opts, String urlViewListener, String dismissListener,
                                       String blinkListener, Map<String, String> fontAssets,
                                       String waveRgb) {
+        return advancedViewSmali(opts, urlViewListener, dismissListener, blinkListener, fontAssets, waveRgb, null);
+    }
+
+    static String advancedViewSmali(DialogOptions opts, String urlViewListener, String dismissListener,
+                                      String blinkListener, Map<String, String> fontAssets,
+                                      String waveRgb, String videoHelper) {
         StringBuilder sb = new StringBuilder();
         sb.append("    new-instance v6, Landroid/widget/FrameLayout;\n");
         sb.append("    invoke-direct {v6, p0}, Landroid/widget/FrameLayout;-><init>(Landroid/content/Context;)V\n");
@@ -852,6 +927,16 @@ public class OverlayInjectorUtil {
         sb.append("    move-result-object v5\n");
         sb.append("    invoke-virtual {v5}, Landroid/content/res/Resources;->getDisplayMetrics()Landroid/util/DisplayMetrics;\n");
         sb.append("    move-result-object v5\n");
+        if (hasVideo(opts) && videoHelper != null) {
+            sb.append("    const-string v1, \"").append(VIDEO_ASSET_NAME).append("\"\n");
+            sb.append("    invoke-static {p0, v1}, ").append(videoHelper).append("->create(Landroid/content/Context;Ljava/lang/String;)Landroid/view/View;\n");
+            sb.append("    move-result-object v2\n");
+            sb.append("    new-instance v3, Landroid/widget/FrameLayout$LayoutParams;\n");
+            sb.append("    const/4 v1, -0x1\n");
+            sb.append("    const/4 v7, -0x2\n");
+            sb.append("    invoke-direct {v3, v1, v7}, Landroid/widget/FrameLayout$LayoutParams;-><init>(II)V\n");
+            sb.append("    invoke-virtual {v6, v2, v3}, Landroid/widget/FrameLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V\n");
+        }
         int label = 0;
         if (opts.widgets != null) {
             for (AdvWidget w : opts.widgets) {
@@ -1398,6 +1483,145 @@ public class OverlayInjectorUtil {
                 ".end method\n";
     }
 
+    static String dragListenerSmali(String dragType) {
+        return ".class public " + dragType + "\n" +
+                ".super Ljava/lang/Object;\n" +
+                ".source \"mpDrag.java\"\n" +
+                ".implements Landroid/view/View$OnTouchListener;\n\n" +
+                ".field private w:Landroid/view/Window;\n" +
+                ".field private lx:F\n" +
+                ".field private ly:F\n" +
+                ".field private sx:I\n" +
+                ".field private sy:I\n\n" +
+                ".method public constructor <init>(Landroid/view/Window;)V\n" +
+                "    .locals 0\n" +
+                "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n" +
+                "    iput-object p1, p0, " + dragType + "->w:Landroid/view/Window;\n" +
+                "    return-void\n" +
+                ".end method\n\n" +
+                ".method public onTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z\n" +
+                "    .locals 4\n" +
+                "    invoke-virtual {p2}, Landroid/view/MotionEvent;->getActionMasked()I\n" +
+                "    move-result v0\n" +
+                "    if-nez v0, :mp_drag_chk\n" +
+                "    invoke-virtual {p2}, Landroid/view/MotionEvent;->getRawX()F\n" +
+                "    move-result v1\n" +
+                "    iput v1, p0, " + dragType + "->lx:F\n" +
+                "    invoke-virtual {p2}, Landroid/view/MotionEvent;->getRawY()F\n" +
+                "    move-result v1\n" +
+                "    iput v1, p0, " + dragType + "->ly:F\n" +
+                "    iget-object v1, p0, " + dragType + "->w:Landroid/view/Window;\n" +
+                "    invoke-virtual {v1}, Landroid/view/Window;->getAttributes()Landroid/view/WindowManager$LayoutParams;\n" +
+                "    move-result-object v1\n" +
+                "    iget v2, v1, Landroid/view/WindowManager$LayoutParams;->x:I\n" +
+                "    iput v2, p0, " + dragType + "->sx:I\n" +
+                "    iget v2, v1, Landroid/view/WindowManager$LayoutParams;->y:I\n" +
+                "    iput v2, p0, " + dragType + "->sy:I\n" +
+                "    const/4 v0, 0x1\n" +
+                "    return v0\n" +
+                "    :mp_drag_chk\n" +
+                "    const/4 v1, 0x2\n" +
+                "    if-ne v0, v1, :mp_drag_ret0\n" +
+                "    iget-object v1, p0, " + dragType + "->w:Landroid/view/Window;\n" +
+                "    invoke-virtual {v1}, Landroid/view/Window;->getAttributes()Landroid/view/WindowManager$LayoutParams;\n" +
+                "    move-result-object v2\n" +
+                "    invoke-virtual {p2}, Landroid/view/MotionEvent;->getRawX()F\n" +
+                "    move-result v0\n" +
+                "    iget v3, p0, " + dragType + "->lx:F\n" +
+                "    sub-float v0, v0, v3\n" +
+                "    float-to-int v0, v0\n" +
+                "    iget v3, p0, " + dragType + "->sx:I\n" +
+                "    add-int v0, v0, v3\n" +
+                "    iput v0, v2, Landroid/view/WindowManager$LayoutParams;->x:I\n" +
+                "    invoke-virtual {p2}, Landroid/view/MotionEvent;->getRawY()F\n" +
+                "    move-result v0\n" +
+                "    iget v3, p0, " + dragType + "->ly:F\n" +
+                "    sub-float v0, v0, v3\n" +
+                "    float-to-int v0, v0\n" +
+                "    iget v3, p0, " + dragType + "->sy:I\n" +
+                "    add-int v0, v0, v3\n" +
+                "    iput v0, v2, Landroid/view/WindowManager$LayoutParams;->y:I\n" +
+                "    invoke-virtual {v1, v2}, Landroid/view/Window;->setAttributes(Landroid/view/WindowManager$LayoutParams;)V\n" +
+                "    const/4 v0, 0x1\n" +
+                "    return v0\n" +
+                "    :mp_drag_ret0\n" +
+                "    const/4 v0, 0x0\n" +
+                "    return v0\n" +
+                ".end method\n";
+    }
+
+    static String videoViewSmali(String videoType) {
+        String heightHex = Integer.toHexString(Float.floatToRawIntBits(220f));
+        return ".class public " + videoType + "\n" +
+                ".super Ljava/lang/Object;\n" +
+                ".source \"mpVideo.java\"\n" +
+                ".implements Landroid/media/MediaPlayer$OnPreparedListener;\n\n" +
+                ".method public constructor <init>()V\n" +
+                "    .locals 0\n" +
+                "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n" +
+                "    return-void\n" +
+                ".end method\n\n" +
+                ".method public onPrepared(Landroid/media/MediaPlayer;)V\n" +
+                "    .locals 1\n" +
+                "    const/4 v0, 0x1\n" +
+                "    invoke-virtual {p1, v0}, Landroid/media/MediaPlayer;->setLooping(Z)V\n" +
+                "    invoke-virtual {p1}, Landroid/media/MediaPlayer;->start()V\n" +
+                "    return-void\n" +
+                ".end method\n\n" +
+                ".method public static create(Landroid/content/Context;Ljava/lang/String;)Landroid/view/View;\n" +
+                "    .locals 8\n" +
+                "    new-instance v0, Ljava/io/File;\n" +
+                "    invoke-virtual {p0}, Landroid/content/Context;->getCacheDir()Ljava/io/File;\n" +
+                "    move-result-object v1\n" +
+                "    invoke-direct {v0, v1, p1}, Ljava/io/File;-><init>(Ljava/io/File;Ljava/lang/String;)V\n" +
+                "    invoke-virtual {p0}, Landroid/content/Context;->getAssets()Landroid/content/res/AssetManager;\n" +
+                "    move-result-object v1\n" +
+                "    invoke-virtual {v1, p1}, Landroid/content/res/AssetManager;->open(Ljava/lang/String;)Ljava/io/InputStream;\n" +
+                "    move-result-object v1\n" +
+                "    new-instance v2, Ljava/io/FileOutputStream;\n" +
+                "    invoke-direct {v2, v0}, Ljava/io/FileOutputStream;-><init>(Ljava/io/File;)V\n" +
+                "    const/16 v3, 0x4000\n" +
+                "    new-array v3, v3, [B\n" +
+                "    :mp_vid_loop\n" +
+                "    invoke-virtual {v1, v3}, Ljava/io/InputStream;->read([B)I\n" +
+                "    move-result v4\n" +
+                "    if-ltz v4, :mp_vid_done\n" +
+                "    const/4 v5, 0x0\n" +
+                "    invoke-virtual {v2, v3, v5, v4}, Ljava/io/FileOutputStream;->write([BII)V\n" +
+                "    goto :mp_vid_loop\n" +
+                "    :mp_vid_done\n" +
+                "    invoke-virtual {v2}, Ljava/io/FileOutputStream;->close()V\n" +
+                "    invoke-virtual {v1}, Ljava/io/InputStream;->close()V\n" +
+                "    new-instance v1, Landroid/widget/FrameLayout;\n" +
+                "    invoke-direct {v1, p0}, Landroid/widget/FrameLayout;-><init>(Landroid/content/Context;)V\n" +
+                "    new-instance v2, Landroid/widget/VideoView;\n" +
+                "    invoke-direct {v2, p0}, Landroid/widget/VideoView;-><init>(Landroid/content/Context;)V\n" +
+                "    new-instance v3, " + videoType + "\n" +
+                "    invoke-direct {v3}, " + videoType + "-><init>()V\n" +
+                "    invoke-virtual {v2, v3}, Landroid/widget/VideoView;->setOnPreparedListener(Landroid/media/MediaPlayer$OnPreparedListener;)V\n" +
+                "    invoke-virtual {v0}, Ljava/io/File;->getAbsolutePath()Ljava/lang/String;\n" +
+                "    move-result-object v0\n" +
+                "    invoke-virtual {v2, v0}, Landroid/widget/VideoView;->setVideoPath(Ljava/lang/String;)V\n" +
+                "    invoke-virtual {p0}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;\n" +
+                "    move-result-object v3\n" +
+                "    invoke-virtual {v3}, Landroid/content/res/Resources;->getDisplayMetrics()Landroid/util/DisplayMetrics;\n" +
+                "    move-result-object v3\n" +
+                "    const/4 v4, 0x1\n" +
+                "    const v5, 0x" + heightHex + "\n" +
+                "    invoke-static {v4, v5, v3}, Landroid/util/TypedValue;->applyDimension(IFLandroid/util/DisplayMetrics;)F\n" +
+                "    move-result v5\n" +
+                "    float-to-int v5, v5\n" +
+                "    const/4 v4, -0x1\n" +
+                "    new-instance v6, Landroid/widget/FrameLayout$LayoutParams;\n" +
+                "    const/16 v7, 0x11\n" +
+                "    invoke-direct {v6, v4, v5, v7}, Landroid/widget/FrameLayout$LayoutParams;-><init>(III)V\n" +
+                "    invoke-virtual {v1, v2, v6}, Landroid/widget/FrameLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V\n" +
+                "    invoke-virtual {v2}, Landroid/widget/VideoView;->requestFocus()Z\n" +
+                "    invoke-virtual {v2}, Landroid/widget/VideoView;->start()V\n" +
+                "    return-object v1\n" +
+                ".end method\n";
+    }
+
     static String fontWalkType(String classDescriptor) {
         return classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpFontWalk;";
     }
@@ -1512,6 +1736,8 @@ public class OverlayInjectorUtil {
             String blinkListener = null;
             String dismissListener = null;
             String waveRgb = null;
+            String dragListener = null;
+            String videoHelper = null;
             if (dialog != null) {
                 if (hasUrl(dialog)) {
                     urlListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpUrl;";
@@ -1577,7 +1803,17 @@ public class OverlayInjectorUtil {
                     patchedFiles.add(listenerFile);
                     if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, dismissListener));
                 }
-                insert.append(dialogHelperSmali(classDescriptor, dialog, urlListener, urlViewListener, noshowListener, blinkListener, dismissListener, fontAssets, waveRgb)).append("\n");
+                if (dialog.draggable) {
+                    dragListener = emitHelperSmali(context, smaliFile, classDescriptor, "$mpDrag",
+                            dragListenerSmali(classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpDrag;"),
+                            logger, patchedFiles);
+                }
+                if (hasVideo(dialog)) {
+                    videoHelper = emitHelperSmali(context, smaliFile, classDescriptor, "$mpVideo",
+                            videoViewSmali(classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpVideo;"),
+                            logger, patchedFiles);
+                }
+                insert.append(dialogHelperSmali(classDescriptor, dialog, urlListener, urlViewListener, noshowListener, blinkListener, dismissListener, fontAssets, waveRgb, dragListener, videoHelper)).append("\n");
             }
             insert.append(wrapperSmali(classDescriptor, flags.isEmpty() ? "protected" : flags,
                     toast != null, dialog != null));
@@ -1592,6 +1828,24 @@ public class OverlayInjectorUtil {
                 logger.logMessage(context.getString(R.string.logger_injected_overlay, className));
             }
             return true;
+    }
+
+    private static String emitHelperSmali(Context context, File smaliFile, String classDescriptor,
+                                          String suffix, String content, APKLogger logger,
+                                          List<File> patchedFiles) throws IOException {
+        String type = classDescriptor.substring(0, classDescriptor.length() - 1) + suffix + ";";
+        File out = new File(smaliFile.getParentFile(),
+                smaliFile.getName().replace(".smali", suffix + ".smali"));
+        writeFile(out, content);
+        patchedFiles.add(out);
+        if (logger != null && context != null) {
+            logger.logMessage(context.getString(R.string.logger_generated, type));
+        }
+        return type;
+    }
+
+    private static boolean hasVideo(DialogOptions opts) {
+        return opts != null && notEmpty(opts.videoPath);
     }
 
     private static boolean hasUrl(DialogOptions opts) {

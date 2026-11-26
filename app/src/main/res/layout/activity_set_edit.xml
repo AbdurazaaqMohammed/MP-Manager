@@ -62,7 +62,7 @@
                         android:layout_height="wrap_content"
                         android:text="0"
                         android:textSize="10.5sp"
-                        android:textColor="#E91E63"
+                        android:textColor="?attr/colorTertiary"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>

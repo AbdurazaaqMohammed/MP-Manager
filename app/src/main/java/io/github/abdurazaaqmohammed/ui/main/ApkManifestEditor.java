@@ -76,6 +76,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ApkManifestEditor {
 
@@ -260,7 +261,7 @@ public class ApkManifestEditor {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(rss.getString(R.string.loading));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             ManifestData manifestData = decodeManifestWithRes(apkFile);
             List<XMLEntry> loadedEntries = manifestData != null ? manifestData.entries : null;
             if (loadedEntries == null) loadedEntries = decodeManifest(apkFile);
@@ -272,7 +273,7 @@ public class ApkManifestEditor {
                 return;
             }
             context.handler.post(() -> showQuickEditDialog(apkFile, finalEntries, data));
-        }).start();
+        });
     }
 
     private void showQuickEditDialog(File apkFile, List<XMLEntry> entries, ManifestData manifestData) {
@@ -579,7 +580,7 @@ public class ApkManifestEditor {
         fpd.setTitle(context.rss.getString(R.string.select_icon));
         ProgressManager pm = new ProgressManager(context, true);
 
-        fpd.setDialogSelectionListener(files -> new Thread(() -> {
+        fpd.setDialogSelectionListener(files -> AppExecutors.io().execute(() -> {
             IconTargets targets = resolveIconTargets(apkFile);
 
             byte[] iconBytes;
@@ -614,7 +615,7 @@ public class ApkManifestEditor {
                 pm.dismiss();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
-        }).start());
+        }));
         fpd.show();
     }
 
@@ -971,7 +972,7 @@ public class ApkManifestEditor {
     }
 
     public void editAllManifestEntries(File apkFile) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<XMLEntry> entries = decodeManifest(apkFile);
                 if (entries == null) {
@@ -982,7 +983,7 @@ public class ApkManifestEditor {
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     @SuppressLint("SetTextI18n")
@@ -1335,7 +1336,7 @@ public class ApkManifestEditor {
                                  boolean[] sign, SignWrapper[] wrapper) {
         Runnable doEdit = () -> {
             ProgressManager pm2 = new ProgressManager(context, true).show();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     int changed;
                     try {
@@ -1359,7 +1360,7 @@ public class ApkManifestEditor {
                     pm2.dismiss();
                     new ErrorUtil(context).showError(e);
                 }
-            }).start();
+            });
         };
         if (sign[0]) SignWrapper.requireAuth(context, sw -> {
             wrapper[0] = sw;
@@ -1370,7 +1371,7 @@ public class ApkManifestEditor {
 
     public void showPermissionsDialog(File apkFile) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String[] perms;
             try {
                 PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(
@@ -1414,11 +1415,35 @@ public class ApkManifestEditor {
                 autosign.setOnCheckedChangeListener((buttonView, isChecked) ->
                         settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                 permDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-                ListView permList = permDialog.findViewById(R.id.permList);
-                permList.setAdapter(new ArrayAdapter<>(context,
-                        android.R.layout.simple_list_item_multiple_choice, labels));
-                permList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-                for (int i = 0; i < keep.length; i++) permList.setItemChecked(i, keep[i]);
+                androidx.recyclerview.widget.RecyclerView permList = permDialog.findViewById(R.id.permList);
+                permList.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(context));
+                boolean[] checkedState = java.util.Arrays.copyOf(keep, keep.length);
+                permList.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+                    @NonNull
+                    @Override
+                    public androidx.recyclerview.widget.RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                        View v = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_multiple_choice, parent, false);
+                        return new androidx.recyclerview.widget.RecyclerView.ViewHolder(v) {};
+                    }
+
+                    @Override
+                    public void onBindViewHolder(@NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder holder, int position) {
+                        android.widget.CheckedTextView ctv = (android.widget.CheckedTextView) holder.itemView;
+                        ctv.setText(labels[position]);
+                        ctv.setChecked(checkedState[position]);
+                        ctv.setOnClickListener(v -> {
+                            int pos = holder.getBindingAdapterPosition();
+                            if (pos == androidx.recyclerview.widget.RecyclerView.NO_POSITION) return;
+                            checkedState[pos] = !checkedState[pos];
+                            ctv.setChecked(checkedState[pos]);
+                        });
+                    }
+
+                    @Override
+                    public int getItemCount() {
+                        return labels.length;
+                    }
+                });
 
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(rss.getString(R.string.me_perms_n, perms.length))
@@ -1429,7 +1454,7 @@ public class ApkManifestEditor {
                             List<String> toDisable = new ArrayList<>();
                             List<String> toEnable = new ArrayList<>();
                             for (int i = 0; i < perms.length; i++) {
-                                boolean wantEnabled = permList.isItemChecked(i);
+                                boolean wantEnabled = checkedState[i];
                                 boolean isDisabled = perms[i] != null
                                         && perms[i].startsWith(DISABLED_PREFIX);
                                 String base = baseNames[i];
@@ -1445,7 +1470,7 @@ public class ApkManifestEditor {
                         .setNeutralButton(rss.getString(R.string.remove), (d, which) -> {
                             List<String> toRemove = new ArrayList<>();
                             for (int i = 0; i < perms.length; i++) {
-                                if (permList.isItemChecked(i)) continue;
+                                if (checkedState[i]) continue;
                                 String base = baseNames[i];
                                 if (base == null || base.isEmpty()) continue;
                                 toRemove.add(base);
@@ -1467,7 +1492,7 @@ public class ApkManifestEditor {
                         }).create();
                 dialogUtil.styleAlertDialog(dialog);
             });
-        }).start();
+        });
     }
 
     public void showManifestTogglesDialog(File apkFile) {
@@ -1475,7 +1500,7 @@ public class ApkManifestEditor {
                 "android:requestLegacyExternalStorage", "android:largeHeap"};
         String[] labels = {rss.getString(R.string.me_tog_debug), rss.getString(R.string.me_tog_backup), rss.getString(R.string.me_tog_cleartext), rss.getString(R.string.me_tog_legacy), rss.getString(R.string.me_tog_heap)};
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean[] current = new boolean[attrs.length];
             try {
                 List<XMLEntry> entries = decodeManifest(apkFile);
@@ -1524,7 +1549,7 @@ public class ApkManifestEditor {
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doEdit = () -> {
                                 ProgressManager pm2 = new ProgressManager(context, true).show();
-                                new Thread(() -> {
+                                AppExecutors.io().execute(() -> {
                                     try {
                                         int changed = 0;
                                         for (int i = 0; i < attrs.length; i++) {
@@ -1549,7 +1574,7 @@ public class ApkManifestEditor {
                                         pm2.dismiss();
                                         new ErrorUtil(context).showError(e);
                                     }
-                                }).start();
+                                });
                             };
                             if (sign[0]) SignWrapper.requireAuth(context, sw -> {
                                 wrapper[0] = sw;
@@ -1558,7 +1583,7 @@ public class ApkManifestEditor {
                             else doEdit.run();
                         }).create());
             });
-        }).start();
+        });
     }
 
     private void writeManifestEntries(File apkFile, List<XMLEntry> entries) throws Exception {

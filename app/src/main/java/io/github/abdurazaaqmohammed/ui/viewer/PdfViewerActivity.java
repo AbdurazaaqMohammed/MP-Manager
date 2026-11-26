@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * High-performance PDF Viewer Activity featuring:
@@ -300,11 +301,13 @@ public class PdfViewerActivity extends BaseActivity {
 
     private void applyEyeProtection(boolean enabled) {
         if (enabled) {
-            fabEyeComfort.setCardBackgroundColor(Color.parseColor("#D32F2F"));
+            fabEyeComfort.setCardBackgroundColor(com.google.android.material.color.MaterialColors.getColor(
+                    this, com.google.android.material.R.attr.colorError, 0xFFD32F2F));
             eyeComfortOverlay.setVisibility(View.VISIBLE);
             updateEyeOverlayAlpha(eyeComfortIntensity);
         } else {
-            fabEyeComfort.setCardBackgroundColor(Color.parseColor("#212121"));
+            fabEyeComfort.setCardBackgroundColor(com.google.android.material.color.MaterialColors.getColor(
+                    this, com.google.android.material.R.attr.colorSurfaceContainerHighest, 0xFF212121));
             eyeComfortOverlay.setVisibility(View.GONE);
         }
     }
@@ -404,7 +407,7 @@ public class PdfViewerActivity extends BaseActivity {
             intent.setClipData(ClipData.newRawUri(uri.toString(), uri));
             startActivity(Intent.createChooser(intent, getString(R.string.share)));
         } catch (Exception e) {
-            Toast.makeText(this, R.string.cannot_open_item, Toast.LENGTH_SHORT).show();
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.cannot_open_item);
         }
     }
 
@@ -418,7 +421,7 @@ public class PdfViewerActivity extends BaseActivity {
             intent.setClipData(ClipData.newRawUri(uri.toString(), uri));
             startActivity(Intent.createChooser(intent, getString(R.string.open_with)));
         } catch (Exception e) {
-            Toast.makeText(this, R.string.cannot_open_item, Toast.LENGTH_SHORT).show();
+            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.cannot_open_item);
         }
     }
 
@@ -521,7 +524,7 @@ public class PdfViewerActivity extends BaseActivity {
                     bitmapCache.put(pos, renderedBitmap);
                 }
 
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(PdfViewerActivity.this, () -> {
                     if (!isFinishing() && !isDestroyed()) {
                         if (holder.getBindingAdapterPosition() == pos) {
                             holder.pageLoading.setVisibility(View.GONE);

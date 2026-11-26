@@ -18,6 +18,7 @@ import android.widget.TextView;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.radiobutton.MaterialRadioButton;
 import com.reandroid.apk.APKLogger;
@@ -49,10 +50,10 @@ public final class PrivacyAuditDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Auditing APK privacy...");
 
-        new Thread(() -> {
+        io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
             try {
                 PrivacyAuditReport report = PrivacyScannerEngine.scanApk(apkFile);
-                context.runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     if (report.threats.isEmpty()) {
                         Extensions.showMessage(context, context.getString(R.string.privacy_no_threats));
@@ -61,12 +62,12 @@ public final class PrivacyAuditDialog {
                     displayDialog(context, apkFile, report);
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     private static void displayDialog(MainActivity context, File apkFile, PrivacyAuditReport report) {
@@ -268,7 +269,7 @@ public final class PrivacyAuditDialog {
         Runnable doSanitize = () -> {
             ProgressManager pm = new ProgressManager(context, true).show();
             APKLogger logger = pm.getLogger();
-            new Thread(() -> {
+            io.github.abdurazaaqmohammed.util.misc.AppExecutors.io().execute(() -> {
                 try {
                     pm.setText("Sanitizing DEX bytecode...");
                     PrivacyAuditReport auditResult = PrivacyBytecodeEngine.sanitizeApkWithAudit(apkFile, outFile, options, logger);
@@ -282,16 +283,17 @@ public final class PrivacyAuditDialog {
                     }
 
                     pm.dismiss();
-                    context.runOnUiThread(() -> {
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context, () -> {
                         Extensions.showMessage(context, context.getString(
                                 R.string.privacy_done, stats.totalMutations()));
                         context.refreshAllPanes();
                     });
                 } catch (Exception e) {
                     pm.dismiss();
-                    context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                    io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(context,
+                            () -> new ErrorUtil(context).showError(e));
                 }
-            }).start();
+            });
         };
 
         if (doSign) {
@@ -325,7 +327,8 @@ public final class PrivacyAuditDialog {
     private static View createDivider(MainActivity context) {
         View v = new View(context);
         v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Extensions.dp2px(context, 1)));
-        v.setBackgroundColor(Color.parseColor("#33888888"));
+        v.setBackgroundColor(MaterialColors.getColor(
+                context, com.google.android.material.R.attr.colorOutlineVariant, 0x33888888));
         int m = Extensions.dp2px(context, 8);
         ((LinearLayout.LayoutParams) v.getLayoutParams()).setMargins(0, m, 0, m);
         return v;

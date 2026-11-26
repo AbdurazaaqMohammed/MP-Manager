@@ -16,12 +16,10 @@
         android:textColor="?attr/colorOnSurface"
         android:textStyle="bold" />
 
-    <ListView
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/extractOptionsGrid"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:divider="@null"
-        android:dividerHeight="0dp"
         android:padding="4dp" />
 
 </LinearLayout>

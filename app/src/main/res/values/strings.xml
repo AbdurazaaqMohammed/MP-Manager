@@ -1009,6 +1009,7 @@ Layout Inspector
     <string name="logger_modified_dex">Modified %1$d dex file(s)</string>
     <string name="logger_target_dex">Target classes are in %1$d dex file(s)</string>
     <string name="logger_embedding_fonts">Embedding %1$d font(s) as APK assets</string>
+    <string name="logger_embedding_video">Embedding video as APK asset: %1$s</string>
     <string name="logger_injected_overlay">Injected overlay into %1$s</string>
     <string name="logger_skipped_patched">Skipped (already patched) %1$s</string>
     <string name="logger_no_oncreate">No onCreate found in %1$s</string>
@@ -1590,10 +1591,10 @@ Strings are sent to the external service you configured.</string>
     <string name="rich_text_html">Rich text (HTML)</string>
     <string name="dialog_title">Dialog title</string>
     <string name="dialog_message">Dialog message</string>
-    <string name="add_positive_button">Add positive button</string>
+    <string name="add_positive_button">Add positive button (Right)</string>
     <string name="dismiss">Dismiss</string>
     <string name="url">URL</string>
-    <string name="add_negative_button">Add negative button</string>
+    <string name="add_negative_button">Add negative button (Left)</string>
     <string name="remove_positive_button">Remove positive button</string>
     <string name="text_empty_none">Text (empty = none)</string>
     <string name="remove_negative_button">Remove negative button</string>
@@ -1612,7 +1613,21 @@ Strings are sent to the external service you configured.</string>
     <string name="title_color">Title Color</string>
     <string name="cancelable">Cancelable</string>
     <string name="add_don_t_show_again_option">Add \'Don\'t show again\' option</string>
+    <string name="show_mode">Display behavior</string>
+    <string name="always_show">Always show</string>
+    <string name="show_once">Show once</string>
+    <string name="don_t_show_again_button">Add \'Don\'t show again\' button</string>
+    <string name="movable_dialog">Movable (draggable)</string>
     <string name="dialog_image">Dialog image</string>
+    <string name="dialog_media">Dialog media</string>
+    <string name="media_none">None</string>
+    <string name="media_picture">Picture</string>
+    <string name="media_video">Video</string>
+    <string name="choose_video">Choose video</string>
+    <string name="video_selected_format">Video: %1$s (%2$s)</string>
+    <string name="video_size_warning">Warning: Embedding video increases APK size</string>
+    <string name="video_too_large">Video exceeds 25 MB limit</string>
+    <string name="choose_video_required">Please choose a video</string>
     <string name="widghelp">Add widgets, drag to move, tap to edit</string>
     <string name="image">Image</string>
     <string name="button">Button</string>
@@ -2646,4 +2661,10 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="boot_image_inspector">Boot image inspector</string>
     <string name="customize_open_with">Open with order</string>
     <string name="customize_open_with_hint">Long-press to drag items; tap eye icon to hide or show</string>
+    <string name="empty_folder">Empty folder</string>
+    <string name="mount_invalid_filesystem">File is not a valid filesystem image</string>
+    <string name="mounting_image">Mounting %s…</string>
+    <string name="image_options_message">Image Type: %1$s%2$s\n\nWould you like to browse and explore the filesystem contents or open with an external app?</string>
+    <string name="image_explorer_title">System Image Explorer</string>
+    <string name="image_browse_files">Browse Files</string>
 </resources>

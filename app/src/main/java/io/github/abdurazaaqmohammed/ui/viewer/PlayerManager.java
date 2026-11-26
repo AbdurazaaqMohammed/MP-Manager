@@ -27,6 +27,7 @@ import java.util.Random;
 
 import io.github.abdurazaaqmohammed.data.prefs.ListPrefs;
 import io.github.abdurazaaqmohammed.domain.files.FileSorting;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class PlayerManager {
 
@@ -279,7 +280,7 @@ public class PlayerManager {
     /** Parses external cues off the calling thread, then activates them. */
     private void loadExternalCuesAsync(final String absPath, final boolean select) {
         final int gen = ++externalParseGen;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<SubtitleUtil.Cue> cues = new ArrayList<>();
             try {
                 cues = SubtitleUtil.parse(new File(absPath));
@@ -305,7 +306,7 @@ public class PlayerManager {
                 else notifySubtitleTracksChanged();
                 updateExternalCue(true);
             });
-        }).start();
+        });
     }
 
     /** Rebuilds the track list; external sidecar is always listed first. */
@@ -427,7 +428,7 @@ public class PlayerManager {
         // Scan the video directory off the main thread.
         final String videoPath = item.path;
         final int gen = externalParseGen;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<File> sidecars = SubtitleUtil.findSidecars(videoPath);
             handler.post(() -> {
                 if (gen != externalParseGen) return;
@@ -443,7 +444,7 @@ public class PlayerManager {
                 activeExternalLabel = best.getName();
                 loadExternalCuesAsync(best.getAbsolutePath(), true);
             });
-        }).start();
+        });
     }
 
     public static synchronized PlayerManager getInstance(Context context) {

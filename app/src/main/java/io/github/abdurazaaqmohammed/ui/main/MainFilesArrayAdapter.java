@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.text.MimeUtil;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAdapter.ViewHolder> {
 
@@ -412,7 +413,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             context.loadFolderInPaneAsync(f, pane1);
             return;
         }
-        new Thread(() -> {
+        if ((f instanceof RootFile rf && rf.hasRootStat())
+                || (f instanceof ShizukuFile sf && sf.hasStat())) {
+            // Listing already resolved directory/file/symlink target status; avoid a second backend fork.
+            context.clearGreen(pane1);
+            context.setSelectedPane(pane1 ? 1 : 2);
+            context.loadFolderInPaneAsync(f, pane1);
+            return;
+        }
+        AppExecutors.io().execute(() -> {
             final boolean dir = resolveDirViaBackend(f);
             context.handler.post(() -> {
                 try {
@@ -432,7 +441,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 } catch (Exception ignored) {
                 }
             });
-        }).start();
+        });
     }
 
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
@@ -744,29 +753,31 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         } else {
             entry = null;
             file = (File) item;
-            iconLoader.setupFileView(file, holder.fileIconView, holder.fileDateView);
             holder.fileNameView.setText(fileName = (position == 0 ? ".." : file.getName()));
             if (position == 0) {
-                holder.fileDateView.setVisibility(View.GONE);
-                holder.fileDateView.setTag(null);
-            } else if (isSearchResultsMode) {
-                holder.fileDateView.setVisibility(View.VISIBLE);
-                // getParent() of a SafFile is the percent-encoded synthetic path;
-                // show the decoded document location instead.
-                File parentFile = file.getParentFile();
-                holder.fileDateView.setText(parentFile != null ? SafFile.displayPathOf(parentFile) : "");
-                if (holder.appBadgeView != null) {
-                    holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
-                    holder.appBadgeView.setVisibility(View.VISIBLE);
-                }
-            } else if (holder.appBadgeView != null) {
-                if (isSymlink(file)) {
-                    holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
-                    holder.appBadgeView.setVisibility(View.VISIBLE);
-                } else if (file.getParent() != null) {
-                    iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
-                } else {
-                    holder.appBadgeView.setVisibility(View.GONE);
+                iconLoader.setupUpView(holder.fileIconView, holder.fileDateView);
+                if (holder.appBadgeView != null) holder.appBadgeView.setVisibility(View.GONE);
+            } else {
+                iconLoader.setupFileView(file, holder.fileIconView, holder.fileDateView);
+                if (isSearchResultsMode) {
+                    holder.fileDateView.setVisibility(View.VISIBLE);
+                    // getParent() of a SafFile is the percent-encoded synthetic path;
+                    // show the decoded document location instead.
+                    File parentFile = file.getParentFile();
+                    holder.fileDateView.setText(parentFile != null ? SafFile.displayPathOf(parentFile) : "");
+                    if (holder.appBadgeView != null) {
+                        holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
+                        holder.appBadgeView.setVisibility(View.VISIBLE);
+                    }
+                } else if (holder.appBadgeView != null) {
+                    if (isSymlink(file)) {
+                        holder.appBadgeView.setImageResource(R.drawable.ic_link_24);
+                        holder.appBadgeView.setVisibility(View.VISIBLE);
+                    } else if (file.getParent() != null) {
+                        iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
+                    } else {
+                        holder.appBadgeView.setVisibility(View.GONE);
+                    }
                 }
             }
         }
@@ -909,7 +920,7 @@ final View.OnClickListener originalClickListener;
         } else if (file != null)
             context.setCurrentFolder(file.getParentFile(), getOldValues());
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 boolean multi = !selectedPositions.isEmpty();
                 String direction = pane1 ? "->" : "<-";
@@ -1247,17 +1258,17 @@ final View.OnClickListener originalClickListener;
                                     if (allRealFiles(finalDexCompare1) && allRealFiles(finalDexCompare2)) {
                                         new CompareDexOptionsDialog(context, toFileList(finalDexCompare1), toFileList(finalDexCompare2)).show();
                                     } else {
-                                        new Thread(() -> {
+                                        AppExecutors.io().execute(() -> {
                                             try {
                                                 List<File> f1 = resolveCompareFileList(finalDexCompare1);
                                                 List<File> f2 = resolveCompareFileList(finalDexCompare2);
                                                 if (!f1.isEmpty() && !f2.isEmpty()) {
-                                                    context.runOnUiThread(() -> new CompareDexOptionsDialog(context, f1, f2).show());
+                                                    AppExecutors.runOnUiIfAlive(context, () -> new CompareDexOptionsDialog(context, f1, f2).show());
                                                 }
                                             } catch (Exception e) {
-                                                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                                             }
-                                        }).start();
+                                        });
                                     }
                                 }
                                 return;
@@ -1278,17 +1289,17 @@ final View.OnClickListener originalClickListener;
                                 ).show();
                                 return;
                             case FileMenuOrder.CMP_ARSC:
-                                new Thread(() -> {
+                                AppExecutors.io().execute(() -> {
                                     try {
                                         File f1 = resolveCompareFile(finalCompareFile1);
                                         File f2 = resolveCompareFile(finalCompareFile2);
                                         if (f1 != null && f2 != null) {
-                                            context.runOnUiThread(() -> new CompareArscDialog(context, f1.getAbsolutePath(), f2.getAbsolutePath()).show());
+                                            AppExecutors.runOnUiIfAlive(context, () -> new CompareArscDialog(context, f1.getAbsolutePath(), f2.getAbsolutePath()).show());
                                         }
                                     } catch (Exception e) {
-                                        context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                        AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                                     }
-                                }).start();
+                                });
                                 return;
                             case FileMenuOrder.CMP_HASH:
                                 checksumDialogs.showCompareHashesDialog((File) finalCompareFile1, (File) finalCompareFile2);
@@ -1428,7 +1439,7 @@ final View.OnClickListener originalClickListener;
                                         if (multi) {
                                             clearSelection();
                                         }
-                                        context.runOnUiThread(() -> {
+                                        AppExecutors.runOnUiIfAlive(context, () -> {
                                             context.reloadCurrentFolder();
                                             if (context.isSameLocationInPanes()) {
                                                 context.reloadPane(!pane1, false);
@@ -1562,7 +1573,7 @@ final View.OnClickListener originalClickListener;
                 } catch (Exception ignored) {
                 }
             }
-        }).start();
+        });
     }
 
     private void updateFolderCountOnMainScreen(int position) {

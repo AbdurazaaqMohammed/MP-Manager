@@ -45,6 +45,7 @@ import java.util.zip.ZipInputStream;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class NativeToolManager {
 
@@ -253,7 +254,7 @@ public class NativeToolManager {
         final boolean[] cancelled = {false};
         dialog.setOnDismissListener(d -> cancelled[0] = true);
         String base = baseUrl(activity);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 Map<String, String[]> manifest = fetchManifest(base);
                 for (int idx : missing) {
@@ -261,12 +262,12 @@ public class NativeToolManager {
                     String zipName = zips[idx];
                     String pack = packs[idx];
                     final String fZip = zipName;
-                    activity.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         status.setText(activity.getString(R.string.downloading_x, fZip));
                         bar.setIndeterminate(true);
                     });
                     File tmp = new File(activity.getCacheDir(), fZip + ".part");
-                    downloadFile(base + "/" + zipName, tmp, (done, total) -> activity.runOnUiThread(() -> {
+                    downloadFile(base + "/" + zipName, tmp, (done, total) -> AppExecutors.runOnUiIfAlive(activity, () -> {
                         if (total > 0) {
                             bar.setIndeterminate(false);
                             bar.setProgress((int) (1000 * done / total));
@@ -287,18 +288,18 @@ public class NativeToolManager {
                     writeMarker(dest, version);
                     tmp.delete();
                 }
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     dialog.dismiss();
                     cb.onReady();
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     dialog.dismiss();
                     new ErrorUtil(activity).showError(e);
                     //cb.onError(e.getMessage() != null ? e.getMessage() : e.toString());
                 });
             }
-        }).start();
+        });
     }
 
     private static Map<String, String[]> fetchManifest(String base) {

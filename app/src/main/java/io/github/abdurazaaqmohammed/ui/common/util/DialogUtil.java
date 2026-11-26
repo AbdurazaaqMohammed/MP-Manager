@@ -20,6 +20,7 @@ import androidx.appcompat.widget.ButtonBarLayout;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class DialogUtil {
     private final Activity context;
@@ -121,7 +122,7 @@ public class DialogUtil {
      * end up with a vertical, scroll-requiring button bar.
      */
     public void styleAlertDialog(AlertDialog ad) {
-        context.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(context, () -> {
             ad.show();
             keepButtonsHorizontal(ad);
         });

@@ -5,5 +5,10 @@
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="android:windowContentTransitions">true</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.MPManager.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MPManager.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.MPManager.Large</item>
     </style>
 </resources>

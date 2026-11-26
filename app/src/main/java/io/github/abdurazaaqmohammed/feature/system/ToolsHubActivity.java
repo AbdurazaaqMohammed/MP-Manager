@@ -19,7 +19,6 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.widget.PopupMenu;
 
 import androidx.annotation.NonNull;
@@ -68,6 +67,7 @@ import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ToolsHubActivity extends BaseActivity {
     private RecyclerView grid;
@@ -174,14 +174,14 @@ public class ToolsHubActivity extends BaseActivity {
     }
 
     private void refreshCatalog() {
-        Toast.makeText(this, getString(R.string.tools_hub_refreshing), Toast.LENGTH_SHORT).show();
-        PackCatalog.refreshAsync(this, fresh -> runOnUiThread(() -> {
+        Extensions.showMessage(this, getString(R.string.tools_hub_refreshing));
+        PackCatalog.refreshAsync(this, fresh -> AppExecutors.runOnUiIfAlive(ToolsHubActivity.this, () -> {
             if (isFinishing() || isDestroyed()) return;
             if (fresh != null && !fresh.isEmpty()) {
                 catalog = PackCatalog.load(this);
-                Toast.makeText(this, getString(R.string.tools_hub_updated), Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, getString(R.string.tools_hub_updated));
             } else {
-                Toast.makeText(this, getString(R.string.tools_hub_refresh_failed), Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, getString(R.string.tools_hub_refresh_failed));
             }
             rebuildPacks();
         }));
@@ -373,7 +373,7 @@ public class ToolsHubActivity extends BaseActivity {
             return;
         }
         if (!PluginHost.isTrusted(this, ext.packageName)) {
-            Toast.makeText(this, R.string.plugin_events_trust_first, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, R.string.plugin_events_trust_first);
             return;
         }
         String digest = PluginHost.certDigest(this, ext.packageName);
@@ -569,20 +569,20 @@ public class ToolsHubActivity extends BaseActivity {
             if (files == null || files.length == 0 || files[0] == null) return;
             File picked = new File(files[0]);
             if (!picked.getName().toLowerCase().endsWith(".apk")) {
-                Toast.makeText(this, getString(R.string.tools_hub_not_apk), Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(this, getString(R.string.tools_hub_not_apk));
                 return;
             }
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 String error = PackManager.installFromFile(this, pack, picked);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ToolsHubActivity.this, () -> {
                     if (error == null) {
-                        Toast.makeText(this, getString(R.string.tools_hub_installed_toast, pack.title), Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, getString(R.string.tools_hub_installed_toast, pack.title));
                         rebuildPacks();
                     } else {
-                        Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                        Extensions.showMessage(this, error);
                     }
                 });
-            }).start();
+            });
         });
         picker.show();
     }

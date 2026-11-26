@@ -169,14 +169,27 @@ public class CustomAutoComplete extends EmptyLanguage {
 		if (mIndentationRules == null || mIndentationRules.increaseIndentPattern == null) {
 			return 0;
 		}
-		return line.matches(mIndentationRules.increaseIndentPattern.pattern()) ? mEditor.getTabWidth() : 0;
+		return mIndentationRules.increaseIndentPattern.matchesPartially(line) ? mEditor.getTabWidth() : 0;
 	}
 	
 	private final NewlineHandler[] mNewlineHandlers = new NewlineHandler[]{new EndwiseNewlineHandler()};
 	
 	@Override
 	public NewlineHandler[] getNewlineHandlers() {
+		if (mLanguage != null) {
+			return mLanguage.getNewlineHandlers();
+		}
 		return mNewlineHandlers;
+	}
+
+	@Override
+	public io.github.rosemoe.sora.lang.format.Formatter getFormatter() {
+		return io.github.abdurazaaqmohammed.feature.editor.StructuredCodeFormatter.forSmali();
+	}
+
+	/** Exposes the underlying language (e.g. {@link TextMateLanguage}) for shared editor preferences. */
+	public Language getWrappedLanguage() {
+		return mLanguage;
 	}
 	
 	@Override

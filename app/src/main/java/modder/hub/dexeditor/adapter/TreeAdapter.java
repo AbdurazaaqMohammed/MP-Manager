@@ -74,6 +74,7 @@ import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.model.TreeNode;
@@ -96,7 +97,6 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     private final Context context;
     private final float density;
 
-    private GradientDrawable folderDrawable;
     private GradientDrawable classDrawable;
 
     // UI state flags
@@ -135,11 +135,6 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         this.defaultTextColor = resolveAttrColor(android.R.attr.textColorPrimary, 0xFF000000);
         this.openedTextColorResolved = resolveAttrColor(com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888);
 
-        if (folderDrawable == null) {
-            folderDrawable = new GradientDrawable();
-            folderDrawable.setCornerRadius(5 * density); // Minimal radius for folder (Standard)
-            folderDrawable.setColor(resolveAttrColor(com.google.android.material.R.attr.colorSurfaceContainerHighest, 0xFF252525));
-        }
         if (classDrawable == null) {
             classDrawable = new GradientDrawable();
             classDrawable.setCornerRadius(100 * density); // Fully circular for Class
@@ -369,13 +364,19 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                 if (holder.iconBackground.getVisibility() != View.VISIBLE) {
                     holder.iconBackground.setVisibility(View.VISIBLE);
                 }
-                holder.icon.setImageResource(R.drawable.ic_folder_mt);
+                ViewGroup.LayoutParams iconLp = holder.icon.getLayoutParams();
+                if (iconLp.width != ViewGroup.LayoutParams.MATCH_PARENT) {
+                    iconLp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                    iconLp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                    holder.icon.setLayoutParams(iconLp);
+                }
+                holder.icon.setImageDrawable(FileIconSpec.FOLDER.drawable(context));
                 if (holder.lastBackgroundType != TYPE_DIRECTORY) {
-                    holder.iconBackground.setBackground(folderDrawable);
+                    holder.iconBackground.setBackground(null);
                     holder.lastBackgroundType = TYPE_DIRECTORY;
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    holder.iconBackground.setElevation(5);
+                    holder.iconBackground.setElevation(0f);
                 }
                 break;
             case TYPE_SNIPPET:

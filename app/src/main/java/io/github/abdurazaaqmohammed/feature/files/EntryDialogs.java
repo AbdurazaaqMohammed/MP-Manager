@@ -71,6 +71,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Rename/delete/compress entry dialogs extracted from MainFilesArrayAdapter.
@@ -240,18 +241,20 @@ public class EntryDialogs {
             if (ad.getWindow() != null) ad.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
         } catch (Exception ignored) {}
         dialogUtil.styleAlertDialog(ad);
-        ad.getButton(AlertDialog.BUTTON_NEUTRAL)
-                .setOnClickListener(v6 -> {
-                    int selectionStart = renameInput.getSelectionStart();
-                    int selectionEnd = renameInput.getSelectionEnd();
-                    if (selectionStart != selectionEnd) {
-                        renameInput.getText().delete(selectionStart, selectionEnd);
-                    }
-                    CharSequence text = ((ClipboardManager) context
-                            .getSystemService(Context.CLIPBOARD_SERVICE)).getText();
-                    if (!TextUtils.isEmpty(text))
-                        renameInput.getText().insert(selectionStart, text);
-                });
+        android.widget.Button pasteBtn = ad.getButton(AlertDialog.BUTTON_NEUTRAL);
+        if (pasteBtn != null) {
+            pasteBtn.setOnClickListener(v6 -> {
+                int selectionStart = renameInput.getSelectionStart();
+                int selectionEnd = renameInput.getSelectionEnd();
+                if (selectionStart != selectionEnd) {
+                    renameInput.getText().delete(selectionStart, selectionEnd);
+                }
+                ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                CharSequence text = cm == null ? null : cm.getText();
+                if (!TextUtils.isEmpty(text))
+                    renameInput.getText().insert(selectionStart, text);
+            });
+        }
     }
 
     /**
@@ -350,7 +353,7 @@ public class EntryDialogs {
             final boolean targetInsideBin = isTargetInsideBin;
             Runnable doDelete = () -> {
                 pm.show();
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     try {
                         if (isInZip) {
                             if (UiPrefs.genBackup(context)) FileUtils.backupOnce(zipFile);
@@ -367,6 +370,8 @@ public class EntryDialogs {
                             toBin = recycleCb != null && recycleCb.isChecked();
                             RecycleBin.setLastChoice(context, toBin);
                         }
+                        long binStartMs = System.currentTimeMillis() - 1000L;
+                        List<String> binnedOrigins = new ArrayList<>();
                         if (!isInZip) {
                             List<File> selectedFiles = new ArrayList<>();
                             if (multi) {
@@ -375,6 +380,9 @@ public class EntryDialogs {
                                 }
                             } else if (file != null) {
                                 selectedFiles.add(file);
+                            }
+                            if (toBin) {
+                                for (File sf : selectedFiles) binnedOrigins.add(sf.getAbsolutePath());
                             }
                             deletePlainFiles(pm, selectedFiles, toBin, useElevatedForDelete, filesToDisplay);
                         } else if (multi) {
@@ -405,7 +413,15 @@ public class EntryDialogs {
                             context.handler.post(state::clearSelection);
                         }
                         pm.dismiss();
-                        if (toBin) {
+                        if (toBin && !binnedOrigins.isEmpty()) {
+                            context.handler.post(() -> Extensions.showMessageWithAction(
+                                    context, R.string.moved_to_recycle_bin, R.string.undo, () ->
+                                            AppExecutors.io().execute(() -> {
+                                                if (RecycleBin.restoreByOrigins(context, binnedOrigins, binStartMs) > 0) {
+                                                    context.handler.post(() -> context.refreshPaneAfterChange(pane1, null));
+                                                }
+                                            })));
+                        } else if (toBin) {
                             context.handler.post(() ->
                                     Extensions.showMessage(context, R.string.moved_to_recycle_bin));
                         }
@@ -420,7 +436,7 @@ public class EntryDialogs {
                         });
                         if (!TransferCancelledException.isCancellation(e)) new ErrorUtil(context).showError(e);
                     }
-                }).start();
+                });
             };
             Runnable checkAndRun = () -> {
                 boolean inKeyDir = false;
@@ -596,7 +612,7 @@ public class EntryDialogs {
         }
         if (targets.isEmpty()) return;
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean applyToAll = false;
             int rememberedAction = -1;
             boolean anyRenamed = false;
@@ -679,7 +695,7 @@ public class EntryDialogs {
                     if (highlight != null) context.flashPaneItem(pane1, highlight);
                 });
             }
-        }).start();
+        });
     }
 
     private static String getDuplicateRestoreName(Context context, String fileName, File destinationFolder, boolean useElevated) {
@@ -781,7 +797,7 @@ public class EntryDialogs {
             ad.dismiss();
             // The conflict-checked rename runs off the UI thread like the
             // rest of the restore code.
-            new Thread(() -> restoreSingleBackup(context, dialogUtil, pane1, file, new File(parent, name))).start();
+            AppExecutors.io().execute(() -> restoreSingleBackup(context, dialogUtil, pane1, file, new File(parent, name)));
         }));
     }
 
@@ -882,7 +898,7 @@ public class EntryDialogs {
         target.setText(base + "\n" + context.rss.getString(R.string.delete_size_calc));
         TransferControl scanControl = new TransferControl();
         shown.setOnDismissListener(d -> scanControl.cancel());
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 long bytes = 0;
                 long items = 0;
@@ -910,7 +926,7 @@ public class EntryDialogs {
                     try { target.setText(base + "\n" + info); } catch (Exception ignored) {}
                 });
             } catch (TransferCancelledException ignored) {}
-        }, "delete-confirmation-stats").start();
+        });
     }
 
     public void showCompressDialog(File file, String fileName, boolean multi) {
@@ -1002,7 +1018,7 @@ public class EntryDialogs {
         pm.setControllable(true);
         pm.show();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
 
                 List<File> sources = new ArrayList<>();
                 if (multi) {
@@ -1185,6 +1201,6 @@ public class EntryDialogs {
                         if (finalStageTmp != null) Util.deleteDir(finalStageTmp);
                     }
                 }
-        }).start();
+        });
     }
 }

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Dialog for exporting strings from an APK's strings.xml for translation.
@@ -123,12 +124,12 @@ public class TranslationExportDialog {
 
     /** Performs the actual export in a background thread. */
     private void performExport(File outputDir, String format) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 TranslationExporter.ExportResult result = TranslationExporter.exportStrings(
                         activity, selectedApkFile, format.toLowerCase(), outputDir);
 
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (result.success) {
                         Toast.makeText(activity,
                                 activity.getString(R.string.exported_x,
@@ -140,9 +141,9 @@ public class TranslationExportDialog {
                     }
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() -> new ErrorUtil(activity).showError(e));
+                AppExecutors.runOnUiIfAlive(activity, () -> new ErrorUtil(activity).showError(e));
             }
-        }).start();
+        });
     }
 
     /**
@@ -151,13 +152,13 @@ public class TranslationExportDialog {
     public void showPreviewDialog(File apkFile) {
         this.selectedApkFile = apkFile;
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<TranslationExporter.StringEntry> entries =
                         extractStringsPreview(apkFile);
                 this.entries = entries.toArray(new TranslationExporter.StringEntry[0]);
 
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (this.entries == null || this.entries.length == 0) {
                         new MaterialAlertDialogBuilder(activity)
                                 .setTitle(R.string.export_strings)
@@ -195,10 +196,10 @@ public class TranslationExportDialog {
                             .show();
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() ->
+                AppExecutors.runOnUiIfAlive(activity, () ->
                         new ErrorUtil(activity).showError(e));
             }
-        }).start();
+        });
     }
 
     private List<TranslationExporter.StringEntry> extractStringsPreview(File apkFile) throws Exception {

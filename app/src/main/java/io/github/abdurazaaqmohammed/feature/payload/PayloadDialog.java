@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.boot.BootInspectManager;
@@ -36,6 +37,7 @@ import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Material 3 interactive dialog for inspecting and extracting Android OTA payload.bin files.
@@ -51,20 +53,20 @@ public final class PayloadDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.extracting));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 PayloadParser.PayloadInfo info = PayloadParser.parse(payloadFile);
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     displayDialog(context, payloadFile, info, pane1);
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Failed to parse payload: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void displayDialog(MainActivity context, File payloadFile,
@@ -128,8 +130,8 @@ public final class PayloadDialog {
                 LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconSize, iconSize);
                 iconLp.rightMargin = Extensions.dp2px(context, 10);
                 iconView.setLayoutParams(iconLp);
-                iconView.setImageResource(R.drawable.ic_disk_drive_24px);
-                iconView.setColorFilter(0xFF455A64);
+                iconView.setColorFilter(null);
+                iconView.setImageDrawable(FileIconSpec.DISK.drawable(context));
                 itemLayout.addView(iconView);
 
                 LinearLayout textContainer = new LinearLayout(context);
@@ -257,10 +259,10 @@ public final class PayloadDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.payload_extracting, entry.getFileName()));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File extracted = PayloadExtractor.extractPartition(payloadFile, info, entry, outputDir, pm);
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, context.getString(R.string.payload_extract_success, extracted.getName()));
                     context.reloadCurrentFolder();
@@ -269,12 +271,12 @@ public final class PayloadDialog {
                     }
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extraction failed: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void extractAllPartitions(MainActivity context, File payloadFile,
@@ -289,7 +291,7 @@ public final class PayloadDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Extracting all partitions…");
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 outputDir.mkdirs();
                 int total = info.partitions.size();
@@ -298,21 +300,21 @@ public final class PayloadDialog {
                     PayloadEntry entry = info.partitions.get(i);
                     final String name = entry.getFileName();
                     final int idx = i + 1;
-                    context.runOnUiThread(() -> pm.setText("Extracting [" + idx + "/" + total + "] " + name + "…"));
+                    AppExecutors.runOnUiIfAlive(context, () -> pm.setText("Extracting [" + idx + "/" + total + "] " + name + "…"));
                     PayloadExtractor.extractPartition(payloadFile, info, entry, outputDir, pm);
                 }
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, context.getString(R.string.payload_extract_all_success, total));
                     context.reloadCurrentFolder();
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extraction error: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void showPayloadInfo(MainActivity context, File payloadFile,

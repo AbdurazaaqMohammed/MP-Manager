@@ -78,6 +78,7 @@ import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 import io.github.abdurazaaqmohammed.util.io.ZipTransferControl;
 import io.github.abdurazaaqmohammed.privilege.api.FileOpsSession.CopyOp;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class FileOperationsHelper {
 
@@ -178,7 +179,7 @@ public class FileOperationsHelper {
 
     private void runWithProgress(String text, IoOperation op) {
         showActiveProgress(text, 0);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 op.run();
             } catch (Exception e) {
@@ -189,7 +190,7 @@ public class FileOperationsHelper {
                 //activeProgress = null;
                 finishActiveProgress();
             }
-        }).start();
+        });
     }
 
     private void runWithProgress(String text, List<?> items, IoOperation op) {
@@ -202,7 +203,7 @@ public class FileOperationsHelper {
      */
     private void runWithProgress(String text, List<?> items, int operationRes, IoOperation op) {
         showActiveProgress(text, operationRes);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 // Measuring happens here, not on the UI thread: an elevated tree
                 // needs a shell round trip to count.
@@ -216,7 +217,7 @@ public class FileOperationsHelper {
                 //activeProgress = null;
                 finishActiveProgress();
             }
-        }).start();
+        });
     }
 
     /**
@@ -1540,7 +1541,7 @@ public class FileOperationsHelper {
         if (isApk && autosign[0]) context.handler.post(() ->
                 SignWrapper.requireAuth(context, sw -> {
                     activeProgress.setText(context.rss.getString(R.string.signing, zipFile.getName()));
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             sw.signApk(zipFile);
                             dismissActiveProgress();
@@ -1551,7 +1552,7 @@ public class FileOperationsHelper {
                         }
                         openZipFile(zipFile, currentPath);
                         context.offerOuterUpdate(zipFile, adapter.pane1);
-                    }).start();
+                    });
                 }));
         else {
             openZipFile(zipFile, currentPath);
@@ -1931,7 +1932,7 @@ public class FileOperationsHelper {
             realDestParent.mkdirs();
         }
         File destDir = FileUtils.getUnusedFile(new File(realDestParent, folderName));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             char[] password = null;
             try {
                 // Ask for a password BEFORE showing any progress UI, so
@@ -2020,7 +2021,7 @@ public class FileOperationsHelper {
                     context.handler.post(() -> new ErrorUtil(context).showError(e));
                 }
             }
-        }).start();
+        });
     }
 
     /** Entry count for the extraction progress bar; 1 when the archive cannot be read cheaply. */

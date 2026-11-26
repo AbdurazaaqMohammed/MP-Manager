@@ -57,6 +57,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /** Themed partition browser; destructive operations are always separately confirmed. */
 public final class PartitionDumperDialog {
@@ -88,24 +89,24 @@ public final class PartitionDumperDialog {
     private static void load(AppCompatActivity activity) {
         ProgressManager progress = new ProgressManager(activity, false).show();
         progress.setText(activity.getString(R.string.tools_hub_loading));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<PartitionItem> partitions = PartitionResolver.queryPartitions(activity);
                 String slot = PartitionResolver.getActiveSlot();
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     progress.dismiss();
                     if (!alive(activity)) return;
                     if (partitions.isEmpty()) Extensions.showMessage(activity, R.string.partition_root_required);
                     else browse(activity, partitions, slot);
                 });
             } catch (Exception error) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     progress.dismiss();
                     if (alive(activity)) Extensions.showMessage(activity,
                             activity.getString(R.string.partition_discovery_failed, error.getMessage()));
                 });
             }
-        }, "partition-discovery").start();
+        });
     }
 
     private static LinearLayout column(Context context) {
@@ -315,7 +316,7 @@ public final class PartitionDumperDialog {
     private static void dump(AppCompatActivity activity, List<PartitionItem> items, File directory, String filename) {
         ProgressManager progress = new ProgressManager(activity, true).show();
         progress.setText(activity.getString(R.string.partition_batch_start));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int completed = 0;
             String failure = "";
             for (PartitionItem item : items) {
@@ -346,7 +347,7 @@ public final class PartitionDumperDialog {
                             if (System.currentTimeMillis() - lastUpdate > 250) {
                                 lastUpdate = System.currentTimeMillis();
                                 long bytes = copied;
-                                activity.runOnUiThread(() -> progress.setText(activity.getString(R.string.partition_dumping_progress,
+                                AppExecutors.runOnUiIfAlive(activity, () -> progress.setText(activity.getString(R.string.partition_dumping_progress,
                                         item.rawName, FileSize.getHumanReadableFileSize(bytes),
                                         FileSize.getHumanReadableFileSize(item.sizeBytes), "")));
                             }
@@ -366,7 +367,7 @@ public final class PartitionDumperDialog {
             }
             int count = completed;
             String error = failure;
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 progress.dismiss();
                 if (!alive(activity)) return;
                 if (activity instanceof MainActivity main) main.refreshPane(true);
@@ -375,7 +376,7 @@ public final class PartitionDumperDialog {
                                 + (TextUtils.isEmpty(error) ? "" : "\n\n" + error))
                         .setPositiveButton(android.R.string.ok, null).show();
             });
-        }, "partition-backup").start();
+        });
     }
 
     public static void showFlashDialog(AppCompatActivity activity, PartitionItem item) {
@@ -394,7 +395,7 @@ public final class PartitionDumperDialog {
     private static void inspectFlash(AppCompatActivity activity, List<PartitionItem> targets, File image) {
         ProgressManager progress = new ProgressManager(activity, false).show();
         progress.setText(activity.getString(R.string.partition_inspecting));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (!image.isFile() || image.length() == 0) throw new IOException(activity.getString(R.string.partition_flash_empty_file));
                 var identity = SystemImageEngine.identifyImage(image);
@@ -421,7 +422,7 @@ public final class PartitionDumperDialog {
                 if (sparse) message += "\n\n" + activity.getString(R.string.partition_sparse_explanation);
                 if (risk) message += "\n\n" + activity.getString(R.string.partition_compatibility_warning);
                 String review = message;
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     progress.dismiss();
                     if (!alive(activity)) return;
                     LinearLayout content = column(activity);
@@ -443,12 +444,12 @@ public final class PartitionDumperDialog {
                     }
                 });
             } catch (Exception error) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     progress.dismiss();
                     if (alive(activity)) Extensions.showMessage(activity, activity.getString(R.string.partition_flash_failed, error.getMessage()));
                 });
             }
-        }, "partition-inspect").start();
+        });
     }
 
     private static String imageType(Context context, String key) {
@@ -471,7 +472,7 @@ public final class PartitionDumperDialog {
                               boolean sparse, long length, long modified) {
         ProgressManager progress = new ProgressManager(activity, false).show();
         progress.setText(activity.getString(R.string.partition_flash_start));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String error = null;
             int completed = 0;
             try {
@@ -485,7 +486,7 @@ public final class PartitionDumperDialog {
                         try (OutputStream out = new BufferedOutputStream(process.getOutputStream(), 1024 * 1024)) {
                             if (sparse) SystemImageEngine.unsparseToStream(image, out, new SystemImageEngine.ProgressCallback() {
                                 @Override public void onProgress(String message, int percent) {
-                                    activity.runOnUiThread(() -> progress.setProgress(percent, 100));
+                                    AppExecutors.runOnUiIfAlive(activity, () -> progress.setProgress(percent, 100));
                                 }
                                 @Override public void onError(String message) {}
                                 @Override public void onSuccess(File result) {}
@@ -507,7 +508,7 @@ public final class PartitionDumperDialog {
             } catch (Exception failure) { error = failure.getMessage(); }
             String failure = error;
             int count = completed;
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 progress.dismiss();
                 if (!alive(activity)) return;
                 new MaterialAlertDialogBuilder(activity)
@@ -516,7 +517,7 @@ public final class PartitionDumperDialog {
                                 + (failure == null ? "\n\n" + activity.getString(R.string.partition_reboot_message) : "\n\n" + failure))
                         .setPositiveButton(android.R.string.ok, null).show();
             });
-        }, "partition-flash").start();
+        });
     }
 
     private static Process root(String command) throws IOException {
@@ -541,24 +542,24 @@ public final class PartitionDumperDialog {
     private static void unsparse(AppCompatActivity activity, File image) {
         ProgressManager progress = new ProgressManager(activity, false).show();
         progress.setText(activity.getString(R.string.partition_inspecting));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             File output = null;
             try {
                 output = FileUtils.getUnusedFile(new File(image.getParentFile(), image.getName() + "_raw.img"));
                 SystemImageEngine.unsparseToFile(image, output, null);
                 File result = output;
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     progress.dismiss();
                     if (alive(activity)) Extensions.showMessage(activity,
                             activity.getString(R.string.partition_unsparse_success, result.getAbsolutePath(), FileSize.getHumanReadableFileSize(result.length())));
                 });
             } catch (Exception error) {
                 if (output != null) output.delete();
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     progress.dismiss();
                     if (alive(activity)) Extensions.showMessage(activity, activity.getString(R.string.partition_unsparse_failed, error.getMessage()));
                 });
             }
-        }, "partition-unsparse").start();
+        });
     }
 }

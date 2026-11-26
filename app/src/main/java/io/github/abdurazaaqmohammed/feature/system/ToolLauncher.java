@@ -17,7 +17,9 @@ import io.github.abdurazaaqmohammed.feature.system.appops.AppOpsActivity;
 import io.github.abdurazaaqmohammed.feature.system.ocr.ScreenOcrActivity;
 import io.github.abdurazaaqmohammed.feature.system.shell.CommandShellActivity;
 import io.github.abdurazaaqmohammed.mcp.McpServerActivity;
+import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
+import io.github.abdurazaaqmohammed.util.misc.EditorTasks;
 
 /** One launch path for built-in tools, regardless of where the user opens them. */
 public final class ToolLauncher {
@@ -97,7 +99,8 @@ public final class ToolLauncher {
             }
         } else if (destination == ToolsHubActivity.class && !"tools".equals(id)) {
             intent.putExtra(EXTRA_HUB_TOOL, id);
-        } else if (destination == LogcatActivity.class || destination == FridaConsoleActivity.class) {
+        } else if ((destination == LogcatActivity.class || destination == FridaConsoleActivity.class)
+                && (!(context instanceof BaseActivity) || EditorTasks.showEditorTasksInRecents(context))) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
         return intent;

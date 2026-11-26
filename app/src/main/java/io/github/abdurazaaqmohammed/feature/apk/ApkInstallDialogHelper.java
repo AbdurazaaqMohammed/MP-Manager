@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ApkInstallDialogHelper {
 
@@ -108,7 +109,7 @@ public class ApkInstallDialogHelper {
             installPrivilegedOrFallback(apkFiles, appName, firstApk);
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             ApkInstallAnalysis analysis;
             try {
                 analysis = ApkInstallAnalysis.analyze(activity, firstApk);
@@ -116,7 +117,7 @@ public class ApkInstallDialogHelper {
                 analysis = null;
             }
             final ApkInstallAnalysis result = analysis;
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (activity.isFinishing() || activity.isDestroyed()) return;
                 if (result == null || !InstallInfoDialog.shouldShow(activity, result)) {
                     installPrivilegedOrFallback(apkFiles, appName, firstApk);
@@ -125,7 +126,7 @@ public class ApkInstallDialogHelper {
                 InstallInfoDialog.show(activity, new DialogUtil(activity), appName, result,
                         () -> installPrivilegedOrFallback(apkFiles, appName, firstApk));
             });
-        }).start();
+        });
     }
 
     private void installPrivilegedOrFallback(List<File> apkFiles, String appName, File firstApk) {
@@ -141,7 +142,7 @@ public class ApkInstallDialogHelper {
 
                 @Override
                 public void onError(Exception e) {
-                    activity.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         dismissProgress(pm);
                         new ErrorUtil(activity).showError(e);
                     });
@@ -175,7 +176,7 @@ public class ApkInstallDialogHelper {
             finishInstall(fallback, pm, appName, firstApk);
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String recorded = fallback;
             for (int i = 0; i < 20; i++) {
                 String now = PrivilegeManager.Installer.readRecordedInstaller(activity, packageName);
@@ -191,8 +192,8 @@ public class ApkInstallDialogHelper {
                 }
             }
             final String shown = recorded;
-            activity.runOnUiThread(() -> finishInstall(shown, pm, appName, firstApk));
-        }).start();
+            AppExecutors.runOnUiIfAlive(activity, () -> finishInstall(shown, pm, appName, firstApk));
+        });
     }
 
     private void finishInstall(String recorded, ProgressManager pm, String appName, File firstApk) {
@@ -374,7 +375,7 @@ public class ApkInstallDialogHelper {
                 }
             })
             .setNegativeButton(android.R.string.ok, null);
-        activity.runOnUiThread(b::show);
+        AppExecutors.runOnUiIfAlive(activity, b::show);
     }
 
     private CharSequence getAppNameForApk(File apkFile) {

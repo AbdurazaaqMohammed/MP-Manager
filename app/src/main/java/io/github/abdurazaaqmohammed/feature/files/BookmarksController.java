@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.files;
 
 
-import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 import io.github.abdurazaaqmohammed.data.prefs.FolderPins;
 import io.github.abdurazaaqmohammed.ui.common.util.Haptics;
 
@@ -9,7 +8,6 @@ import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -37,13 +35,11 @@ import com.google.android.material.textfield.TextInputEditText;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.BookmarksAdapter;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.common.util.ViewPagers;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.ui.UiFields;
-import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
-
-import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -52,7 +48,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -713,19 +708,9 @@ public class BookmarksController {
                 File file = reorderItems.get(position);
                 String label = bookmarkLabels.get(file.getPath());
                 holder.name.setText(label != null ? label : file.getName());
-                if (file.isFile()) {
-                    String ext = FilenameUtils.getExtension(file.getName()).toLowerCase(Locale.ROOT);
-                    if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) holder.icon.setImageResource(R.drawable.image_24px);
-                    else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) holder.icon.setImageResource(R.drawable.music_24px);
-                    else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) holder.icon.setImageResource(R.drawable.video_24px);
-                    else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) holder.icon.setImageResource(R.drawable.baseline_folder_zip_24);
-                    else holder.icon.setImageResource(R.drawable.baseline_insert_drive_file_24);
-                } else {
-                    holder.icon.setImageResource(R.drawable.folder_24px);
-                }
-                TypedValue tv = new TypedValue();
-                activity.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, tv, true);
-                ColorUtil.changeImageColor(holder.icon.getDrawable(), tv.data);
+                holder.icon.setColorFilter(null);
+                holder.icon.setImageDrawable(
+                        FileIconSpec.forPath(file.getPath(), !file.isFile(), activity.theme).drawable(activity));
                 holder.dragHandle.setVisibility(View.VISIBLE);
             }
 

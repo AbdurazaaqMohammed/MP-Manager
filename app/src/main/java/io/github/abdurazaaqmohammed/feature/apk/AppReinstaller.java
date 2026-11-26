@@ -22,6 +22,7 @@ import java.util.UUID;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.PathGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Uninstalls a package so an APK signed with a different key can take its
@@ -222,7 +223,7 @@ public final class AppReinstaller {
      * @param onDone runs on the main thread once the package is gone.
      */
     public static void uninstall(Activity activity, String packageName, Runnable onDone) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             boolean done = false;
             try {
                 if (PrivilegeManager.Root.isRootAvailable(activity)) {
@@ -264,14 +265,14 @@ public final class AppReinstaller {
                 }
             }
             final boolean removed = done;
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (removed) {
                     if (onDone != null) onDone.run();
                 } else {
                     uninstallViaSystem(activity, packageName, onDone);
                 }
             });
-        }).start();
+        });
     }
 
     /** Hands the uninstall to the system dialog; {@code onDone} runs if the user confirms. */
@@ -284,7 +285,7 @@ public final class AppReinstaller {
             // There is no reliable result for ACTION_DELETE, so re-check shortly
             // after the dialog closes rather than guessing.
             if (onDone == null) return;
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 for (int i = 0; i < 40; i++) {
                     try {
                         Thread.sleep(500);
@@ -293,12 +294,12 @@ public final class AppReinstaller {
                         return;
                     }
                     boolean stillThere = ApkInfoUtil.isInstalled(activity, packageName);
-                    activity.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(activity, () -> {
                         if (!stillThere && onDone != null) onDone.run();
                     });
                     if (!stillThere) return;
                 }
-            }).start();
+            });
         } catch (Throwable t) {
             Log.e(TAG, "uninstallViaSystem failed", t);
             new ErrorUtil(activity).showError(t);

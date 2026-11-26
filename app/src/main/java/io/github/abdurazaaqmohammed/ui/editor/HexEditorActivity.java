@@ -71,6 +71,7 @@ import io.github.abdurazaaqmohammed.util.hash.BytePatternSearch;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 
 public class HexEditorActivity extends BaseActivity {
@@ -334,6 +335,25 @@ public class HexEditorActivity extends BaseActivity {
             return;
         }
 
+        ParkedHexState parked = takeParkedState(ParkedHexState.class);
+        if (parked != null && parked.originalSize == originalSize) {
+            mods.putAll(parked.mods);
+            structural = parked.structural;
+            size = parked.size;
+            chunks.clear();
+            chunks.addAll(parked.chunks);
+            if (structural) rebuildIndex();
+            undoStack.addAll(parked.undoStack);
+            redoStack.addAll(parked.redoStack);
+            cursorPos = parked.cursorPos;
+            nibbleHigh = parked.nibbleHigh;
+            selStart = parked.selStart;
+            selEnd = parked.selEnd;
+            pendingRootWrite = parked.pendingRootWrite;
+            readOnly = parked.readOnly;
+            viewport.resize(size);
+        }
+
         MaterialToolbar toolbar = findViewById(R.id.hexToolbar);
         toolbar.setTitle(R.string.hex_editor);
         toolbar.setSubtitle(rootOriginalPath != null
@@ -419,10 +439,20 @@ public class HexEditorActivity extends BaseActivity {
 
         updateStatus();
 
-        long initialOffset = getIntent().getLongExtra("offset", -1);
-        if (readOnly && writable) Extensions.showMessage(this, R.string.editor_large_read_only);
-        if (initialOffset >= 0) {
-            recycler.post(() -> setCursor(Math.min(initialOffset, Math.max(0, size - 1)), true));
+        if (parked != null) {
+            adapter.notifyDataSetChanged();
+            long target = Math.min(Math.max(0, parked.cursorPos), Math.max(0, size - 1));
+            boolean restoredNibble = parked.nibbleHigh;
+            recycler.post(() -> {
+                setCursor(target, true);
+                nibbleHigh = restoredNibble;
+            });
+        } else {
+            long initialOffset = getIntent().getLongExtra("offset", -1);
+            if (readOnly && writable) Extensions.showMessage(this, R.string.editor_large_read_only);
+            if (initialOffset >= 0) {
+                recycler.post(() -> setCursor(Math.min(initialOffset, Math.max(0, size - 1)), true));
+            }
         }
     }
 
@@ -1384,11 +1414,11 @@ public class HexEditorActivity extends BaseActivity {
         final ProgressManager pm = new ProgressManager(this, true);
         pm.setText(getString(R.string.search) + "…");
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             long found = BytePatternSearch.find(this::readRange, size, pattern, startPos,
                     forward, () -> pm.isCancelling() || isDestroyed());
             final long f = found;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 pm.dismiss();
                 busy = false;
                 if (pm.isCancelling() || isFinishing() || isDestroyed()) return;
@@ -1399,7 +1429,7 @@ public class HexEditorActivity extends BaseActivity {
                     Extensions.showMessage(this, getString(R.string.hex_not_found));
                 }
             });
-        }).start();
+        });
     }
 
     private void replaceCurrentMatch() {
@@ -1581,7 +1611,7 @@ public class HexEditorActivity extends BaseActivity {
         busy = true;
         ProgressManager pm = new ProgressManager(this, false).show();
         pm.setText(getString(R.string.saving));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
           boolean localCommitted = false;
           try {
             backupForSave();
@@ -1598,7 +1628,7 @@ public class HexEditorActivity extends BaseActivity {
             localCommitted = true;
             if (rootOriginalPath != null) PrivilegeManager.Staging.writeBack(this, file, rootOriginalPath);
             pageCache.clear();
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 busy = false;
                 pm.dismiss();
                 if (isDestroyed()) return;
@@ -1614,7 +1644,7 @@ public class HexEditorActivity extends BaseActivity {
             });
           } catch (Exception error) {
             boolean committed = localCommitted;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 busy = false;
                 pm.dismiss();
                 if (committed && rootOriginalPath != null) {
@@ -1628,7 +1658,7 @@ public class HexEditorActivity extends BaseActivity {
                 if (!isDestroyed()) new ErrorUtil(this).showError(error);
             });
           }
-        }, "hex-save").start();
+        });
     }
 
     /**
@@ -1745,6 +1775,72 @@ public class HexEditorActivity extends BaseActivity {
                 .show();
     }
 
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.hex_editor, getHexMinimizeTitle());
+    }
+
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        return new ParkedHexState(
+                new TreeMap<>(mods),
+                structural,
+                size,
+                originalSize,
+                new ArrayList<>(chunks),
+                new ArrayDeque<>(undoStack),
+                new ArrayDeque<>(redoStack),
+                cursorPos,
+                nibbleHigh,
+                selStart,
+                selEnd,
+                pendingRootWrite,
+                readOnly);
+    }
+
+    private static final class ParkedHexState implements MinimizedEditors.ParkedState {
+        final TreeMap<Long, Integer> mods;
+        final boolean structural;
+        final long size;
+        final long originalSize;
+        final List<Chunk> chunks;
+        final ArrayDeque<EditOp> undoStack;
+        final ArrayDeque<EditOp> redoStack;
+        final long cursorPos;
+        final boolean nibbleHigh;
+        final long selStart;
+        final long selEnd;
+        final boolean pendingRootWrite;
+        final boolean readOnly;
+
+        ParkedHexState(TreeMap<Long, Integer> mods, boolean structural, long size, long originalSize,
+                       List<Chunk> chunks, ArrayDeque<EditOp> undoStack, ArrayDeque<EditOp> redoStack,
+                       long cursorPos, boolean nibbleHigh, long selStart, long selEnd,
+                       boolean pendingRootWrite, boolean readOnly) {
+            this.mods = mods;
+            this.structural = structural;
+            this.size = size;
+            this.originalSize = originalSize;
+            this.chunks = chunks;
+            this.undoStack = undoStack;
+            this.redoStack = redoStack;
+            this.cursorPos = cursorPos;
+            this.nibbleHigh = nibbleHigh;
+            this.selStart = selStart;
+            this.selEnd = selEnd;
+            this.pendingRootWrite = pendingRootWrite;
+            this.readOnly = readOnly;
+        }
+
+        @Override
+        public void discard() {
+            mods.clear();
+            chunks.clear();
+            undoStack.clear();
+            redoStack.clear();
+        }
+    }
+
     private String getHexMinimizeTitle() {
         if (file == null) return null;
         String name = file.getName();
@@ -1854,15 +1950,15 @@ public class HexEditorActivity extends BaseActivity {
         }
         ProgressManager pm = new ProgressManager(this, false).show();
         pm.setText(getString(R.string.hex_copy));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String value = formatBytesAs(data, format);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HexEditorActivity.this, () -> {
                 pm.dismiss();
                 if (isFinishing() || isDestroyed()) return;
                 copyToClipboard(value);
                 Extensions.showMessage(this, getString(R.string.hex_copied_n, data.length));
             });
-        }, "hex-copy").start();
+        });
     }
 
     @Override

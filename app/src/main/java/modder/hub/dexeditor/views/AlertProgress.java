@@ -49,6 +49,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /* 
 Author @developer-krushna
@@ -114,14 +115,14 @@ public class AlertProgress {
     }
 
     public void setProgress(final int value) {
-        activity.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(activity, () -> {
             progress.setVisibility(View.VISIBLE);
             progress.setProgress(value);
         });
     }
 
     public void setMax(final int max) {
-        activity.runOnUiThread(() -> progress.setMax(max));
+        AppExecutors.runOnUiIfAlive(activity, () -> progress.setMax(max));
     }
 
     public boolean isShowing() {
@@ -129,7 +130,7 @@ public class AlertProgress {
     }
 
     public void setTitle(final String title) {
-        activity.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(activity, () -> {
             if (title == null || title.isEmpty()) {
                 textview_title.setVisibility(View.GONE);
             } else {
@@ -140,7 +141,7 @@ public class AlertProgress {
     }
 
     public void setMessage(final String message) {
-        activity.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(activity, () -> {
             if (message == null || message.isEmpty()) {
                 textview_mesage.setVisibility(View.GONE);
             } else {
@@ -152,7 +153,7 @@ public class AlertProgress {
 
     public void setProgress(final int value, final int max) {
 
-        activity.runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(activity, () -> {
             progress.setVisibility(View.VISIBLE);
             progress.setProgress(value);
             progress.setMax(max);
@@ -161,16 +162,16 @@ public class AlertProgress {
 
     public void setIndeterminate(final boolean bool) {
 
-        activity.runOnUiThread(() -> progress.setIndeterminate(bool));
+        AppExecutors.runOnUiIfAlive(activity, () -> progress.setIndeterminate(bool));
 
     }
 
     public void show() {
-        activity.runOnUiThread(() -> alert.show());
+        AppExecutors.runOnUiIfAlive(activity, () -> alert.show());
     }
 
     public void dismiss() {
-        activity.runOnUiThread(() -> alert.dismiss());
+        AppExecutors.runOnUiIfAlive(activity, () -> alert.dismiss());
     }
 
     public void setButton(int whichButton, CharSequence text, DialogInterface.OnClickListener listener) {

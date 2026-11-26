@@ -40,6 +40,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
 import androidx.preference.PreferenceManager;
@@ -51,6 +52,7 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
@@ -61,8 +63,12 @@ import io.github.abdurazaaqmohammed.data.prefs.ExtractorCache;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
-import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -111,6 +117,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class APKExtractorActivity extends BaseActivity {
     private final AppRecyclerViewAdapter[] appAdapter = new AppRecyclerViewAdapter[2];
@@ -458,7 +465,7 @@ public class APKExtractorActivity extends BaseActivity {
         loadingApps = true;
         findViewById(R.id.progressBar).setVisibility(View.VISIBLE);
         if (userAppInfoList.isEmpty() && systemAppInfoList.isEmpty()) paintCachedApps();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
             PackageManager pm = getPackageManager();
             List<PackageInfo> apps = pm.getInstalledPackages(0);
@@ -601,7 +608,7 @@ public class APKExtractorActivity extends BaseActivity {
                 ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshUser)).setRefreshing(false);
                 ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshSystem)).setRefreshing(false);
 
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     try {
                         ExtractorCache.save(APKExtractorActivity.this, false, mode, freshUser);
                         ExtractorCache.save(APKExtractorActivity.this, true, mode, freshSystem);
@@ -612,7 +619,7 @@ public class APKExtractorActivity extends BaseActivity {
                     } catch (Exception e) {
                         new ErrorUtil(APKExtractorActivity.this).showError(e);
                     }
-                }).start();
+                });
             });
             } catch (Exception e) {
                 handler.post(() -> {
@@ -623,7 +630,7 @@ public class APKExtractorActivity extends BaseActivity {
                 });
                 new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
-        }).start();
+        });
     }
 
     private void refreshApps() {
@@ -677,21 +684,21 @@ public class APKExtractorActivity extends BaseActivity {
             }
 
             View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_extract_options, null);
-            ListView gridView = dialogView.findViewById(R.id.extractOptionsGrid);
-            gridView.setAdapter(new ExtractOptionAdapter(this,
-                    displayList.toArray(new String[0]),
-                    iconList.stream().mapToInt(Integer::intValue).toArray()));
+            RecyclerView gridView = dialogView.findViewById(R.id.extractOptionsGrid);
+            gridView.setLayoutManager(new LinearLayoutManager(this));
 
             AlertDialog alertDialog = new MaterialAlertDialogBuilder(this)
                     .setView(dialogView)
                     .setNegativeButton(rss.getString(android.R.string.cancel), (d, w) -> cur.clearSelection())
                     .create();
+            gridView.setAdapter(new ExtractOptionAdapter(this,
+                    displayList.toArray(new String[0]),
+                    iconList.stream().mapToInt(Integer::intValue).toArray(),
+                    which -> {
+                        alertDialog.dismiss();
+                        performAction(idList.get(which), cur);
+                    }));
             styleAlertDialog(alertDialog);
-
-            gridView.setOnItemClickListener((parent2, view2, which, id2) -> {
-                alertDialog.dismiss();
-                performAction(idList.get(which), cur);
-            });
         });
 
         TabLayout tabLayout = findViewById(R.id.tabLayout);
@@ -1008,18 +1015,46 @@ public class APKExtractorActivity extends BaseActivity {
 
                                 AlertDialog dialog = builder.create();
 
-                                ArrayList<String> filtered = new ArrayList<>(labelsList);
-                                ArrayAdapter<String> finalAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, filtered);
+                                RecyclerView lv = dialogView.findViewById(R.id.listView);
+                                lv.setLayoutManager(new LinearLayoutManager(this));
+                                lv.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+                                ListAdapter<String, RecyclerView.ViewHolder> finalAdapter = new ListAdapter<>(
+                                        new DiffUtil.ItemCallback<String>() {
+                                            @Override
+                                            public boolean areItemsTheSame(@NonNull String a, @NonNull String b) {
+                                                return a.equals(b);
+                                            }
 
-                                ListView lv = dialogView.findViewById(R.id.listView);
+                                            @Override
+                                            public boolean areContentsTheSame(@NonNull String a, @NonNull String b) {
+                                                return a.equals(b);
+                                            }
+                                        }) {
+                                    @NonNull
+                                    @Override
+                                    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                                        View v = getLayoutInflater().inflate(android.R.layout.simple_list_item_1, parent, false);
+                                        android.util.TypedValue tv = new android.util.TypedValue();
+                                        if (getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true)) {
+                                            v.setBackgroundResource(tv.resourceId);
+                                        }
+                                        return new RecyclerView.ViewHolder(v) {};
+                                    }
+
+                                    @Override
+                                    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                                        String selected = getItem(position);
+                                        TextView tv = holder.itemView.findViewById(android.R.id.text1);
+                                        tv.setText(selected);
+                                        holder.itemView.setOnClickListener(v -> {
+                                            dialog.dismiss();
+                                            Intent intent = new Intent().setComponent(new ComponentName(packageName, selected)).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                            startActivity(intent);
+                                        });
+                                    }
+                                };
                                 lv.setAdapter(finalAdapter);
-
-                                lv.setOnItemClickListener((parent1, view1, position1, id1) -> {
-                                    dialog.dismiss();
-                                    String selected = filtered.get(position1);
-                                    Intent intent = new Intent().setComponent(new ComponentName(packageName, selected)).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    startActivity(intent);
-                                });
+                                finalAdapter.submitList(new ArrayList<>(labelsList));
 
                                 searchEt.addTextChangedListener(new TextWatcher() {
                                     @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -1027,10 +1062,10 @@ public class APKExtractorActivity extends BaseActivity {
 
                                     @Override public void afterTextChanged(Editable s) {
                                         String q = s.toString().toLowerCase().trim();
-                                        filtered.clear();
+                                        ArrayList<String> filtered = new ArrayList<>();
                                         if (q.isEmpty()) filtered.addAll(labelsList);
                                         else for (String label : labelsList) if (label.toLowerCase().contains(q)) filtered.add(label);
-                                        finalAdapter.notifyDataSetChanged();
+                                        finalAdapter.submitList(filtered);
                                     }
                                 });
 
@@ -1082,7 +1117,7 @@ public class APKExtractorActivity extends BaseActivity {
             Extensions.showMessage(this, getString(R.string.root_not_available));
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 action.run();
                 //runOnUiThread(() -> Extensions.showMessage(this, actionName + " done"));
@@ -1090,7 +1125,7 @@ public class APKExtractorActivity extends BaseActivity {
                 new ErrorUtil(this).showError(e);
                 //runOnUiThread(() -> Extensions.showMessage(this, actionName + " failed: " + e.getMessage()));
             }
-        }).start();
+        });
     }
 
     interface RootRunnable {
@@ -1198,7 +1233,7 @@ public class APKExtractorActivity extends BaseActivity {
         ProgressManager bpm = new ProgressManager(this, true);
         bpm.setText(progressTitle);
         bpm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<String> failed = new ArrayList<>();
             for (AppInfo ai : targets) {
                 try {
@@ -1215,7 +1250,7 @@ public class APKExtractorActivity extends BaseActivity {
                 else Extensions.showMessage(this, getString(R.string.batch_failed_x, failed.size(), TextUtils.join(", ", failed)));
                 refreshApps();
             });
-        }).start();
+        });
     }
 
     private void performAction(int whichAction, AppRecyclerViewAdapter adapter) {
@@ -1236,7 +1271,7 @@ public class APKExtractorActivity extends BaseActivity {
                 share(antisplit, itemsToProcess);
                 break;
             case 2:
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     String thing = "resources.arsc";
                     for (int i = 0, itemsToProcessSize = itemsToProcess.size(); i < itemsToProcessSize; i++) {
                         int integer = itemsToProcess.get(i);
@@ -1254,11 +1289,11 @@ public class APKExtractorActivity extends BaseActivity {
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
-                }).start();
+                });
                 break;
 
             case 3:
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     final String classes = "classes", dex = ".dex";
                     ZipParameters zp = MergeUtil.newPreferredZipParameters(APKExtractorActivity.this);
                     FileHeader fh;
@@ -1283,11 +1318,11 @@ public class APKExtractorActivity extends BaseActivity {
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
-                }).start();
+                });
                 break;
 
             case 4:
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     String am = "AndroidManifest.xml";
                     int itemsToProcessSize = itemsToProcess.size();
                     for (int i = 0; i < itemsToProcessSize; i++) {
@@ -1306,11 +1341,11 @@ public class APKExtractorActivity extends BaseActivity {
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
-                }).start();
+                });
                 break;
 
             case 5:
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     for (int integer : itemsToProcess) {
                         AppInfo ai = adapter.filteredAppInfoList.get(integer);
                         try {
@@ -1325,11 +1360,11 @@ public class APKExtractorActivity extends BaseActivity {
                         }
                     }
                     handler.post(showFinishedDialog(path, pm));
-                }).start();
+                });
                 break;
 
             case 6:
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     APKLogger logger = pm.getLogger();
                     for (int integer : itemsToProcess) {
                         AppInfo ai = adapter.filteredAppInfoList.get(integer);
@@ -1355,11 +1390,11 @@ public class APKExtractorActivity extends BaseActivity {
                         }
                     }
                     handler.post(showFinishedDialog(path, pm));
-                }).start();
+                });
                 break;
 
             case 7:
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     PackageManager pmgr = getPackageManager();
                     for (int integer : itemsToProcess) {
                         AppInfo ai = adapter.filteredAppInfoList.get(integer);
@@ -1378,7 +1413,7 @@ public class APKExtractorActivity extends BaseActivity {
                         }
                     }
                     handler.post(showFinishedDialog(path, pm));
-                }).start();
+                });
                 break;
             case 8:
                 pm.dismiss();
@@ -1493,7 +1528,7 @@ public class APKExtractorActivity extends BaseActivity {
 
         ProgressManager pm = new ProgressManager(this, true).show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File baseApk = new File(ai.filePath);
                 File apkDirectory = baseApk.getParentFile();
@@ -1539,7 +1574,7 @@ public class APKExtractorActivity extends BaseActivity {
                         ProgressManager signPm = new ProgressManager(this, true);
                         signPm.setText(getString(R.string.signing, toSign.getName()));
                         signPm.show();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try {
                                 sw.signApk(toSign);
                                 signPm.dismiss();
@@ -1548,14 +1583,14 @@ public class APKExtractorActivity extends BaseActivity {
                                 signPm.dismiss();
                                 new ErrorUtil(this).showError(e);
                             }
-                        }).start();
+                        });
                     }));
                 } else if (showFinishedDialog) handler.post(showFinishedDialog(finalOutput.getPath(), null));
             } catch (Exception e) {
                 pm.dismiss();
                 new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
-        }).start();
+        });
     }
 
     private void share(boolean antisplit, List<Integer> itemsToProcess) {
@@ -1563,7 +1598,7 @@ public class APKExtractorActivity extends BaseActivity {
         ArrayList<Uri> fileUris = new ArrayList<>();
         ArrayList<File> mergedFiles = new ArrayList<>();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String authority = "io.github.abdurazaaqmohammed.MPManager.provider";
             for(int i : itemsToProcess) try {
                 AppInfo ai = getCurrentAdapter().filteredAppInfoList.get(i);
@@ -1608,7 +1643,7 @@ public class APKExtractorActivity extends BaseActivity {
                 handler.post(() -> SignWrapper.requireAuth(this, sw -> {
                     ProgressManager signPm = new ProgressManager(this, true);
                     signPm.show();
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             for (File f : mergedFiles) {
                                 signPm.setText(getString(R.string.signing, f.getName()));
@@ -1620,11 +1655,11 @@ public class APKExtractorActivity extends BaseActivity {
                             signPm.dismiss();
                             new ErrorUtil(this).showError(e);
                         }
-                    }).start();
+                    });
                 }));
             } else fireMultipleShareIntent(fileUris);
 
-        }).start();
+        });
     }
 
     private void fireMultipleShareIntent(ArrayList<Uri> fileUris) {
@@ -1638,7 +1673,7 @@ public class APKExtractorActivity extends BaseActivity {
     public void share(int pos, boolean antisplit) {
         ProgressManager pm = new ProgressManager(this, true).show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 AppInfo ai = getCurrentAdapter().filteredAppInfoList.get(pos);
                 boolean split = ai.isSplit;
@@ -1688,7 +1723,7 @@ public class APKExtractorActivity extends BaseActivity {
                         ProgressManager signPm = new ProgressManager(this, true);
                         signPm.setText(getString(R.string.signing, toSign.getName()));
                         signPm.show();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try {
                                 sw.signApk(toSign);
                                 signPm.dismiss();
@@ -1697,14 +1732,14 @@ public class APKExtractorActivity extends BaseActivity {
                                 signPm.dismiss();
                                 new ErrorUtil(this).showError(e);
                             }
-                        }).start();
+                        });
                     }));
                 } else fireSingleShareIntent(fileUris, shareMultiple, toShare[0]);
             } catch (Exception e) {
                 pm.dismiss();
                 new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
-        }).start();
+        });
     }
 
     private void fireSingleShareIntent(ArrayList<Uri> fileUris, boolean isMultiple, File single) {
@@ -1724,7 +1759,7 @@ public class APKExtractorActivity extends BaseActivity {
     }
 
     public void styleAlertDialog(AlertDialog ad) {
-        runOnUiThread(ad::show);
+        AppExecutors.runOnUiIfAlive(APKExtractorActivity.this, ad::show);
     }
 
     @Override

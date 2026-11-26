@@ -17,9 +17,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.widget.AdapterView;
 import android.widget.ImageButton;
-import android.widget.ListView;
 import android.widget.PopupMenu;
 
 import androidx.preference.PreferenceManager;
@@ -57,6 +55,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.io.RecycleBin;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.SidebarAdapter;
@@ -89,6 +88,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Sidebar drawer: setup, organize-mode drag & drop, section order,
@@ -100,7 +100,7 @@ public class SidebarController {
 
     private final MainActivity activity;
     private SidebarAdapter sidebarAdapter;
-    private ListView sidebarList;
+    private RecyclerView sidebarList;
     private SwipeRefreshLayout sidebarRefresh;
     private boolean sidebarOrganizeMode;
     private View organizeDragView;
@@ -242,24 +242,16 @@ public class SidebarController {
         // Data intentionally NOT loaded here: ensureSidebarData() fills the
         // adapter on first drawer open (async), keeping cold start free of
         // storage stats and PackageManager queries.
-        sidebarList.setAdapter(sidebarAdapter);
-        sidebarList.setOnItemClickListener((parent, view, position, id) -> {
-            SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(position);
-            if (sidebarOrganizeMode) {
-                if (entry != null && entry.type() != SidebarAdapter.EntryType.HEADER) {
-                    startSidebarDrag(view, entry);
-                }
-                return;
+        sidebarList.setLayoutManager(new LinearLayoutManager(activity));
+        final int gapPx = Math.round(8 * activity.getResources().getDisplayMetrics().density);
+        sidebarList.addItemDecoration(new RecyclerView.ItemDecoration() {
+            @Override
+            public void getItemOffsets(@NonNull android.graphics.Rect outRect, @NonNull View view,
+                    @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+                if (parent.getChildAdapterPosition(view) > 0) outRect.top = gapPx;
             }
-            if (entry != null) openSidebarEntry(entry);
         });
-        sidebarList.setOnItemLongClickListener((parent, view, position, id) -> {
-            if (!sidebarOrganizeMode) return false;
-            SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(position);
-            if (entry == null || entry.type() == SidebarAdapter.EntryType.STORAGE) return false;
-            startSidebarDrag(view, entry);
-            return true;
-        });
+        sidebarList.setAdapter(sidebarAdapter);
         sidebarList.setOnDragListener((v, event) -> handleSidebarDrag(event));
         sidebarRefresh = activity.findViewById(R.id.sidebarRefresh);
         if (sidebarRefresh != null) {
@@ -354,11 +346,10 @@ public class SidebarController {
             organizeDragStarted = false;
             organizeDownX = event.getX();
             organizeDownY = event.getY();
-            int position = sidebarList.pointToPosition((int) event.getX(), (int) event.getY());
+            View child = sidebarList.findChildViewUnder(event.getX(), event.getY());
+            int position = child != null ? sidebarList.getChildAdapterPosition(child) : RecyclerView.NO_POSITION;
             organizeDragEntry = sidebarAdapter.getEntry(position);
-            int childIndex = position - sidebarList.getFirstVisiblePosition();
-            organizeDragView = childIndex >= 0 && childIndex < sidebarList.getChildCount()
-                    ? sidebarList.getChildAt(childIndex) : null;
+            organizeDragView = child;
             organizeDragCard = organizeDragView;
             if (organizeDragEntry != null && organizeDragView != null) {
                 activity.handler.postDelayed(organizeLongPressRunnable, ViewConfiguration.getLongPressTimeout());
@@ -458,7 +449,7 @@ public class SidebarController {
      */
     public void refreshSidebarAsync(List<String> sectionOrder) {
         if (sidebarAdapter == null || !sidebarDataReady) return;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             final SidebarData data;
             try {
                 data = loadSidebarData(sectionOrder);
@@ -476,7 +467,7 @@ public class SidebarController {
                 });
             } catch (Exception ignored) {
             }
-        }, "sidebar-refresh").start();
+        });
     }
 
     /**
@@ -487,7 +478,7 @@ public class SidebarController {
     public void ensureSidebarData() {
         if (sidebarAdapter == null || sidebarDataReady) return;
         sidebarDataReady = true;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 // Warm the plugin caches off-main so the bind below rarely
                 // hits PackageManager on the UI thread.
@@ -518,7 +509,7 @@ public class SidebarController {
                 });
             } catch (Exception ignored) {
             }
-        }, "sidebar-load").start();
+        });
     }
 
     /**
@@ -813,13 +804,14 @@ public class SidebarController {
             String payload = event.getClipData() == null || event.getClipData().getItemCount() == 0
                     ? null : event.getClipData().getItemAt(0).getText().toString();
             SidebarAdapter.SidebarEntry source = sidebarAdapter.findByPayload(payload);
-            int dropPos = sidebarList.pointToPosition((int) event.getX(), (int) event.getY());
-            if (dropPos == AdapterView.INVALID_POSITION) {
-                int y = (int) event.getY();
+            View dropChild = sidebarList.findChildViewUnder(event.getX(), event.getY());
+            int dropPos = dropChild != null ? sidebarList.getChildAdapterPosition(dropChild) : RecyclerView.NO_POSITION;
+            if (dropPos == RecyclerView.NO_POSITION) {
+                float y = event.getY();
                 for (int i = 0; i < sidebarList.getChildCount(); i++) {
                     View child = sidebarList.getChildAt(i);
                     if (y >= child.getTop() && y <= child.getBottom()) {
-                        dropPos = sidebarList.getFirstVisiblePosition() + i;
+                        dropPos = sidebarList.getChildAdapterPosition(child);
                         break;
                     }
                 }
@@ -1064,7 +1056,7 @@ public class SidebarController {
                             pm.setOperation(R.string.op_deleting);
                             pm.setTotal(toDel.size());
                             pm.show();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 for (int i = 0; i < toDel.size(); i++) {
                                     RecycleBin.Entry entry = toDel.get(i);
                                     pm.setFile(entry.displayName());
@@ -1073,7 +1065,7 @@ public class SidebarController {
                                     RecycleBin.deleteEntry(activity, entry);
                                     pm.setProgress(i + 1, toDel.size());
                                 }
-                                activity.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> {
                                     pm.dismiss();
                                     allEntries.clear();
                                     filteredEntries.clear();
@@ -1081,7 +1073,7 @@ public class SidebarController {
                                     sortAndRefresh.run();
                                     Extensions.showMessage(activity, R.string.recycle_bin_emptied);
                                 });
-                            }).start();
+                            });
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
@@ -1101,7 +1093,7 @@ public class SidebarController {
                             pm.setOperation(R.string.op_deleting);
                             pm.setTotal(toDel.size());
                             pm.show();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 for (int i = 0; i < toDel.size(); i++) {
                                     RecycleBin.Entry entry = toDel.get(i);
                                     pm.setFile(entry.displayName());
@@ -1110,7 +1102,7 @@ public class SidebarController {
                                     RecycleBin.deleteEntry(activity, entry);
                                     pm.setProgress(i + 1, toDel.size());
                                 }
-                                activity.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> {
                                     pm.dismiss();
                                     selectedEntries.clear();
                                     allEntries.clear();
@@ -1119,7 +1111,7 @@ public class SidebarController {
                                     sortAndRefresh.run();
                                     Extensions.showMessage(activity, R.string.item_deleted);
                                 });
-                            }).start();
+                            });
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
@@ -1197,11 +1189,9 @@ public class SidebarController {
                 ssb.setSpan(new ForegroundColorSpan(0xFFFF5252), delStart, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 sub.setText(ssb);
 
-                if (entry.file.isDirectory()) {
-                    icon.setImageResource(R.drawable.folder_24px);
-                } else {
-                    icon.setImageResource(R.drawable.baseline_insert_drive_file_24);
-                }
+                icon.setColorFilter(null);
+                icon.setImageDrawable(FileIconSpec.forPath(
+                        entry.displayName(), entry.file.isDirectory(), activity.theme).drawable(activity));
 
                 if (!selectedEntries.isEmpty()) {
                     cb.setVisibility(View.VISIBLE);
@@ -1297,13 +1287,13 @@ public class SidebarController {
                 .setMessage(details.toString())
                 .setNeutralButton(R.string.delete, (d, w) -> {
                     d.dismiss();
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         RecycleBin.deleteEntry(activity, entry);
-                        activity.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(activity, () -> {
                             Extensions.showMessage(activity, R.string.item_deleted);
                             if (onUpdated != null) onUpdated.run();
                         });
-                    }).start();
+                    });
                 })
                 .setPositiveButton(R.string.action_jump, (d, w) -> {
                     d.dismiss();

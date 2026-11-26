@@ -3,9 +3,7 @@ package io.github.abdurazaaqmohammed.ui.main;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 
 import io.github.abdurazaaqmohammed.util.io.SafFile;
-import io.github.abdurazaaqmohammed.util.misc.ColorUtil;
 
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,7 +12,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.res.ResourcesCompat;
 
 import android.text.TextUtils;
 
@@ -22,7 +19,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.feature.files.NavigationHistoryEntry;
 
@@ -66,10 +62,8 @@ public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
         fileDateView.setText(path);
         fileDateView.setContentDescription(context.rss.getString(R.string.filepath));
 
-        fileIconView.setImageDrawable(ResourcesCompat.getDrawable(context.rss,
-                entry.isZip() ? R.drawable.baseline_folder_zip_24 : R.drawable.folder__61764____the_noun_project,
-                context.getTheme()));
-        ColorUtil.changeImageColor(fileIconView.getDrawable(), (context.theme == R.style.Theme_MyApp_Light) ? Color.BLACK : Color.WHITE);
+        fileIconView.setColorFilter(null);
+        fileIconView.setImageDrawable((entry.isZip() ? FileIconSpec.ARCHIVE : FileIconSpec.FOLDER).drawable(context));
         return convertView;
     }
 }

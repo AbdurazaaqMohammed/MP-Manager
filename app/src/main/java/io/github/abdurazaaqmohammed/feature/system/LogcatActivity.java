@@ -57,10 +57,12 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.data.prefs.MinimizedEditors;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Logcat viewer over {@link LogcatService}, which owns the capture so it can
@@ -102,6 +104,11 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
     /** Highest line id already shown, so the snapshot + live batches don't overlap. */
     private long lastSeenId = -1;
     private final Runnable searchRunnable = this::applyFilters;
+
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.sidebar_logcat, getString(modeSubtitle()));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -386,7 +393,7 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
     }
 
     private void saveLogs() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String name = "mpmanager_logcat_"
                     + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()) + ".txt";
             File out = new File(Environment.getExternalStoragePublicDirectory(
@@ -407,7 +414,7 @@ public class LogcatActivity extends BaseActivity implements LogcatReader.Listene
                 handler.post(() -> Extensions.showMessage(this,
                         getString(R.string.logcat_save_failed, e.getMessage())));
             }
-        }, "logcat-save").start();
+        });
     }
 
     private void createHomeShortcut() {

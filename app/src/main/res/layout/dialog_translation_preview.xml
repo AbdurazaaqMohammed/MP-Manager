@@ -24,7 +24,8 @@
             android:layout_height="wrap_content"
             android:textSize="13sp"
             android:fontFamily="monospace"
-            android:background="#F5F5F5"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:background="?attr/colorSurfaceVariant"
             android:padding="8dp"
             android:maxHeight="300dp"/>
 

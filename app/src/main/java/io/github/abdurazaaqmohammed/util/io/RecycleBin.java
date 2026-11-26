@@ -375,6 +375,20 @@ public final class RecycleBin {
         return null;
     }
 
+    /** Restores newly binned files matching their original paths and batch timestamp. */
+    public static int restoreByOrigins(Context context, java.util.Collection<String> originPaths, long minDeletedAt) {
+        if (originPaths == null || originPaths.isEmpty()) return 0;
+        java.util.Set<String> pending = new java.util.HashSet<>(originPaths);
+        int restored = 0;
+        for (Entry entry : entries(context)) {
+            if (entry.deletedAt >= minDeletedAt && entry.originPath != null && pending.remove(entry.originPath)) {
+                if (restoreEntry(context, entry) != null) restored++;
+                if (pending.isEmpty()) break;
+            }
+        }
+        return restored;
+    }
+
     public static boolean renameEntry(Context context, Entry entry, String newName) {
         if (entry == null || entry.file == null || newName == null || newName.trim().isEmpty()) return false;
         File root = entry.file.getParentFile();

@@ -42,6 +42,7 @@ import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.util.archive.ZipCompat;
 
 import net.lingala.zip4j.model.FileHeader;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Interactive UI dialog for inspecting, modding, bypassing SSL pinning,
@@ -58,13 +59,13 @@ public final class FlutterToolsDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Analyzing Flutter app…");
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             FlutterInfo info = FlutterInfo.parseFromApk(apkFile);
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 pm.dismiss();
                 displayApkDialog(context, apkFile, fileName, info);
             });
-        }).start();
+        });
     }
 
     public static void showForLibrary(MainActivity context, File libFile, String fileName) {
@@ -73,13 +74,13 @@ public final class FlutterToolsDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Analyzing library…");
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             FlutterInfo info = FlutterInfo.parseFromLibrary(libFile);
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 pm.dismiss();
                 displayLibraryDialog(context, libFile, fileName, info);
             });
-        }).start();
+        });
     }
 
     private static void displayApkDialog(MainActivity context, File apkFile, String fileName, FlutterInfo info) {
@@ -208,7 +209,7 @@ public final class FlutterToolsDialog {
             ProgressManager pm = new ProgressManager(context, true).show();
             pm.setText(context.getString(R.string.flutter_ssl_unpin));
 
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File outApk = new File(apkFile.getParentFile(), apkFile.getName().replace(".apk", "_ssl_unpinned.apk"));
                     int patched = FlutterSslPatcher.patchApk(apkFile, outApk, pm);
@@ -217,24 +218,24 @@ public final class FlutterToolsDialog {
                         if (sw != null) {
                             sw.signApk(outApk);
                         }
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             pm.dismiss();
                             Extensions.showMessage(context, context.getString(R.string.flutter_ssl_unpin_success, outApk.getName()));
                             context.reloadCurrentFolder();
                         });
                     } else {
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             pm.dismiss();
                             Extensions.showMessage(context, "No libflutter.so could be patched (already patched or unknown version)");
                         });
                     }
                 } catch (Exception e) {
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         pm.dismiss();
                         Extensions.showMessage(context, "Patch failed: " + e.getMessage());
                     });
                 }
-            }).start();
+            });
         });
     }
 
@@ -255,23 +256,23 @@ public final class FlutterToolsDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Extracting strings…");
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 List<DartStringsExtractor.DartStringItem> items = isApk
                         ? DartStringsExtractor.extractFromApk(targetFile, 5)
                         : DartStringsExtractor.extractFromLibrary(targetFile, 5);
 
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     displayStringsList(context, targetFile, items);
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extraction error: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void displayStringsList(MainActivity context, File targetFile, List<DartStringsExtractor.DartStringItem> allItems) {
@@ -396,7 +397,7 @@ public final class FlutterToolsDialog {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.flutter_extract_assets));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 outDir.mkdirs();
                 List<FileHeader> headers = ZipCompat.listHeaders(apkFile);
@@ -415,18 +416,18 @@ public final class FlutterToolsDialog {
                         }
                     }
                 }
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Assets extracted to " + outDir.getName());
                     context.reloadCurrentFolder();
                 });
             } catch (Exception e) {
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     pm.dismiss();
                     Extensions.showMessage(context, "Extract failed: " + e.getMessage());
                 });
             }
-        }).start();
+        });
     }
 
     private static void showFullInfoDialog(MainActivity context, FlutterInfo info) {

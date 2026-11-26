@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Root Jiagu Dumper (tools hub). UI over {@link JiaguDumpEngine}: dump the real
@@ -114,7 +115,7 @@ public final class JiaguDumpDialog {
             logView.setText(logBuf.toString());
             logScroll.post(() -> logScroll.fullScroll(ScrollView.FOCUS_DOWN));
         };
-        JiaguDumpEngine.LogSink sink = line -> activity.runOnUiThread(() -> {
+        JiaguDumpEngine.LogSink sink = line -> AppExecutors.runOnUiIfAlive(activity, () -> {
             logBuf.append(line).append('\n');
             rerender.run();
         });
@@ -143,7 +144,7 @@ public final class JiaguDumpDialog {
             final int waitSec = waitSecTmp;
             final String apkPath = apkInput.getText() == null ? "" : apkInput.getText().toString().trim();
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(false);
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File outDir = JiaguDumpEngine.dump(activity, pkg, waitSec, sink);
                     if (!TextUtils.isEmpty(apkPath)) {
@@ -156,8 +157,8 @@ public final class JiaguDumpDialog {
                             sink.log("Built " + rebuilt.getAbsolutePath());
                             if (PreferenceManager.getDefaultSharedPreferences(activity)
                                     .getBoolean("autosign", true)) {
-                                activity.runOnUiThread(() -> SignWrapper.requireAuth(activity, wrapper -> {
-                                    new Thread(() -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> SignWrapper.requireAuth(activity, wrapper -> {
+                                    AppExecutors.io().execute(() -> {
                                         try {
                                             wrapper.signApk(rebuilt);
                                             sink.log("Signed " + rebuilt.getName());
@@ -165,7 +166,7 @@ public final class JiaguDumpDialog {
                                             sink.log("Signing failed: " + e.getMessage());
                                         }
                                         busy.set(false);
-                                    }, "jiagu-sign").start();
+                                    });
                                 }));
                                 return;
                             }
@@ -175,12 +176,12 @@ public final class JiaguDumpDialog {
                     sink.log("FAILED: " + e.getMessage());
                 }
                 busy.set(false);
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     try {
                         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
                     } catch (Exception ignored) {}
                 });
-            }, "jiagu-dump").start();
+            });
         });
     }
 

@@ -47,6 +47,7 @@ import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import modder.hub.dexeditor.views.TextActionWindow;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ArscTextActivity extends BaseActivity {
 
@@ -58,6 +59,12 @@ public class ArscTextActivity extends BaseActivity {
         String key = UUID.randomUUID().toString();
         sessions.put(key, new Session(data, block, title, highlight));
         return new Intent(context, ArscTextActivity.class).putExtra("arscTextSession", key);
+    }
+
+    public static void discardSession(Intent intent) {
+        if (intent == null) return;
+        String key = intent.getStringExtra("arscTextSession");
+        if (key != null) sessions.remove(key);
     }
 
     private ArscData data;
@@ -215,7 +222,65 @@ public class ArscTextActivity extends BaseActivity {
         });
         final TypeBlock tb = block;
         currentHighlight = highlight;
-        loadBlockText();
+        ParkedArscTextState parked = takeParkedState(ParkedArscTextState.class);
+        if (parked != null && parked.draftText != null) {
+            selHandler.post(() -> {
+                if (isFinishing() || isDestroyed() || fragment == null) return;
+                loadingText = true;
+                try {
+                    fragment.setText(parked.draftText);
+                } catch (Exception ignored) {
+                }
+                loadingText = false;
+                bufferDirty = parked.dirty;
+                applied = parked.applied;
+                ensureMenuSubscribed();
+            });
+        } else {
+            loadBlockText();
+        }
+    }
+
+    @Override
+    protected String getMinimizeTitle() {
+        String baseTitle = toolbar != null && toolbar.getTitle() != null
+                ? toolbar.getTitle().toString() : getString(R.string.arsc_editor);
+        String parentName = null;
+        if (data != null) {
+            if (data.apkFile != null) parentName = data.apkFile.getName();
+            else if (data.arscFile != null) parentName = data.arscFile.getName();
+        }
+        return MinimizedEditors.formatTitle(baseTitle, parentName);
+    }
+
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        String sessionKey = getIntent().getStringExtra("arscTextSession");
+        String draft = null;
+        try {
+            if (fragment != null) draft = fragment.getCode();
+        } catch (Exception ignored) {
+        }
+        return new ParkedArscTextState(sessionKey, draft, bufferDirty, applied);
+    }
+
+    private static final class ParkedArscTextState implements MinimizedEditors.ParkedState {
+        final String sessionKey;
+        final String draftText;
+        final boolean dirty;
+        final boolean applied;
+
+        ParkedArscTextState(String sessionKey, String draftText, boolean dirty, boolean applied) {
+            this.sessionKey = sessionKey;
+            this.draftText = draftText;
+            this.dirty = dirty;
+            this.applied = applied;
+        }
+
+        @Override
+        public void discard() {
+            if (sessionKey != null) sessions.remove(sessionKey);
+        }
     }
 
     private void loadBlockText() {
@@ -223,7 +288,7 @@ public class ArscTextActivity extends BaseActivity {
         final String highlight = currentHighlight;
         final int token = ++loadToken;
         Extensions.showMessage(this, R.string.loading);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String text = ArscData.typeBlockText(tb, ArscData.TEXT_ENTRY_CAP);
             int count = 0;
             try {
@@ -232,7 +297,7 @@ public class ArscTextActivity extends BaseActivity {
             }
             final String loaded = text;
             final int entryCount = count;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(ArscTextActivity.this, () -> {
                 if (token != loadToken || block != tb || fragment == null) return;
                 loadingText = true;
                 try {
@@ -261,7 +326,7 @@ public class ArscTextActivity extends BaseActivity {
                 }
                 Extensions.showMessage(this, entryCount + " entries");
             });
-        }).start();
+        });
     }
 
     private void applyText(Runnable onDone) {
@@ -277,10 +342,10 @@ public class ArscTextActivity extends BaseActivity {
         final TypeBlock tb = block;
         final String content = text;
         Extensions.showMessage(this, "Applying…");
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 ArscData.TextApplyResult r = data.applyTypeBlockText(tb, content);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscTextActivity.this, () -> {
                     if (r.updated + r.created > 0) {
                         applied = true;
                         bufferDirty = false;
@@ -302,9 +367,9 @@ public class ArscTextActivity extends BaseActivity {
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(ArscTextActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     private void finishWithResult() {
@@ -323,15 +388,7 @@ public class ArscTextActivity extends BaseActivity {
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
                 .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
-                .setNeutralButton(R.string.minimize, (d, w) -> {
-                    String baseTitle = toolbar.getTitle() != null ? toolbar.getTitle().toString() : getString(R.string.arsc_editor);
-                    String parentName = null;
-                    if (data != null) {
-                        if (data.apkFile != null) parentName = data.apkFile.getName();
-                        else if (data.arscFile != null) parentName = data.arscFile.getName();
-                    }
-                    MinimizedEditors.minimize(this, MinimizedEditors.formatTitle(baseTitle, parentName));
-                })
+                .setNeutralButton(R.string.minimize, (d, w) -> MinimizedEditors.minimize(this, getMinimizeTitle()))
                 .show();
     }
 
@@ -699,7 +756,7 @@ public class ArscTextActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         dismissIdPopup();
-        if (isFinishing()) sessions.remove(getIntent().getStringExtra("arscTextSession"));
+        if (shouldDiscardStateOnDestroy()) sessions.remove(getIntent().getStringExtra("arscTextSession"));
         try {
             if (fragment != null && fragment.getEditor() != null) fragment.getEditor().release();
         } catch (Exception ignored) {

@@ -41,6 +41,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.MainFilesArrayAdapter;
@@ -66,6 +67,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * File search + find-in-files dialogs extracted from MainActivity.
@@ -341,7 +343,7 @@ public class FileSearchController {
         List<String> matchedNames = new ArrayList<>();
         long[] lastUiUpdate = {0};
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<File> results = FileSearch.searchByName(startDir, finalQuery, subfolders,
                     mCase, regex, textInside, minSize, maxSize,
                     dir -> {
@@ -426,7 +428,7 @@ public class FileSearchController {
                     showSearchResultsDialog(startDir, results, isPane1);
                 }
             });
-        }).start();
+        });
     }
 
     public void showSearchResultsDialog(File startDir, List<File> results, boolean isPane1) {
@@ -598,11 +600,9 @@ public class FileSearchController {
 
                 title.setText(f.getName());
                 sub.setText(f.getParent() != null ? f.getParent() : "");
-                if (f.isDirectory()) {
-                    icon.setImageResource(R.drawable.folder_24px);
-                } else {
-                    icon.setImageResource(R.drawable.ic_link_24);
-                }
+                icon.setColorFilter(null);
+                icon.setImageDrawable(
+                        FileIconSpec.forPath(f.getPath(), f.isDirectory(), activity.theme).drawable(activity));
 
                 row.setOnClickListener(v -> {
                     if (list.getLayoutManager() != null) {
@@ -739,7 +739,7 @@ public class FileSearchController {
         List<String> matchedNames = new ArrayList<>();
         long[] lastUiUpdate = {0};
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<ZipEntryInfo> results = FileSearch.searchZipEntries(zipFile, currentSubPath, query,
                     subfolders, mCase, regex, textInside, minSize, maxSize,
                     new FileSearch.SearchCallback() {
@@ -811,7 +811,7 @@ public class FileSearchController {
                     showZipSearchResultsDialog(zipFile, currentSubPath, results, isPane1);
                 }
             });
-        }).start();
+        });
     }
 
     public void showZipSearchResultsDialog(File zipFile, String currentSubPath, List<ZipEntryInfo> results, boolean isPane1) {
@@ -975,11 +975,9 @@ public class FileSearchController {
 
                 title.setText(entry.getName());
                 sub.setText(entry.getFullPath());
-                if (entry.isDirectory()) {
-                    icon.setImageResource(R.drawable.folder_24px);
-                } else {
-                    icon.setImageResource(R.drawable.ic_link_24);
-                }
+                icon.setColorFilter(null);
+                icon.setImageDrawable(
+                        FileIconSpec.forPath(entry.getName(), entry.isDirectory(), activity.theme).drawable(activity));
 
                 row.setOnClickListener(v -> {
                     if (list.getLayoutManager() != null) {
@@ -1104,7 +1102,7 @@ public class FileSearchController {
         }
         ProgressManager pm = new ProgressManager(activity, true).show();
         pm.setText(activity.rss.getString(R.string.searching));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<ContentHit> hits = FileSearch.findInFiles(startDir, query, subfolders, matchCase, regex,
                     scanned -> {
                         if (scanned % 50 == 0) {
@@ -1119,7 +1117,7 @@ public class FileSearchController {
                 }
                 showContentHitsDialog(hits, query, regex, matchCase);
             });
-        }).start();
+        });
     }
 
     public void showXmlSearchDialog() {
@@ -1181,7 +1179,7 @@ public class FileSearchController {
         }
         ProgressManager pm = new ProgressManager(activity, true).show();
         pm.setText(activity.rss.getString(R.string.searching));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<ContentHit> hits = FileSearch.searchInXmlFiles(searchTarget, query, searchSubfolders, matchCase, regex,
                     scanned -> {
                         if (scanned % 50 == 0) {
@@ -1201,7 +1199,7 @@ public class FileSearchController {
                 lastSearchType = SearchType.XML;
                 showContentHitsDialog(hits, query, regex, matchCase);
             });
-        }).start();
+        });
     }
 
     private static class XmlFileGroup {
@@ -1429,7 +1427,7 @@ public class FileSearchController {
     }
 
     private void openContentHit(ContentHit hit, String query, boolean regex, boolean matchCase) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File target = hit.file();
                 String entryPath = hit.displayPath();
@@ -1517,11 +1515,11 @@ public class FileSearchController {
                         intent.putExtra("axml", true);
                     }
                 }
-                activity.runOnUiThread(() -> activity.startActivityForResult(intent, 757));
+                AppExecutors.runOnUiIfAlive(activity, () -> activity.startActivityForResult(intent, 757));
             } catch (Exception e) {
                 new ErrorUtil(activity).showError(e);
             }
-        }).start();
+        });
     }
 
     private int dp(int value) {

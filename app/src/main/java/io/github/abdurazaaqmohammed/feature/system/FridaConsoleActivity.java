@@ -52,6 +52,7 @@ import io.github.abdurazaaqmohammed.feature.apk.frida.FridaModuleDialog;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Frida console for rooted devices (frida-hook-engine Path C): injects the
@@ -202,7 +203,7 @@ public class FridaConsoleActivity extends BaseActivity {
     }
 
     private void showAppPicker() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<PackageInfo> apps = new ArrayList<>();
             try {
                 PackageManager pm = getPackageManager();
@@ -210,8 +211,8 @@ public class FridaConsoleActivity extends BaseActivity {
             } catch (Exception ignored) {
             }
             List<PackageInfo> fApps = apps;
-            runOnUiThread(() -> displayAppPicker(fApps));
-        }, "frida-apps").start();
+            AppExecutors.runOnUiIfAlive(FridaConsoleActivity.this, () -> displayAppPicker(fApps));
+        });
     }
 
     private void displayAppPicker(List<PackageInfo> loaded) {
@@ -301,11 +302,11 @@ public class FridaConsoleActivity extends BaseActivity {
                     holder.icon.setBackground(icon);
                 } else {
                     holder.icon.setBackgroundResource(android.R.drawable.sym_def_app_icon);
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             Drawable loaded = info.applicationInfo.loadIcon(getPackageManager());
                             icons.put(info.packageName, loaded);
-                            runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(FridaConsoleActivity.this, () -> {
                                 if (holder.pkg != null && holder.pkg.equals(info.packageName)) {
                                     holder.icon.setText(null);
                                     holder.icon.setBackground(loaded);
@@ -313,7 +314,7 @@ public class FridaConsoleActivity extends BaseActivity {
                             });
                         } catch (Exception ignored) {
                         }
-                    }, "icon-" + info.packageName).start();
+                    });
                 }
                 return row;
             }
@@ -450,7 +451,7 @@ public class FridaConsoleActivity extends BaseActivity {
                 .redirectErrorStream(true)
                 .start();
         setRunning(true);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 char[] buf = new char[4096];
@@ -466,11 +467,11 @@ public class FridaConsoleActivity extends BaseActivity {
             } catch (Exception ignored) {
             }
             final int exit = code;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(FridaConsoleActivity.this, () -> {
                 appendConsole("\n[frida-inject exited with code " + exit + "]\n");
                 setRunning(false);
             });
-        }, "frida-console").start();
+        });
     }
 
     /** engine agent (raw code, java bridge included) + our init() call. */
@@ -561,7 +562,7 @@ public class FridaConsoleActivity extends BaseActivity {
     }
 
     private void appendConsole(String text) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(FridaConsoleActivity.this, () -> {
             console.append(text);
             consoleScroll.post(() -> consoleScroll.fullScroll(ScrollView.FOCUS_DOWN));
         });

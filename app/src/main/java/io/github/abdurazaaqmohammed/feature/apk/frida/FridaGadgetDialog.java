@@ -31,6 +31,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.main.UIHelper;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * "Frida Gadget" APK patching dialog (frida-hook-engine Path B): pick the
@@ -48,7 +49,7 @@ public final class FridaGadgetDialog {
 
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText("Analyzing APK…");
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<String> abis = new ArrayList<>();
             List<Il2CppDumperUtil.Target> targets = new ArrayList<>();
             try {
@@ -58,7 +59,7 @@ public final class FridaGadgetDialog {
             }
             List<String> fAbis = abis;
             List<Il2CppDumperUtil.Target> fTargets = targets;
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 pm.dismiss();
                 if (fAbis.isEmpty()) {
                     Extensions.showMessage(context, context.getString(
@@ -67,7 +68,7 @@ public final class FridaGadgetDialog {
                 }
                 displayDialog(context, apkFile, fAbis, fTargets);
             });
-        }).start();
+        });
     }
 
     private static void displayDialog(MainActivity context, File apkFile,
@@ -189,7 +190,7 @@ public final class FridaGadgetDialog {
         Runnable doPatch = () -> FridaGadgetPatcher.ensureBundle(context, () -> {
             ProgressManager pm = new ProgressManager(context, true).show();
             APKLogger logger = pm.getLogger();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File out = FridaGadgetPatcher.patchApk(context, apkFile, abis,
                             targetClass, config, logger);
@@ -198,7 +199,7 @@ public final class FridaGadgetDialog {
                         wrapper[0].signApk(out);
                     }
                     pm.dismiss();
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         Extensions.showMessage(context, context.getString(
                                 R.string.frida_done, out.getName()));
                         context.refreshAllPanes();
@@ -207,7 +208,7 @@ public final class FridaGadgetDialog {
                     pm.dismiss();
                     new ErrorUtil(context).showError(e);
                 }
-            }).start();
+            });
         });
         if (doSign) SignWrapper.requireAuth(context, sw -> {
             wrapper[0] = sw;

@@ -10,9 +10,6 @@ import android.text.TextUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 
@@ -39,47 +36,56 @@ public class RunUtil {
     }
 
     public static void runInBg(Callable<Boolean> callable, Handler handler, Runnable runnable, Activity context) {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<Boolean> future = executor.submit(callable);
-
-        executor.submit(() -> {
+        AppExecutors.io().execute(() -> {
             try {
-                future.get();
-                handler.post(runnable);
+                callable.call();
+                if (!AppExecutors.isActivityAlive(context)) return;
+                if (handler != null) {
+                    handler.post(() -> {
+                        if (AppExecutors.isActivityAlive(context)) runnable.run();
+                    });
+                } else {
+                    AppExecutors.runOnUiIfAlive(context, runnable);
+                }
             } catch (Exception e) {
-                new ErrorUtil(context).showError(e);
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
             }
         });
     }
 
     public void runInBackground(Callable<Boolean> callable) {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<Boolean> future = executor.submit(callable);
-
-        executor.submit(() -> {
+        AppExecutors.io().execute(() -> {
             try {
-                Boolean success = future.get();
-
-                if (success && handler != null && !TextUtils.isEmpty(msg))
-                    handler.post(() -> {
+                Boolean success = callable.call();
+                if (Boolean.TRUE.equals(success) && !TextUtils.isEmpty(msg)) {
+                    Runnable notifyUi = () -> {
+                        if (!AppExecutors.isActivityAlive(context)) return;
                         Extensions.showMessage(context, msg);
-                        if(reloadFolder) context.reloadCurrentFolder();
-                    });
+                        if (reloadFolder) context.reloadCurrentFolder();
+                    };
+                    if (handler != null) handler.post(notifyUi);
+                    else AppExecutors.runOnUiIfAlive(context, notifyUi);
+                }
             } catch (Exception e) {
-                new ErrorUtil(context).showError(e);
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
             }
         });
     }
 
     public void runInBackground(Callable<Boolean> callable, Runnable doAfter) {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<Boolean> future = executor.submit(callable);
-
-        executor.submit(() -> {
+        AppExecutors.io().execute(() -> {
             try {
-                if (future.get() && handler != null) handler.post(doAfter);
+                if (Boolean.TRUE.equals(callable.call()) && doAfter != null) {
+                    if (handler != null) {
+                        handler.post(() -> {
+                            if (AppExecutors.isActivityAlive(context)) doAfter.run();
+                        });
+                    } else {
+                        AppExecutors.runOnUiIfAlive(context, doAfter);
+                    }
+                }
             } catch (Exception e) {
-                new ErrorUtil(context).showError(e);
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
             }
         });
     }

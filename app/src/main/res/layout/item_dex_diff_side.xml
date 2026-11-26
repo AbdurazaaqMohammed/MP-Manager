@@ -31,7 +31,8 @@
     <View
         android:layout_width="1dp"
         android:layout_height="match_parent"
-        android:background="#40808080" />
+        android:alpha="0.5"
+        android:background="?attr/colorOutlineVariant" />
 
     <TextView
         android:id="@+id/side_num_new"

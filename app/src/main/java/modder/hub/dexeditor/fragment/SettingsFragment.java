@@ -43,7 +43,6 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.widget.Toast;
 
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
@@ -68,6 +67,7 @@ import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /*
 Author @developer-krushna
@@ -143,7 +143,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	private boolean validateAndSetApiKey(Preference preference, String apiKey) {
 		apiKey = apiKey.trim();
 		if (apiKey.isEmpty()) {
-			Toast.makeText(getActivity(), "Input key", Toast.LENGTH_SHORT).show();
+			io.github.codehasan.colorpicker.extensions.Extensions.showMessage(getActivity(), "Input key");
 			return false;
 		}
 		preference.setSummary(formatApiKeySummary(apiKey));
@@ -160,23 +160,23 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 			startActivity(new Intent(Intent.ACTION_VIEW, 
 			Uri.parse("https://aistudio.google.com/app/u/0/apikey")));
 		} catch (Exception e) {
-			Toast.makeText(getActivity(), "No browser found", Toast.LENGTH_SHORT).show();
+			io.github.codehasan.colorpicker.extensions.Extensions.showMessage(getActivity(), "No browser found");
 		}
 	}
 	private void refreshGeminiModels() {
 		Context ctx = getActivity();
 		if (ctx == null) return;
 		if (getChatGptApiKey(ctx).trim().isEmpty()) {
-			Toast.makeText(getActivity(), "Set API key first", Toast.LENGTH_SHORT).show();
+			io.github.codehasan.colorpicker.extensions.Extensions.showMessage(getActivity(), "Set API key first");
 			return;
 		}
-		Toast.makeText(getActivity(), "Fetching models", Toast.LENGTH_SHORT).show();
+		io.github.codehasan.colorpicker.extensions.Extensions.showMessage(getActivity(), "Fetching models");
 		fetchGeminiModels(ctx, models -> {
 			Activity a = getActivity();
 			if (a == null) return;
-			a.runOnUiThread(() -> {
+			AppExecutors.runOnUiIfAlive(a, () -> {
 				if (models.isEmpty()) {
-					Toast.makeText(a, "No Gemini models found", Toast.LENGTH_SHORT).show();
+					io.github.codehasan.colorpicker.extensions.Extensions.showMessage(a, "No Gemini models found");
 					return;
 				}
 				ListPreference modelPref = findPreference(KEY_GEMINI_MODEL);
@@ -188,7 +188,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 					if (!models.contains(cur)) modelPref.setValue(models.get(0));
 					updateSummary(modelPref);
 				}
-				Toast.makeText(a, models.size() + " models loaded", Toast.LENGTH_SHORT).show();
+				io.github.codehasan.colorpicker.extensions.Extensions.showMessage(a, models.size() + " models loaded");
 			});
 		});
 	}

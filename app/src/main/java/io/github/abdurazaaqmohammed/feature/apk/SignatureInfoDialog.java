@@ -33,6 +33,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Material "Signature information" sheet for an APK: scheme list, verification
@@ -56,13 +57,13 @@ public final class SignatureInfoDialog {
             return;
         }
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             final ApkSignatureInfo info;
             try {
                 info = ApkSignatureInfo.analyze(apk);
             } catch (Throwable t) {
                 pm.dismiss();
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     View view = errorView(context, context.getString(android.R.string.unknownName));
                     (dialogUtil != null ? dialogUtil : new DialogUtil(context)).getDialogBuilder()
                             .setTitle(R.string.signature_info)
@@ -73,8 +74,8 @@ public final class SignatureInfoDialog {
                 return;
             }
             pm.dismiss();
-            context.runOnUiThread(() -> displayDialog(context, dialogUtil, info));
-        }).start();
+            AppExecutors.runOnUiIfAlive(context, () -> displayDialog(context, dialogUtil, info));
+        });
     }
 
     private static void displayDialog(AppCompatActivity context, DialogUtil dialogUtil, ApkSignatureInfo info) {

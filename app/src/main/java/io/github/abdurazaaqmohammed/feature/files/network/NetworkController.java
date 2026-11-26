@@ -45,6 +45,7 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.SafFile;
 import io.github.abdurazaaqmohammed.util.io.SafFs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public final class NetworkController {
     private final MainActivity activity;
@@ -407,11 +408,11 @@ public final class NetworkController {
         if (connections != null) connections.close();
         workers.shutdownNow();
         // Socket/logoff teardown must not block Android's UI thread.
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             synchronized (clients) {
                 for (RemoteClient client : clients) try { client.close(); } catch (Exception ignored) {}
                 clients.clear();
             }
-        }, "network-close").start();
+        });
     }
 }

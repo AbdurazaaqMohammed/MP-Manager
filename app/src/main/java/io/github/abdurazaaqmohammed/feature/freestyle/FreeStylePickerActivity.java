@@ -22,7 +22,6 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -103,12 +102,12 @@ public class FreeStylePickerActivity extends BaseActivity {
 
         btnNext.setOnClickListener(v -> {
             if (selectedPaths.isEmpty()) {
-                Toast.makeText(this, R.string.select_images, Toast.LENGTH_SHORT).show();
+                io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.select_images);
                 return;
             }
-            Intent intent = new Intent(this, FreeStyleCanvasActivity.class);
-            intent.putStringArrayListExtra("selected_images", new ArrayList<>(selectedPaths));
-            startActivity(intent);
+            Intent result = new Intent(this, FreeStyleCanvasActivity.class);
+            result.putStringArrayListExtra("selected_images", new ArrayList<>(selectedPaths));
+            startActivity(result);
         });
 
         updateSelectionHeader();
@@ -158,7 +157,7 @@ public class FreeStylePickerActivity extends BaseActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 loadDeviceImages();
             } else {
-                Toast.makeText(this, "Permission required to display gallery photos", Toast.LENGTH_SHORT).show();
+                io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, "Permission required to display gallery photos");
                 loadDeviceImages(); // Attempt anyway in case broad access is given
             }
         }

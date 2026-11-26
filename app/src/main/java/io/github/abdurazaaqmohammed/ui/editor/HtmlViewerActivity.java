@@ -41,6 +41,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Built-in HTML preview backed by the system {@link WebView} (no external engine).
@@ -301,7 +302,7 @@ public class HtmlViewerActivity extends BaseActivity {
      * WebView DOM so it works with JavaScript disabled.
      */
     private void showSourceDialog() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String text;
             boolean truncated = false;
             try (InputStream is = FileUtils.getInputStream(file)) {
@@ -320,12 +321,12 @@ public class HtmlViewerActivity extends BaseActivity {
                 }
                 text = new String(bos.toByteArray(), StandardCharsets.UTF_8);
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(HtmlViewerActivity.this, () -> new ErrorUtil(this).showError(e));
                 return;
             }
             if (truncated) text = text + "\n\n[… " + getString(R.string.html_source_truncated) + " …]";
             final String source = text;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(HtmlViewerActivity.this, () -> {
                 TextView tv = new TextView(this);
                 tv.setText(source);
                 tv.setTextIsSelectable(true);
@@ -341,7 +342,7 @@ public class HtmlViewerActivity extends BaseActivity {
                         .setPositiveButton(android.R.string.ok, null)
                         .show();
             });
-        }).start();
+        });
     }
 
     @Override

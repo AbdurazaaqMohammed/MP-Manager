@@ -42,11 +42,10 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <ListView
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/docs_list"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:divider="?android:attr/listDivider" />
+            android:layout_height="match_parent" />
 
         <TextView
             android:id="@+id/docs_empty"

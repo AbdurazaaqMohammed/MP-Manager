@@ -43,6 +43,7 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import java.io.File;
 import java.util.List;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public final class AppDetailsDialog {
 
@@ -104,7 +105,7 @@ public final class AppDetailsDialog {
 
         // Asynchronously load icon if missing
         if (ai.icon == null && ai.packageName != null) {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     PackageManager pm = act.getPackageManager();
                     Drawable d = act.iconCache.getDisk(act, ai.packageName, ai.getVersionCode());
@@ -128,7 +129,7 @@ public final class AppDetailsDialog {
                         });
                     }
                 } catch (Exception ignored) {}
-            }).start();
+            });
         }
 
         addDivider(act, root);
@@ -323,7 +324,7 @@ public final class AppDetailsDialog {
                     }
                 }
                 if (ai.sigType == null && ai.filePath != null) {
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         String sig;
                         try {
                             sig = APKExtractorActivity.resolveSigType(new File(ai.filePath));
@@ -335,7 +336,7 @@ public final class AppDetailsDialog {
                         act.handler.post(() -> {
                             try { sigValue.setText(finalSig); } catch (Exception ignored) {}
                         });
-                    }).start();
+                    });
                 }
                 sigValue.setOnLongClickListener(copy);
                 break;

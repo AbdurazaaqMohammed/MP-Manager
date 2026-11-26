@@ -10,6 +10,7 @@ import io.github.rosemoe.sora.lang.styling.inlayHint.TextInlayHint;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.DirectAccessProps;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * EditorHelper: Shared logic for CodeEditor operations like line manipulation, indentation, etc.
@@ -193,7 +194,7 @@ public class EditorHelper {
         if (text == null) return;
 
         Runnable task = () -> {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     InlayHintsContainer container = new InlayHintsContainer();
                     int lineCount = text.getLineCount();
@@ -226,7 +227,7 @@ public class EditorHelper {
                         pendingScans.remove(editor);
                     }
                 }
-            }).start();
+            });
         };
 
         synchronized (pendingScans) {

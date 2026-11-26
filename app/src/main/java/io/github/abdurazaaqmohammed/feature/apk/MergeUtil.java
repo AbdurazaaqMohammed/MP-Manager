@@ -66,6 +66,7 @@ import java.util.zip.Deflater;
 import io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 public class MergeUtil {
     public static CompressionLevel getPreferredCompressionLevel(Context context) {
         try {
@@ -185,7 +186,7 @@ public class MergeUtil {
     }
 
     public static void showAntisplitDialog(File file, MainActivity context) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<FileHeader> splits = new ArrayList<>();
             try (ZipFile zf = new ZipFile(file)) {
                 for (FileHeader fh : zf.getFileHeaders()) {
@@ -217,7 +218,7 @@ public class MergeUtil {
                     showAntisplitDialogInner(file, context, splits, baseName, null);
                 }
             });
-        }).start();
+        });
     }
 
     private static String findBaseSplit(List<FileHeader> splits) {
@@ -487,7 +488,7 @@ public class MergeUtil {
                                 ProgressManager signPm = new ProgressManager(context, true);
                                 signPm.setText(R.string.signing, outputFile.getName());
                                 signPm.show();
-                                new Thread(() -> {
+                                AppExecutors.io().execute(() -> {
                                     try {
                                         sw.signApk(outputFile);
                                         signPm.dismiss();
@@ -499,7 +500,7 @@ public class MergeUtil {
                                         signPm.dismiss();
                                         new ErrorUtil(context).showError(e);
                                     }
-                                }).start();
+                                });
                             }));
                         } else {
                             context.handler.post(() -> {

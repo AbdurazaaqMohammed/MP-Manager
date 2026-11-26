@@ -35,6 +35,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Pre-install comparison sheet.
@@ -470,7 +471,7 @@ public final class InstallInfoDialog {
             onInstall.run();
             return;
         }
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String backup = null;
             String dataOwner = null;
             if (keepData) {
@@ -487,16 +488,16 @@ public final class InstallInfoDialog {
                         String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                         msg = activity.getString(R.string.install_backup_failed, reason);
                     }
-                    activity.runOnUiThread(() -> new ErrorUtil(activity).showError(new Exception(msg, e)));
+                    AppExecutors.runOnUiIfAlive(activity, () -> new ErrorUtil(activity).showError(new Exception(msg, e)));
                     return;
                 }
             }
             final String archive = backup;
             final String owner = dataOwner;
-            activity.runOnUiThread(() -> AppReinstaller.uninstall(activity, pkg, () -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> AppReinstaller.uninstall(activity, pkg, () -> {
                 onInstall.run();
                 if (archive == null) return;
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     // Give the package manager a moment to finish removing the
                     // old data directory before putting the archive back.
                     try {
@@ -509,13 +510,13 @@ public final class InstallInfoDialog {
                     } catch (Exception e) {
                         String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                         String restoreMsg = activity.getString(R.string.install_restore_failed, reason);
-                        activity.runOnUiThread(() -> new ErrorUtil(activity).showError(new Exception(restoreMsg, e)));
+                        AppExecutors.runOnUiIfAlive(activity, () -> new ErrorUtil(activity).showError(new Exception(restoreMsg, e)));
                     } finally {
                         AppReinstaller.deleteBackup(activity, archive);
                     }
-                }).start();
+                });
             }));
-        }).start();
+        });
     }
 
     private static String shortHash(String full) {

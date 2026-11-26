@@ -39,8 +39,6 @@ import android.annotation.SuppressLint;
 
 import androidx.annotation.NonNull;
 
-import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
-import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.DebugItemType;
 import com.android.tools.smali.dexlib2.HiddenApiRestriction;
 import com.android.tools.smali.dexlib2.Opcodes;
@@ -81,7 +79,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -871,11 +868,7 @@ public class ClassTree {
 
     // This returns the smali code without any informative headers
     public String getPureSmaliFromClassDef(ClassDef classDef) throws Exception {
-        StringWriter stringWriter = new StringWriter(16 * 1024);
-        BaksmaliWriter baksmaliWriter = new BaksmaliWriter(stringWriter);
-        new ClassDefinition(SharedSmaliUtils.OPTIONS, classDef).writeTo(baksmaliWriter);
-        baksmaliWriter.close();
-        return stringWriter.toString();
+        return SharedSmaliUtils.disassembleClass(classDef);
     }
 
     public String findDexFileNameForClass(ClassDef classDef) {

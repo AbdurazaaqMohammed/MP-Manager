@@ -20,7 +20,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -65,6 +64,7 @@ import modder.hub.dexeditor.smali.SharedSmaliUtils;
 import modder.hub.dexeditor.utils.AutoTranslateClient;
 import modder.hub.dexeditor.utils.ClassTree;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Standalone MT-Manager-style DEX translation mode: a two-column
@@ -299,7 +299,7 @@ public class TranslationModeActivity extends BaseActivity {
             return;
         }
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 boolean firstLoad = session.tree() == null;
                 classTree = session.load();
@@ -311,7 +311,7 @@ public class TranslationModeActivity extends BaseActivity {
                 }
                 List<String> strings = classTree.getAllStrings();
                 Collections.sort(strings);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     if (isDestroyed() || session.isClosed()) return;
                     originals.clear();
                     originals.addAll(strings);
@@ -331,12 +331,12 @@ public class TranslationModeActivity extends BaseActivity {
                     }
                 });
             } catch (Throwable e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     pm.dismiss();
                     showError(String.valueOf(e.getMessage()));
                 });
             }
-        }).start();
+        });
     }
 
     private void onStringTapped(String original) {
@@ -411,7 +411,7 @@ public class TranslationModeActivity extends BaseActivity {
         if (!ensureServiceConfigured()) return;
         button.setEnabled(false);
         button.setText(R.string.translating);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 SharedPreferences prefs =
                         getSharedPreferences("translation_prefs", 0);
@@ -423,7 +423,7 @@ public class TranslationModeActivity extends BaseActivity {
                         prefs.getString(PREF_AT_MODEL, ""),
                         language,
                         Collections.singletonList(text));
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     button.setEnabled(true);
                     button.setText(R.string.translate);
                     if (!out.isEmpty()) {
@@ -432,13 +432,13 @@ public class TranslationModeActivity extends BaseActivity {
                     }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     button.setEnabled(true);
                     button.setText(R.string.translate);
                     showError(String.valueOf(e.getMessage()));
                 });
             }
-        }).start();
+        });
     }
 
     private LinearLayout wrap(EditText editText, String hint) {
@@ -641,7 +641,7 @@ public class TranslationModeActivity extends BaseActivity {
                 .setCancelable(false)
                 .show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 int chunkSize = AutoTranslateClient.batchSize(provider);
                 for (int start = 0; start < targets.size(); start += chunkSize) {
@@ -650,7 +650,7 @@ public class TranslationModeActivity extends BaseActivity {
                     List<String> chunk = targets.subList(start, end);
                     final List<String> out = AutoTranslateClient.translate(provider, endpoint,
                             apiKey, model, language, new ArrayList<>(chunk));
-                    runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                         for (int i = 0; i < chunk.size() && i < out.size(); i++) {
                             adapter.setTranslation(chunk.get(i), out.get(i));
                         }
@@ -658,7 +658,7 @@ public class TranslationModeActivity extends BaseActivity {
                     });
                     autoTranslateDone = end;
                     final int doneF = autoTranslateDone;
-                    runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                         if (autoTranslateProgressText != null) {
                             autoTranslateProgressText.setText(
                                     getString(R.string.translation_auto_progress, doneF, autoTranslateTotal));
@@ -666,19 +666,19 @@ public class TranslationModeActivity extends BaseActivity {
                     });
                 }
                 final int done = autoTranslateDone;
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     if (autoTranslateDialog != null) autoTranslateDialog.dismiss();
                     autoTranslateActive = false;
                     toast(getString(R.string.translation_auto_finished, done));
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     if (autoTranslateDialog != null) autoTranslateDialog.dismiss();
                     autoTranslateActive = false;
                     showError(String.valueOf(e.getMessage()));
                 });
             }
-        }).start();
+        });
     }
 
     @Override
@@ -713,7 +713,7 @@ public class TranslationModeActivity extends BaseActivity {
             return;
         }
         ProgressManager pm = new ProgressManager(this, false).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 int dexVersion = classTree.getOpenedDexVersion();
                 List<ClassDef> classes =
@@ -751,12 +751,12 @@ public class TranslationModeActivity extends BaseActivity {
                     }
                     done++;
                     final int fp = done, ft = total;
-                    runOnUiThread(() -> pm.setProgress(fp, ft));
+                    AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> pm.setProgress(fp, ft));
                 }
                 classTree.saveAllDexFiles(new ClassTree.DexSaveProgress() {
                     @Override
                     public void onProgress(int progress, int total1) {
-                        runOnUiThread(() -> pm.setProgress(progress, total1));
+                        AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> pm.setProgress(progress, total1));
                     }
 
                     @Override
@@ -765,22 +765,22 @@ public class TranslationModeActivity extends BaseActivity {
 
                     @Override
                     public void onMessage(String message) {
-                        runOnUiThread(() -> pm.setText(message));
+                        AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> pm.setText(message));
                     }
                 });
                 dirty = false;
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     pm.dismiss();
                     toast(getString(R.string.translation_saved, changed[0]));
                     returnResultAndFinish();
                 });
             } catch (Throwable e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TranslationModeActivity.this, () -> {
                     pm.dismiss();
                     showError(String.valueOf(e.getMessage()));
                 });
             }
-        }).start();
+        });
     }
 
     /** Same result contract as Dex Editor Plus: MainActivity offers the
@@ -1237,16 +1237,16 @@ public class TranslationModeActivity extends BaseActivity {
     }
 
     private void toast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        Extensions.showMessage(this, message);
     }
 
     private void toast(int res) {
-        Toast.makeText(this, res, Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, res);
     }
 
     @SuppressWarnings("SameParameterValue")
     private void showError(String message) {
-        Toast.makeText(this, message == null ? "Error" : message, Toast.LENGTH_LONG).show();
+        Extensions.showMessage(this, message == null ? "Error" : message);
     }
 
     private int themeColor(int attr, int fallback) {

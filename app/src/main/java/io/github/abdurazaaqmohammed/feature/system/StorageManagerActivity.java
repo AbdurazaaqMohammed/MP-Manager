@@ -45,6 +45,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
@@ -79,6 +80,7 @@ import io.github.abdurazaaqmohammed.util.io.StorageUtil;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class StorageManagerActivity extends BaseActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -301,7 +303,7 @@ public class StorageManagerActivity extends BaseActivity {
 
     private void runRootRoundTrip(TextView body) {
         Extensions.showMessage(this, getString(R.string.storage_testing_rw));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             StringBuilder out = new StringBuilder();
             File local = null;
             File back = null;
@@ -358,7 +360,7 @@ public class StorageManagerActivity extends BaseActivity {
                 body.setText(body.getText().toString() + "\n" + extra.trim());
                 Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_roundtrip_done));
             });
-        }).start();
+        });
     }
 
     private void autoClearCaches(boolean selectedOnly) {
@@ -377,13 +379,13 @@ public class StorageManagerActivity extends BaseActivity {
                     .setMessage(elevated ? getString(R.string.storage_autoclear_need_elevated) : getString(R.string.storage_autoclear_need))
                     .setPositiveButton(elevated ? getString(R.string.storage_enable_auto) : getString(R.string.storage_open_settings), (d, w) -> {
                         if (elevated) {
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 boolean ok = PrivilegeManager.Permissions.enableAccessibilityForViaElevated(StorageManagerActivity.this, CacheCleanerService.class.getName());
                                 handler.post(() -> {
                                     Extensions.showMessage(StorageManagerActivity.this, ok ? getString(R.string.storage_service_enabled_again) : getString(R.string.storage_autoenable_failed));
                                     if (!ok) CacheCleaner.openAccessibilitySettings(StorageManagerActivity.this);
                                 });
-                            }).start();
+                            });
                         } else {
                             CacheCleaner.openAccessibilitySettings(StorageManagerActivity.this);
                         }
@@ -429,7 +431,7 @@ public class StorageManagerActivity extends BaseActivity {
                 }
                 Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_cleared_x, cleared, total));
                 List<String> remaining = new ArrayList<>();
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     for (CacheCleaner.QueueItem it : targets) {
                         rootEmptyCacheDirsWithVerify(it.packageName);
                         remaining.add(it.packageName);
@@ -438,7 +440,7 @@ public class StorageManagerActivity extends BaseActivity {
                         loadCaches();
                         refreshVolumes();
                     });
-                }).start();
+                });
             }
         });
         if (!started) {
@@ -491,7 +493,7 @@ public class StorageManagerActivity extends BaseActivity {
     }
 
     private void refreshVolumes() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<StorageUtil.StorageInfo> infos = StorageUtil.getStorageInfos(StorageManagerActivity.this);
             handler.post(() -> {
                 volumeBox.removeAllViews();
@@ -521,7 +523,7 @@ public class StorageManagerActivity extends BaseActivity {
                     volumeBox.addView(card);
                 }
             });
-        }).start();
+        });
     }
 
     private void startScan() {
@@ -533,7 +535,7 @@ public class StorageManagerActivity extends BaseActivity {
         typeBox.removeAllViews();
         scanBar.setIndeterminate(true);
         scanStatus.setText(getString(R.string.storage_scanning));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             Map<String, Long> buckets = new HashMap<>();
             String[] names = new String[]{"Images", "Videos", "Audio", "Documents", "Archives", "APKs", "Other"};
             for (String n : names) buckets.put(n, 0L);
@@ -602,7 +604,7 @@ public class StorageManagerActivity extends BaseActivity {
                 updateScanButtons();
                 refreshVolumes();
             });
-        }).start();
+        });
     }
 
     private boolean isSymlink(File f) {
@@ -848,13 +850,16 @@ public class StorageManagerActivity extends BaseActivity {
                     updateDeleteSelectedBtn();
                 });
                 String absPath = row.file.getAbsolutePath();
+                holder.thumb.setColorFilter(null);
                 if ("Images".equals(row.bucket) || "Videos".equals(row.bucket)) {
                     holder.thumb.setTag(absPath);
                     Bitmap cached = thumbCache.get(absPath);
                     if (cached != null) {
+                        holder.thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
                         holder.thumb.setImageBitmap(cached);
                     } else {
-                        holder.thumb.setImageResource(android.R.drawable.ic_menu_gallery);
+                        holder.thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        holder.thumb.setImageDrawable(FileIconSpec.forPath(absPath, false).drawable(StorageManagerActivity.this));
                         ImageView target = holder.thumb;
                         thumbExecutor.execute(() -> {
                             Bitmap bmp = loadThumb(row.file, row.bucket);
@@ -867,20 +872,16 @@ public class StorageManagerActivity extends BaseActivity {
                             final Bitmap done = bmp;
                             handler.post(() -> {
                                 if (absPath.equals(target.getTag()) && done != null) {
+                                    target.setScaleType(ImageView.ScaleType.CENTER_CROP);
                                     target.setImageBitmap(done);
                                 }
                             });
                         });
                     }
-                } else if ("APKs".equals(row.bucket)) {
-                    holder.thumb.setTag(null);
-                    holder.thumb.setImageResource(io.github.abdurazaaqmohammed.MPManager.R.drawable.apk_document_24px);
-                } else if ("Archives".equals(row.bucket)) {
-                    holder.thumb.setTag(null);
-                    holder.thumb.setImageResource(io.github.abdurazaaqmohammed.MPManager.R.drawable.archive_24px);
                 } else {
                     holder.thumb.setTag(null);
-                    holder.thumb.setImageResource(R.drawable.baseline_insert_drive_file_24);
+                    holder.thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    holder.thumb.setImageDrawable(FileIconSpec.forPath(absPath, false).drawable(StorageManagerActivity.this));
                 }
                 return convertView;
             }
@@ -947,7 +948,7 @@ public class StorageManagerActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.storage_delete_n_files, targets.size()))
                 .setMessage(getString(R.string.storage_will_be_freed, FileSize.getHumanReadableFileSize(total)))
-                .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
+                .setPositiveButton(getString(R.string.delete), (d, w) -> AppExecutors.io().execute(() -> {
                     int ok = 0;
                     for (FileRow row : targets) {
                         if (deleteOneFile(row.file)) ok++;
@@ -960,7 +961,7 @@ public class StorageManagerActivity extends BaseActivity {
                         refreshVolumes();
                         Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_deleted_x, done, targets.size()));
                     });
-                }).start())
+                }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -969,7 +970,7 @@ public class StorageManagerActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.delete))
                 .setMessage(file.getAbsolutePath() + "\n" + FileSize.getHumanReadableFileSize(file.length()))
-                .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
+                .setPositiveButton(getString(R.string.delete), (d, w) -> AppExecutors.io().execute(() -> {
                     final boolean done = deleteOneFile(file);
                     handler.post(() -> {
                         Extensions.showMessage(StorageManagerActivity.this, done ? getString(R.string.storage_deleted) : getString(R.string.storage_delete_failed));
@@ -978,7 +979,7 @@ public class StorageManagerActivity extends BaseActivity {
                             refreshVolumes();
                         }
                     });
-                }).start())
+                }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -1043,7 +1044,7 @@ public class StorageManagerActivity extends BaseActivity {
 
     private void loadCaches() {
         cacheStatus.setText(getString(R.string.storage_loading_caches));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<CacheRow> rows = new ArrayList<>();
             boolean rootReady = PrivilegeManager.Permissions.isRootShellReady(StorageManagerActivity.this);
             Map<String, Long> rootSizes = rootReady ? readCacheSizesViaRoot() : new HashMap<>();
@@ -1093,7 +1094,7 @@ public class StorageManagerActivity extends BaseActivity {
                     cacheStatus.setText(getString(R.string.storage_apps_cache, rows.size(), FileSize.getHumanReadableFileSize(total)));
                 }
             });
-        }).start();
+        });
     }
 
     private Map<String, Long> readCacheSizesViaRoot() {
@@ -1166,7 +1167,7 @@ public class StorageManagerActivity extends BaseActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(selectedOnly ? getString(R.string.storage_clear_sel) : getString(R.string.storage_clear_all_caches))
                 .setMessage(getString(R.string.storage_apps_n, targets.size()))
-                .setPositiveButton(getString(R.string.clear), (d, w) -> new Thread(() -> {
+                .setPositiveButton(getString(R.string.clear), (d, w) -> AppExecutors.io().execute(() -> {
                     int ok = 0;
                     List<String> failures = new ArrayList<>();
                     String firstError = "";
@@ -1240,7 +1241,7 @@ public class StorageManagerActivity extends BaseActivity {
                         loadCaches();
                         refreshVolumes();
                     });
-                }).start())
+                }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }

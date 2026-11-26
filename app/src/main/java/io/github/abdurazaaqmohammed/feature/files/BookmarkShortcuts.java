@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
+import io.github.abdurazaaqmohammed.ui.main.FileIconArt;
 import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 
 /** Shortcut identity, bitmap rendering and explicit navigation are shared by both launcher modes. */
@@ -68,25 +69,34 @@ public final class BookmarkShortcuts {
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        if (withBackground) {
-            paint.setColor(background);
-            canvas.drawRoundRect(new RectF(0, 0, size, size), size * .2f, size * .2f, paint);
-        }
-        int inset = withBackground ? Math.round(size * .2f) : 0;
         if (image != null) {
+            if (withBackground) {
+                paint.setColor(background);
+                canvas.drawRoundRect(new RectF(0, 0, size, size), size * .2f, size * .2f, paint);
+            }
+            int inset = withBackground ? Math.round(size * .2f) : 0;
             int side = Math.min(image.getWidth(), image.getHeight());
             Rect source = new Rect((image.getWidth() - side) / 2, (image.getHeight() - side) / 2,
                     (image.getWidth() + side) / 2, (image.getHeight() + side) / 2);
             if (tintImage) paint.setColorFilter(new PorterDuffColorFilter(foreground, PorterDuff.Mode.SRC_IN));
             canvas.drawBitmap(image, source, new Rect(inset, inset, size - inset, size - inset), paint);
-        } else {
-            Drawable glyph = ContextCompat.getDrawable(context, spec.glyph());
-            if (glyph != null) {
-                glyph = glyph.mutate();
-                glyph.setTint(foreground);
-                glyph.setBounds(inset, inset, size - inset, size - inset);
-                glyph.draw(canvas);
-            }
+            return bitmap;
+        }
+        if (foreground == spec.foreground()) {
+            FileIconArt.drawToCanvas(context, canvas, spec, false, size, withBackground, background);
+            return bitmap;
+        }
+        if (withBackground) {
+            paint.setColor(background);
+            canvas.drawRoundRect(new RectF(0, 0, size, size), size * .2f, size * .2f, paint);
+        }
+        int inset = withBackground ? Math.round(size * .2f) : 0;
+        Drawable glyph = ContextCompat.getDrawable(context, spec.glyph());
+        if (glyph != null) {
+            glyph = glyph.mutate();
+            glyph.setTint(foreground);
+            glyph.setBounds(inset, inset, size - inset, size - inset);
+            glyph.draw(canvas);
         }
         return bitmap;
     }

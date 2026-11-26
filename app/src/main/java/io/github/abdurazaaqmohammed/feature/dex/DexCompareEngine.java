@@ -1,8 +1,6 @@
 package io.github.abdurazaaqmohammed.feature.dex;
 
-import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
-import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.HiddenApiRestriction;
 import com.android.tools.smali.dexlib2.Opcode;
@@ -84,7 +82,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -631,12 +628,7 @@ public final class DexCompareEngine {
     }
 
     private static String toSmali(ClassDef classDef) throws Exception {
-        if (classDef == null) return "";
-        StringWriter stringWriter = new StringWriter(16 * 1024);
-        BaksmaliWriter writer = new BaksmaliWriter(stringWriter);
-        new ClassDefinition(SharedSmaliUtils.OPTIONS, classDef).writeTo(writer);
-        writer.close();
-        return stringWriter.toString();
+        return SharedSmaliUtils.disassembleClass(classDef);
     }
 
     // ==========================================

@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.net.DnsManager;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class PrivateDnsTileService extends TileService {
     public void onStartListening() {
@@ -39,7 +40,7 @@ public class PrivateDnsTileService extends TileService {
     }
 
     private void cycle() {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             DnsManager.DnsProfile applied;
             try {
                 applied = DnsManager.applyNextProfile(this);
@@ -55,7 +56,7 @@ public class PrivateDnsTileService extends TileService {
                 }
                 refresh();
             });
-        }).start();
+        });
     }
 
     private void refresh() {

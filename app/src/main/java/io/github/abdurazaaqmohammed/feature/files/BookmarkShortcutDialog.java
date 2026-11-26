@@ -245,6 +245,8 @@ public final class BookmarkShortcutDialog {
                     image = null;
                     tintImage = false;
                     spec = candidate;
+                    if (!foregroundEdited) foreground = candidate.foreground();
+                    if (!backgroundEdited) background = candidate.background();
                     iconEdited = true;
                     updatePreview();
                     Haptics.perform(v, Haptics.Event.SELECTION);

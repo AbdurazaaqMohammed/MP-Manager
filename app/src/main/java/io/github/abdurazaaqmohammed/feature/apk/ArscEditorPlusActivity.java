@@ -87,6 +87,7 @@ import io.github.abdurazaaqmohammed.feature.translation.TranslationExportDialog;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.editor.FilePickerDialog;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ArscEditorPlusActivity extends BaseActivity {
 
@@ -154,8 +155,25 @@ public class ArscEditorPlusActivity extends BaseActivity {
             finish();
             return;
         }
-        buildShell(new File(path).getName());
-        loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+        String name = new File(path).getName();
+        buildShell(name);
+        ParkedArscPlusState parked = takeParkedState(ParkedArscPlusState.class);
+        if (parked != null && parked.data != null) {
+            data = parked.data;
+            dirty = parked.dirty;
+            batchRemove = parked.batchRemove;
+            savedThisSession = parked.savedThisSession;
+            if (dirty) markDirty();
+            else toolbar.setSubtitle(name);
+            rebuildTree();
+            refreshStrings();
+            historyAdapter.refresh();
+            if (pager != null && parked.selectedTab >= 0) {
+                pager.setCurrentItem(parked.selectedTab, false);
+            }
+        } else {
+            loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+        }
     }
 
     private void buildShell(String fileName) {
@@ -657,7 +675,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
     private void stageStringsReplace(String find, String repl, boolean matchCase, boolean regex, boolean exact) {
         if (data == null) return;
         Extensions.showMessage(this, R.string.matching);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             Map<ResourceEntry, String> staged = new LinkedHashMap<>();
             try {
                 for (ResourceEntry re : data.stringEntries("")) {
@@ -683,12 +701,12 @@ public class ArscEditorPlusActivity extends BaseActivity {
             } catch (Exception ignored) {
             }
             final int n = staged.size();
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                 stringsAdapter.setStaged(staged);
                 updateStringsApply();
                 Extensions.showMessage(this, getString(R.string.staged_tap_apply_changes_to_apply, n));
             });
-        }).start();
+        });
     }
 
     private void showStageDialog(ResourceEntry re) {
@@ -711,7 +729,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         if (data == null || !stringsAdapter.hasStaged()) return;
         final Map<ResourceEntry, String> staged = stringsAdapter.stagedCopy();
         Extensions.showMessage(this, "Applying…");
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int updated = 0;
             int invalid = 0;
             for (Map.Entry<ResourceEntry, String> kv : staged.entrySet()) {
@@ -729,7 +747,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
             }
             final int done = updated;
             final int bad = invalid;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                 stringsAdapter.clearStaged();
                 updateStringsApply();
                 if (done > 0) {
@@ -741,15 +759,15 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 refreshStrings();
                 Extensions.showMessage(this, "Updated " + done + ", invalid " + bad);
             });
-        }).start();
+        });
     }
 
     private void loadAsync(File arsc, File apk, String entryPath) {
         Extensions.showMessage(this, "Loading resources.arsc…");
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 ArscData loaded = ArscData.load(arsc, apk, entryPath);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                     data = loaded;
                     rebuildTree();
                     refreshStrings();
@@ -759,12 +777,12 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                     new ErrorUtil(this).showError(e);
                     finish();
                 });
             }
-        }).start();
+        });
     }
 
     void rebuildTree() {
@@ -787,10 +805,10 @@ public class ArscEditorPlusActivity extends BaseActivity {
             return;
         }
         Extensions.showMessage(this, "Saving…");
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 data.save();
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                     dirty = false;
                     if (data.apkFile != null) savedThisSession = true;
                     toolbar.setSubtitle(data.arscFile.getName());
@@ -801,9 +819,9 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     void finishWithApkResult() {
@@ -876,14 +894,14 @@ public class ArscEditorPlusActivity extends BaseActivity {
 
     private void backupNow() {
         if (data == null) return;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File bak = data.backup();
-                runOnUiThread(() -> Extensions.showMessage(this, "Backup: " + bak.getName()));
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> Extensions.showMessage(this, "Backup: " + bak.getName()));
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     private void confirmExit() {
@@ -900,28 +918,46 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 .show();
     }
 
-    private void minimizeThis() {
-        String name = null;
-        String parent = null;
-        Intent intent = getIntent();
-        if (intent != null) {
-            String apk = intent.getStringExtra("apkPath");
-            if (apk == null) apk = intent.getStringExtra("zipFilePath");
-            if (apk != null && !apk.isEmpty()) parent = new File(apk).getName();
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.arsc_editor_plus,
+                MinimizedEditors.archiveOrFileDetail(getIntent()));
+    }
 
-            name = intent.getStringExtra("zipEntryPath");
-            if (name == null) {
-                String path = intent.getStringExtra("path");
-                if (path != null) {
-                    File f = new File(path);
-                    name = f.getName();
-                    if (parent == null && f.getParentFile() != null) {
-                        parent = f.getParentFile().getName();
-                    }
-                }
-            }
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        if (data == null) return null;
+        return new ParkedArscPlusState(
+                data,
+                dirty,
+                batchRemove,
+                savedThisSession,
+                pager != null ? pager.getCurrentItem() : 0);
+    }
+
+    private static final class ParkedArscPlusState implements MinimizedEditors.ParkedState {
+        final ArscData data;
+        final boolean dirty;
+        final boolean batchRemove;
+        final boolean savedThisSession;
+        final int selectedTab;
+
+        ParkedArscPlusState(ArscData data, boolean dirty, boolean batchRemove,
+                            boolean savedThisSession, int selectedTab) {
+            this.data = data;
+            this.dirty = dirty;
+            this.batchRemove = batchRemove;
+            this.savedThisSession = savedThisSession;
+            this.selectedTab = selectedTab;
         }
-        MinimizedEditors.minimize(this, R.string.arsc_editor_plus, name, parent);
+
+        @Override
+        public void discard() {
+        }
+    }
+
+    private void minimizeThis() {
+        MinimizedEditors.minimize(this, getMinimizeTitle());
     }
 
     @Override
@@ -1243,9 +1279,9 @@ public class ArscEditorPlusActivity extends BaseActivity {
                         Extensions.showMessage(this, R.string.enter_a_name);
                         return;
                     }
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         ResourceEntry created = data.addEntry(pkgName, type, name);
-                        runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                             if (created != null) {
                                 markDirty();
                                 rebuildTree();
@@ -1256,7 +1292,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                                 Extensions.showMessage(this, R.string.add_failed);
                             }
                         });
-                    }).start();
+                    });
                 }).show();
     }
 
@@ -1296,7 +1332,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
 
     private void importZip(File zip, String pkgName, String type) {
         Extensions.showMessage(this, R.string.importing);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File tmp = new File(getCacheDir(), "arsc_import_" + System.currentTimeMillis() + ".arsc");
                 boolean found = false;
@@ -1310,7 +1346,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     }
                 }
                 if (!found) {
-                    runOnUiThread(() -> Extensions.showMessage(this, R.string.no_resources_arsc_in_zip));
+                    AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> Extensions.showMessage(this, R.string.no_resources_arsc_in_zip));
                     return;
                 }
                 int count = data.importFromArsc(tmp, pkgName, type);
@@ -1318,7 +1354,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     tmp.delete();
                 } catch (Exception ignored) {
                 }
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                     if (count > 0) {
                         markDirty();
                         rebuildTree();
@@ -1328,9 +1364,9 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     Extensions.showMessage(this, getString(R.string.imported_x_entries, count));
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     private void batchImport(String pkgName, String type) {
@@ -1348,14 +1384,14 @@ public class ArscEditorPlusActivity extends BaseActivity {
             if (files == null || files.length == 0 || files[0] == null) return;
             File dir = new File(files[0]);
             Extensions.showMessage(this, R.string.exporting);
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     File out = data.exportStringsXml(dir);
-                    runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.exported_x, out.getName())));
+                    AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> Extensions.showMessage(this, getString(R.string.exported_x, out.getName())));
                 } catch (Exception e) {
-                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                    AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> new ErrorUtil(this).showError(e));
                 }
-            }).start();
+            });
         });
         picker.show();
     }
@@ -1386,10 +1422,10 @@ public class ArscEditorPlusActivity extends BaseActivity {
             if (files == null || files.length == 0 || files[0] == null) return;
             File xml = new File(files[0]);
             Extensions.showMessage(this, R.string.importing);
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     int n = data.importStringsXml(xml);
-                    runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                         if (n > 0) {
                             markDirty();
                             rebuildTree();
@@ -1399,9 +1435,9 @@ public class ArscEditorPlusActivity extends BaseActivity {
                         Extensions.showMessage(this,  getString(R.string.imported_x_values, n));
                     });
                 } catch (Exception e) {
-                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                    AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> new ErrorUtil(this).showError(e));
                 }
-            }).start();
+            });
         });
         picker.show();
     }
@@ -1520,17 +1556,17 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     if (base.isEmpty()) base = "arsc_export";
                     final String baseName = base;
                     final List<ResourceEntry> all = new ArrayList<>(entries);
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             data.exportEntries(all, dir, baseName);
-                            runOnUiThread(() -> {
+                            AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                                 exitBatchMode();
                                 Extensions.showMessage(this, getString(R.string.exported_to_X, dir.getPath()));
                             });
                         } catch (Exception e) {
-                            runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                            AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> new ErrorUtil(this).showError(e));
                         }
-                    }).start();
+                    });
                 }).show();
     }
 
@@ -1543,15 +1579,15 @@ public class ArscEditorPlusActivity extends BaseActivity {
         final boolean matchCase = lastMatchCase;
         final boolean regex = lastIsRegex;
         Extensions.showMessage(this, R.string.arsc_searching);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             final String[] SEARCH_TYPES = { "XML", getString(R.string.resource_id), getString(R.string.string), getString(R.string.integer), getString(R.string.color)};
             List<ArscData.SearchHit> hits = data.search(query, type, path, subfolders, matchCase, regex, SEARCH_TYPES);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> {
                 searchAdapter.setHits(hits);
                 updateSearchInfo();
                 Extensions.showMessage(this, getString(R.string.x_results, hits.size()));
             });
-        }).start();
+        });
     }
 
     void openSearchWith(String query, String path) {
@@ -1621,7 +1657,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         final boolean mc = stringsMatchCase;
         final boolean rx = stringsRegex;
         final boolean ex = stringsExact;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<ResourceEntry> list = data.stringEntries("");
             Map<ResourceEntry, String> values = new LinkedHashMap<>();
             for (ResourceEntry re : list) {
@@ -1649,8 +1685,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     return 0;
                 }
             });
-            runOnUiThread(() -> stringsAdapter.setItems(out));
-        }).start();
+            AppExecutors.runOnUiIfAlive(ArscEditorPlusActivity.this, () -> stringsAdapter.setItems(out));
+        });
     }
 
     private int dp(int v) {

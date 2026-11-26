@@ -81,6 +81,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /*
 Author @developer-krushna
@@ -235,7 +236,7 @@ public class AIOverViewActivity extends BaseActivity {
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, IOException e) {
-                    runOnUiThread(new Runnable() {
+                    AppExecutors.runOnUiIfAlive(AIOverViewActivity.this, new Runnable() {
                         @SuppressLint("SetTextI18n")
                         @Override
                         public void run() {
@@ -248,7 +249,7 @@ public class AIOverViewActivity extends BaseActivity {
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                     String responseBody = response.body().string();
-                    runOnUiThread(new Runnable() {
+                    AppExecutors.runOnUiIfAlive(AIOverViewActivity.this, new Runnable() {
                         @SuppressLint("SetTextI18n")
                         @Override
                         public void run() {

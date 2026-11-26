@@ -20,6 +20,7 @@ import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Manages Boot Image virtual archives in cache.
@@ -136,7 +137,7 @@ public class BootInspectManager {
         pm.setText(context.getString(R.string.extracting));
         pm.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String hash = hashPath(imageFile.getAbsolutePath());
                 File cacheDir = new File(context.getCacheDir(), "boot_inspect_" + hash);
@@ -162,7 +163,7 @@ public class BootInspectManager {
                     new ErrorUtil(context).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     public static void checkAndRepackIfNeeded(MainActivity context, File folder, boolean pane1) {
@@ -194,7 +195,7 @@ public class BootInspectManager {
         pm.setText(context.getString(R.string.compressing));
         pm.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File tempOut = new File(context.getCacheDir(), "repack_" + System.currentTimeMillis() + ".img");
                 BootImageEngine.repack(session.inspectDir, tempOut, null);
@@ -242,7 +243,7 @@ public class BootInspectManager {
                     new ErrorUtil(context).showError(e);
                 });
             }
-        }).start();
+        });
     }
 
     private static String hashPath(String path) {

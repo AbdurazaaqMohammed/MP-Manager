@@ -29,7 +29,6 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.util.Patterns;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -69,6 +68,7 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /** Capture/setup UI stays in the small host APK; all OCR inference lives in the optional pack. */
 public final class ScreenOcrActivity extends BaseActivity {
@@ -104,7 +104,7 @@ public final class ScreenOcrActivity extends BaseActivity {
             new ActivityResultContracts.StartActivityForResult(), result -> {
                 projectionRequested = false;
                 if (result.getResultCode() != RESULT_OK || result.getData() == null) {
-                    Toast.makeText(this, R.string.ocr_capture_cancelled, Toast.LENGTH_SHORT).show();
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.ocr_capture_cancelled);
                     return;
                 }
                 try {
@@ -115,7 +115,7 @@ public final class ScreenOcrActivity extends BaseActivity {
                     // Let the user choose any app; recognition waits for their bubble tap.
                     startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME));
                 } catch (Exception error) {
-                    Toast.makeText(this, getString(R.string.ocr_capture_start_failed, error.getMessage()), Toast.LENGTH_LONG).show();
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, getString(R.string.ocr_capture_start_failed, error.getMessage()));
                 }
             });
 
@@ -330,16 +330,16 @@ public final class ScreenOcrActivity extends BaseActivity {
         imageWorker.execute(() -> {
             try {
                 Bitmap bitmap = decodeImage(uri);
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(ScreenOcrActivity.this, () -> {
                     loadingImage = false;
                     if (isFinishing() || isDestroyed()) { bitmap.recycle(); return; }
                     OcrSession.setImage(bitmap);
                 });
             } catch (Exception | OutOfMemoryError error) {
-                runOnUiThread(() -> {
+                io.github.abdurazaaqmohammed.util.misc.AppExecutors.runOnUiIfAlive(this, () -> {
                     loadingImage = false;
-                    if (!isFinishing() && !isDestroyed()) Toast.makeText(this,
-                            getString(R.string.ocr_image_error, error.getMessage()), Toast.LENGTH_LONG).show();
+                    io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this,
+                            getString(R.string.ocr_image_error, error.getMessage()));
                 });
             }
         });
@@ -501,7 +501,7 @@ public final class ScreenOcrActivity extends BaseActivity {
             clip.getDescription().setExtras(sensitive);
         }
         ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(clip);
-        if (Build.VERSION.SDK_INT < 33) Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show();
+        if (Build.VERSION.SDK_INT < 33) io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.copied);
     }
 
     private void shareText() {
@@ -540,7 +540,7 @@ public final class ScreenOcrActivity extends BaseActivity {
         chip.setOnClickListener(v -> {
             try { startActivity(intent); }
             catch (ActivityNotFoundException ignored) {
-                Toast.makeText(this, R.string.ocr_no_action_app, Toast.LENGTH_SHORT).show();
+                io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, R.string.ocr_no_action_app);
             }
         });
         smartActions.addView(chip);

@@ -76,6 +76,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class TextEditorActivity extends BaseActivity implements UnifiedEditorFragment.EditorCallback {
 
@@ -141,13 +142,26 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         initViews();
         setupListeners();
         initEditorFragment();
-        restoreSession();
-        // handleIntent() is what selects and loads the tab for whatever was
-        // requested. Selecting the restored tab here as well started a read for
-        // it even when the user was opening something else, which surfaced that
-        // tab's failure (a gone share-menu file, a revoked permission) as an
-        // error next to the file actually being opened.
-        handleIntent(getIntent());
+        ParkedTextState parked = takeParkedState(ParkedTextState.class);
+        if (parked != null) {
+            tabs.clear();
+            tabs.addAll(parked.tabs);
+            int target = Math.max(0, Math.min(parked.currentIndex, tabs.size() - 1));
+            if (!tabs.isEmpty()) {
+                selectTab(target);
+                updateTabsList();
+            } else {
+                handleIntent(getIntent());
+            }
+        } else {
+            restoreSession();
+            // handleIntent() is what selects and loads the tab for whatever was
+            // requested. Selecting the restored tab here as well started a read for
+            // it even when the user was opening something else, which surfaced that
+            // tab's failure (a gone share-menu file, a revoked permission) as an
+            // error next to the file actually being opened.
+            handleIntent(getIntent());
+        }
     }
 
     @Override
@@ -157,6 +171,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         handleIntent(intent);
     }
 
+
     @Override
     protected void onThemeChanged() {
         // Keep the live tabs and their unsaved buffers; rebuilding the activity reloads them.
@@ -164,6 +179,68 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry.applyEditorChrome(this);
         UnifiedEditorFragment fragment = getFragment();
         if (fragment != null) fragment.applyThemeInPlace();
+    }
+
+    @Override
+    protected String getMinimizeTitle() {
+        return MinimizedEditors.composeLabel(this, R.string.text_editor, getTabMinimizeTitle(getCurrentTab()));
+    }
+
+    @Override
+    public MinimizedEditors.ParkedState createParkedStateForMinimize() {
+        UnifiedEditorFragment f = getFragment();
+        EditorTab cur = getCurrentTab();
+        if (f != null && f.getEditor() != null && cur != null) {
+            cur.document = f.getEditor().getText();
+            cur.readOnly = !f.getEditor().isEditable();
+        }
+        List<EditorTab> parkedTabs = new ArrayList<>(tabs.size());
+        for (EditorTab t : tabs) {
+            EditorTab copy = new EditorTab();
+            copy.title = t.title;
+            copy.file = t.file;
+            copy.fileUri = t.fileUri;
+            copy.rootOriginalPath = t.rootOriginalPath;
+            copy.zipFilePath = t.zipFilePath;
+            copy.zipEntryPath = t.zipEntryPath;
+            copy.axml = t.axml;
+            copy.abx = t.abx;
+            copy.resEntries = t.resEntries;
+            copy.poolEncoding = t.poolEncoding;
+            copy.allowLargeText = t.allowLargeText;
+            copy.readOnly = t.readOnly;
+            copy.lightweight = t.lightweight;
+            copy.fileSize = t.fileSize;
+            copy.modified = t.modified;
+            copy.pendingArchiveUpdate = t.pendingArchiveUpdate;
+            copy.exportedCopyPath = t.exportedCopyPath;
+            String text = t.document != null ? t.document.toString()
+                    : (t.content != null ? t.content : t.pendingDecoded);
+            copy.pendingDecoded = text;
+            parkedTabs.add(copy);
+        }
+        return new ParkedTextState(parkedTabs, currentIndex, sessionFile());
+    }
+
+    private static final class ParkedTextState implements MinimizedEditors.ParkedState {
+        final List<EditorTab> tabs;
+        final int currentIndex;
+        final File sessionFile;
+
+        ParkedTextState(List<EditorTab> tabs, int currentIndex, File sessionFile) {
+            this.tabs = tabs;
+            this.currentIndex = currentIndex;
+            this.sessionFile = sessionFile;
+        }
+
+        @Override
+        public void discard() {
+            tabs.clear();
+            if (sessionFile != null && sessionFile.isFile()) {
+                //noinspection ResultOfMethodCallIgnored
+                sessionFile.delete();
+            }
+        }
     }
 
     @Override
@@ -177,6 +254,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     @Override
     protected void onStop() {
         super.onStop();
+        if (wasMinimizedFinish()) return;
         UnifiedEditorFragment f = getFragment();
         EditorTab t = getCurrentTab();
         if (f != null && f.getEditor() != null && t != null) {
@@ -733,7 +811,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         tab.loading = true;
         tab.loadFailed = false;
         final int token = ++tab.loadToken;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 if (tab.pendingDecoded == null && (tab.file != null || tab.fileUri != null) && !ensureReadableFile(tab)) {
                     markLoadFailed(tab, null, token);
@@ -741,7 +819,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 }
                 tab.fileSize = tabSize(tab);
                 if (!tab.allowLargeText && tab.fileSize > MAX_TEXT_OPEN_BYTES) {
-                    runOnUiThread(() -> offerLargeFileWarning(tab, token));
+                    AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> offerLargeFileWarning(tab, token));
                     return;
                 }
                 tab.readOnly = tab.fileSize > 2L * 1024 * 1024;
@@ -768,7 +846,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         markLoadFailed(tab, null, token);
                         return;
                     }
-                    runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                         if (tab.loadToken != token) return;
                         new MaterialAlertDialogBuilder(this).setMessage(R.string.rest_chang).setTitle(R.string.unsaved_changes_found)
                                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
@@ -777,11 +855,11 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                                     } catch (Exception e) {
                                         new ErrorUtil(this).showError(e);
                                     }
-                                    new Thread(() -> {
+                                    AppExecutors.io().execute(() -> {
                                         Content text = readTabText(tab, token);
                                         if (text == null) markLoadFailed(tab, null, token);
                                         else applyLoadedText(tab, text, token);
-                                    }).start();
+                                    });
                                 })
                                 .setNegativeButton(android.R.string.cancel, (dialog, which) -> applyLoadedText(tab, fileText, token)).show();
                     });
@@ -805,7 +883,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             } catch (Throwable t) {
                 markLoadFailed(tab, t, token);
             }
-        }).start();
+        });
     }
 
     /**
@@ -965,7 +1043,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
      * message is only surfaced when the failing tab is the one on screen.
      */
     private void markLoadFailed(EditorTab tab, Throwable error, int token) {
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
             if (tab.loadToken != token || !tabs.contains(tab) || isDestroyed()) return;
             tab.loading = false;
             tab.loadFailed = true;
@@ -985,7 +1063,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
 
     private void applyLoadedText(EditorTab tab, CharSequence text, int token) {
         Content document = text instanceof Content ? (Content) text : new Content(text == null ? "" : text);
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
             if (tab.loadToken != token || !tabs.contains(tab) || isFinishing() || isDestroyed()) return;
             tab.loading = false;
             tab.loadFailed = false;
@@ -1124,13 +1202,13 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         ProgressManager pm = new ProgressManager(this, true);
         pm.setText(getString(R.string.saving));
         pm.show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 doWriteTabText(tab, text, onDone);
             } finally {
-                runOnUiThread(pm::dismiss);
+                AppExecutors.runOnUiIfAlive(TextEditorActivity.this, pm::dismiss);
             }
-        }).start();
+        });
     }
 
     private void doWriteTabText(EditorTab tab, String text, Runnable onDone) {
@@ -1144,14 +1222,14 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             tab.content = text;
             tab.modified = false;
             tab.exportedCopyPath = null;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                 Extensions.showMessage(this, getString(R.string.saved));
                 if (onDone != null) onDone.run();
             });
         } catch (Exception e) {
             tab.modified = true;
             if (handleSaveFailureElevated(tab, text, onDone, e)) return;
-            runOnUiThread(() -> showSaveFallbackDialog(tab, text, onDone, e));
+            AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> showSaveFallbackDialog(tab, text, onDone, e));
         }
     }
 
@@ -1180,7 +1258,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             tab.content = text;
             tab.modified = false;
             tab.exportedCopyPath = null;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                 Extensions.showMessage(this, getString(R.string.saved_elevated));
                 if (onDone != null) onDone.run();
             });
@@ -1273,7 +1351,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                         String chosenName = input.getText().toString().trim();
                         if (chosenName.isEmpty()) chosenName = defaultName;
                         final String finalName = chosenName;
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try {
                                 File dest = FileUtils.getUnusedFile(new File(targetDir, finalName));
                                 try (OutputStream os = FileUtils.getOutputStream(dest)) {
@@ -1286,15 +1364,15 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                                 } else {
                                     tab.modified = false;
                                 }
-                                runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                                     updateTabsList();
                                     Extensions.showMessage(this,
                                             getString(R.string.saved_to_x, dest.getAbsolutePath()));
                                 });
                             } catch (Exception e) {
-                                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                                AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> new ErrorUtil(this).showError(e));
                             }
-                        }).start();
+                        });
                     })
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
@@ -1331,13 +1409,13 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             ProgressManager pm = new ProgressManager(this, true);
             pm.setText(getString(R.string.saving));
             pm.show();
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try {
                     saveTabTextRootInline(tab, text, onDone);
                 } finally {
-                    runOnUiThread(pm::dismiss);
+                    AppExecutors.runOnUiIfAlive(TextEditorActivity.this, pm::dismiss);
                 }
-            }).start();
+            });
             return;
         }
         saveTabTextRootInline(tab, text, onDone);
@@ -1351,28 +1429,28 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             }
         } catch (Exception e) {
             tab.modified = true;
-            runOnUiThread(() -> new ErrorUtil(this).showError(e));
+            AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> new ErrorUtil(this).showError(e));
             return;
         }
         tab.content = text;
-        runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.editor_writing_root)));
-        new Thread(() -> {
+        AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> Extensions.showMessage(this, getString(R.string.editor_writing_root)));
+        AppExecutors.io().execute(() -> {
             try {
                 if (text.isEmpty() && originalKnownNonEmpty(tab)) {
                     String target = tab.rootOriginalPath;
-                    runOnUiThread(() -> new MaterialAlertDialogBuilder(this)
+                    AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> new MaterialAlertDialogBuilder(this)
                             .setTitle(getString(R.string.editor_overwrite_empty))
                             .setMessage(getString(R.string.editor_overwrite_empty_msg, target))
-                            .setPositiveButton(getString(R.string.editor_overwrite), (d, w) -> new Thread(() -> doRootWriteBack(tab, text, onDone)).start())
+                            .setPositiveButton(getString(R.string.editor_overwrite), (d, w) -> AppExecutors.io().execute(() -> doRootWriteBack(tab, text, onDone)))
                             .setNegativeButton(android.R.string.cancel, null)
                             .show());
                     return;
                 }
                 doRootWriteBack(tab, text, onDone);
             } catch (Exception e) {
-                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> new ErrorUtil(this).showError(e));
             }
-        }).start();
+        });
     }
 
     private boolean originalKnownNonEmpty(EditorTab tab) {
@@ -1394,7 +1472,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     private void doRootWriteBack(EditorTab tab, String text, Runnable onDone) {
         try {
             PrivilegeManager.Staging.writeBack(this, tab.file, tab.rootOriginalPath);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                 tab.modified = false;
                 tab.exportedCopyPath = null;
                 updateTabsList();
@@ -1403,7 +1481,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 if (onDone != null) onDone.run();
             });
         } catch (Exception e) {
-            runOnUiThread(() -> new ErrorUtil(this).showError(e));
+            AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> new ErrorUtil(this).showError(e));
         }
     }
 
@@ -1602,7 +1680,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         UnifiedEditorFragment f = getFragment();
         if (f != null && f.getEditor() != null) {
             EditorTab t = getCurrentTab();
-            if (!manualFinish && t != null && t.modified && t.exportedCopyPath == null) {
+            if (!manualFinish && !wasMinimizedFinish() && t != null && t.modified && t.exportedCopyPath == null) {
                 boolean isFromFile = currentFile != null;
                 if (isFromFile) {
                     // Write to a temporary first and only then rename: the cache
@@ -1773,14 +1851,14 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         long version = document.getDocumentVersion();
         ProgressManager progress = new ProgressManager(this, false).show();
         progress.setText(getString(R.string.saving));
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 backupForSave(tab.file, null);
                 try (OutputStream output = tab.file != null ? FileUtils.getOutputStream(tab.file)
                         : getContentResolver().openOutputStream(tab.fileUri, "wt")) {
                     ContentIO.writeTo(snapshot, output, StandardCharsets.UTF_8, false);
                 }
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                     progress.dismiss();
                     if (isDestroyed()) return;
                     tab.modified = document.getDocumentVersion() != version;
@@ -1791,11 +1869,11 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     if (onDone != null && !tab.modified) onDone.run();
                 });
             } catch (Exception error) {
-                runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                     progress.dismiss();
                     if (!isDestroyed()) showSaveFallbackDialog(tab, snapshot.toString(), onDone, error);
                 });
             }
-        }, "text-save").start();
+        });
     }
 }

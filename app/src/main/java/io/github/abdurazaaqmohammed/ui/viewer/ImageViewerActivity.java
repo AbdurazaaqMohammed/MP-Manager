@@ -49,6 +49,7 @@ import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class ImageViewerActivity extends BaseActivity {
 
@@ -140,7 +141,7 @@ public class ImageViewerActivity extends BaseActivity {
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(R.string.delete, (dialog, which) -> {
                         ProgressManager pm = new ProgressManager(this, true).show();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             if (multi) for (int p : checkedPositions) {
                                 String pathname = imagePaths.get(p);
                                 int size = checkedPositions.size();
@@ -153,7 +154,7 @@ public class ImageViewerActivity extends BaseActivity {
                                 new File(currPath).delete();
                             }
                             pm.dismiss();
-                        }).start();
+                        });
                     }).show();
         });
 
@@ -451,7 +452,7 @@ public class ImageViewerActivity extends BaseActivity {
 
     private void checkNativeTools() {
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             StringBuilder sb = new StringBuilder();
             sb.append(PrivilegeManager.Native.diagnoseExec(ImageViewerActivity.this));
             sb.append("ABI: ").append(PrivilegeManager.Native.deviceAbi()).append("\n");
@@ -517,7 +518,7 @@ public class ImageViewerActivity extends BaseActivity {
             }
             pm.dismiss();
             String report = sb.toString();
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(ImageViewerActivity.this, () -> {
                 TextView text = new TextView(this);
                 text.setTextSize(13);
                 text.setTypeface(Typeface.MONOSPACE);
@@ -533,7 +534,7 @@ public class ImageViewerActivity extends BaseActivity {
                         .setPositiveButton(android.R.string.ok, null)
                         .show();
             });
-        }).start();
+        });
     }
 
 

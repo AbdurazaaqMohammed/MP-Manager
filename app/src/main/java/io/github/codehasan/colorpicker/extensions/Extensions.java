@@ -42,35 +42,47 @@ public final class Extensions {
     }
 
     public static void showMessage(Activity activity, CharSequence message) {
+        showMessageWithAction(activity, message, 0, null);
+    }
+
+    public static void showMessageWithAction(Activity activity, @StringRes int message, @StringRes int actionLabel, Runnable action) {
+        String msg = activity instanceof MainActivity m ? m.rss.getString(message) : activity.getString(message);
+        showMessageWithAction(activity, msg, actionLabel, action);
+    }
+
+    public static void showMessageWithAction(Activity activity, CharSequence message, @StringRes int actionLabel, Runnable action) {
         if (activity == null) return;
         Snackbar snackbar;
         View bottomBar = activity.findViewById(R.id.bottomBar);
+        int duration = action != null ? Snackbar.LENGTH_LONG : Snackbar.LENGTH_SHORT;
         if (bottomBar != null && bottomBar.getVisibility() == View.VISIBLE) {
-            snackbar = Snackbar.make(bottomBar, message, Snackbar.LENGTH_SHORT).setAnchorView(bottomBar);
-            try {
-                View snackView = snackbar.getView();
-                if (snackView.getLayoutParams() instanceof ViewGroup.MarginLayoutParams mlp) {
-                    mlp.bottomMargin += dp2px(activity, 16);
-                    snackView.setLayoutParams(mlp);
-                }
-            } catch (Exception ignored) {}
+            snackbar = Snackbar.make(bottomBar, message, duration).setAnchorView(bottomBar);
+            applyBottomMargin(snackbar, dp2px(activity, 16));
         } else {
             View root = activity.findViewById(android.R.id.content);
             if (root == null) return;
-            snackbar = Snackbar.make(root, message, Snackbar.LENGTH_SHORT);
-            try {
-                View snackView = snackbar.getView();
-                if (snackView.getLayoutParams() instanceof ViewGroup.MarginLayoutParams mlp) {
-                    mlp.bottomMargin += dp2px(activity, 64);
-                    snackView.setLayoutParams(mlp);
-                }
-            } catch (Exception ignored) {}
+            snackbar = Snackbar.make(root, message, duration);
+            applyBottomMargin(snackbar, dp2px(activity, 64));
         }
-        snackbar.getView().setOnTouchListener((v, event) -> {
-            snackbar.dismiss();
-            return false;
-        });
+        if (action != null && actionLabel != 0) {
+            snackbar.setAction(actionLabel, v -> action.run());
+        } else {
+            snackbar.getView().setOnTouchListener((v, event) -> {
+                snackbar.dismiss();
+                return false;
+            });
+        }
         snackbar.show();
+    }
+
+    private static void applyBottomMargin(Snackbar snackbar, int extraPx) {
+        try {
+            View snackView = snackbar.getView();
+            if (snackView.getLayoutParams() instanceof ViewGroup.MarginLayoutParams mlp) {
+                mlp.bottomMargin += extraPx;
+                snackView.setLayoutParams(mlp);
+            }
+        } catch (Exception ignored) {}
     }
 
     /**

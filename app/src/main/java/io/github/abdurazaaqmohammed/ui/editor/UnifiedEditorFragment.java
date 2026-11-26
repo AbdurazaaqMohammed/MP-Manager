@@ -118,6 +118,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldListFragment.DialogLineNumberListener {
 
@@ -540,11 +541,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         Activity activity = getActivity();
         if (!(activity instanceof DexEditorActivity dexActivity)) return;
         if (loadingProgress != null) loadingProgress.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String smaliCode = dexActivity.classTree.getSmaliByType(
                         Objects.requireNonNull(dexActivity.classTree.classMap.get(className)));
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (!isAdded()) return;
                     if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
                     initialContentText = smaliCode;
@@ -554,11 +555,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     postInitialize(false);
                 });
             } catch (Exception e) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
                 });
             }
-        }).start();
+        });
     }
 
     private void updateSmaliCursorInfo() {
@@ -785,6 +786,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
             }
             ColorPreviewHelper.syncScheme(ecs);
+            ThemePackEditorColors.applyIndentGuideColors(ecs, false);
             editor.setColorScheme(ecs); // fresh per-call instance: safe to theme
         }
         applyPackEditorColors();
@@ -916,6 +918,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
         }
         ColorPreviewHelper.syncScheme(scheme);
+        ThemePackEditorColors.applyIndentGuideColors(scheme, true);
         return scheme;
     }
 
@@ -944,6 +947,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             tabSize = Integer.parseInt(editorPrefs.getString("pref_tab_size", "4"));
         } catch (Exception ignored) {}
         editor.setTabWidth(tabSize);
+        syncLanguageTabSize(editor.getEditorLanguage(), tabSize);
         editor.setLineNumberEnabled(resolveShowLineNumbers(editorPrefs));
         
         // Apply unified editor preferences (line spacing, indent guides, current line highlight,
@@ -951,6 +955,18 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         EditorHelper.applyCommonEditorPreferences(editor, editorPrefs);
         if (largeFileMode) {
             editor.setWordwrap(false);
+        }
+    }
+
+    private static void syncLanguageTabSize(Language lang, int tabSize) {
+        if (lang instanceof ColorPreviewLanguageWrapper) {
+            lang = ((ColorPreviewLanguageWrapper) lang).getDelegate();
+        }
+        if (lang instanceof CustomAutoComplete) {
+            lang = ((CustomAutoComplete) lang).getWrappedLanguage();
+        }
+        if (lang instanceof TextMateLanguage) {
+            ((TextMateLanguage) lang).setTabSize(tabSize);
         }
     }
 
@@ -1730,7 +1746,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         final int generation = syntaxPolicy.currentGeneration();
         final Context appContext = requireContext().getApplicationContext();
         final String finalScope = scope;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             LoadedSyntax loaded = loadSyntaxLanguage(appContext, finalScope);
             TextMateLanguage language = loaded == null ? null : loaded.language;
             ThemeRegistry languageRegistry = loaded == null ? null : loaded.registry;
@@ -1743,7 +1759,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 syntaxPolicy.onResultDropped(generation);
                 return;
             }
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (!isAdded() || editor == null) {
                     destroyUnused(language);
                     syntaxPolicy.onResultDropped(generation);
@@ -1768,7 +1784,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     syntaxPolicy.onResultSuperseded(generation);
                 }
             });
-        }).start();
+        });
     }
 
     /** Language + the TextMate registry it was built against (null registry = global). */
@@ -1806,7 +1822,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void setTextMateLanguage(TextMateLanguage language, ThemeRegistry sourceRegistry, int generation) {
         if (editor == null || language == null) return;
-        Language wrapper = new ColorPreviewLanguageWrapper(language, editor);
+        Language wrapper = new ColorPreviewLanguageWrapper(
+                language, editor, io.github.abdurazaaqmohammed.feature.editor.StructuredCodeFormatter.forScope(syntaxPolicy.requestedScope()));
+        syncLanguageTabSize(wrapper, editor.getTabWidth());
         editor.setEditorLanguage(wrapper);
         // Record what is actually live on the editor so the next applySyntax call
         // can verify it instead of trusting a previously requested scope.
@@ -1826,16 +1844,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private void ensureTextMateScheme(ThemeRegistry sourceRegistry) {
         if (editor == null) return;
         try {
-            ThemeRegistry registry = sourceRegistry != null
-                    ? sourceRegistry : ThemeRegistry.getInstance();
-            TextMateColorScheme scheme = TextMateColorScheme.create(registry);
-            if (!ThemePackEditorColors.hasEditorToken(requireContext(),
-                    ThemePackEditorColors.TOKEN_EDITOR_MATCH_HIGHLIGHT)) {
-                scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND,
-                        ThemePackEditorColors.DEFAULT_MATCH_HIGHLIGHT);
-            }
-            ColorPreviewHelper.syncScheme(scheme);
-            editor.setColorScheme(scheme);
+            editor.setColorScheme(createEditorColorScheme(requireContext(), sourceRegistry));
             applyPackEditorColors();
             recordAppliedThemeSignature();
         } catch (Exception e) {
@@ -2075,7 +2084,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 // only stalls the main thread here.
                 final String content = editor.getText().toString();
                 final int cursorLine = editor.getCursor().getLeftLine();
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     try {
                         saveSmaliCodeToFile(content, tempSmaliPath, null);
                     } catch (final Exception e) {
@@ -2089,7 +2098,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         if (getActivity() instanceof DexEditorActivity)
                             ((DexEditorActivity) getActivity()).showSmaliNavigation(tempSmaliPath, title, cursorLine);
                     });
-                }).start();
+                });
             } catch (Exception e) {
                 if (getContext() != null)
                     Notify_MT.Notify(getContext(), getString(R.string.error), e.toString(), getString(R.string.close));
@@ -2306,6 +2315,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (cachedSmaliLanguage != null && themeName.equals(cachedThemeName)) return;
         try {
             initTMStatic(context);
+            if (!syntaxGrammarsLoaded) {
+                GrammarRegistry.getInstance().loadGrammars("languages.json");
+                syntaxGrammarsLoaded = true;
+            }
             ThemeRegistry registry = ThemeRegistry.getInstance();
             cachedThemeName = themeName;
             IThemeSource themeSource = null;
@@ -2388,10 +2401,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
 
         void execute() {
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 final TextLocation location = doInBackground();
                 mainHandler.post(() -> onPostExecute(location));
-            }).start();
+            });
         }
 
         protected TextLocation doInBackground() {

@@ -32,11 +32,12 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 
 public class ShizukuFileService extends IFileService.Stub {
 
-    public static final int SERVICE_VERSION = 4;
+    public static final int SERVICE_VERSION = 5;
     public static final long MAX_BYTES = 100L * 1024L * 1024L;
 
     private static final String[] SHELL_PREFIXES = new String[]{
@@ -449,58 +450,92 @@ public class ShizukuFileService extends IFileService.Stub {
         return new File(path);
     }
 
+    /** Validates canonical path syntax for read-only metadata queries while keeping writes restricted to {@link #checked}. */
+    private File checkedRead(String path) {
+        if (canon(path) == null) {
+            fail("Invalid path");
+            return null;
+        }
+        return new File(path);
+    }
+
     @Override
     public boolean pathExists(String path) {
-        File f = checked(path);
+        File f = checkedRead(path);
         return f != null && f.exists();
     }
 
     @Override
     public boolean pathIsDir(String path) {
-        File f = checked(path);
+        File f = checkedRead(path);
         return f != null && f.isDirectory();
     }
 
     @Override
     public boolean pathIsFile(String path) {
-        File f = checked(path);
+        File f = checkedRead(path);
         return f != null && f.isFile();
     }
 
     @Override
     public long pathSize(String path) {
-        File f = checked(path);
+        File f = checkedRead(path);
         if (f == null || !f.isFile()) return -1;
         return f.length();
     }
 
     @Override
     public long pathMtime(String path) {
-        File f = checked(path);
+        File f = checkedRead(path);
         if (f == null || !f.exists()) return 0;
         return f.lastModified();
     }
 
     @Override
     public List<String> dirStat(String dirPath) {
-        List<String> out = new ArrayList<>();
-        File dir = checked(dirPath);
+        error = "";
+        File dir = checkedRead(dirPath);
         if (dir == null || !dir.isDirectory()) {
             fail("Not a directory");
-            return out;
+            return null;
         }
         File[] kids = dir.listFiles();
         if (kids == null) {
             fail("Cannot list directory");
-            return out;
+            return null;
         }
+        List<String> out = new ArrayList<>(kids.length);
         for (File k : kids) {
             String name = k.getName();
             if (name.equals(".") || name.equals("..")) continue;
             boolean isDir = k.isDirectory();
+            boolean isLink = false;
+            String modeStr = "-";
+            long mtime = k.lastModified();
+            try {
+                android.system.StructStat lst = android.system.Os.lstat(k.getPath());
+                isLink = android.system.OsConstants.S_ISLNK(lst.st_mode);
+                if (!isLink
+                        && !android.system.OsConstants.S_ISDIR(lst.st_mode)
+                        && !android.system.OsConstants.S_ISREG(lst.st_mode)) {
+                    continue;
+                }
+                int modeBits = lst.st_mode & 07777;
+                if (isLink) {
+                    try {
+                        modeBits = android.system.Os.stat(k.getPath()).st_mode & 07777;
+                    } catch (Throwable broken) {
+                        if (mtime <= 0 && lst.st_mtime > 0) mtime = lst.st_mtime * 1000L;
+                    }
+                }
+                modeStr = Integer.toOctalString(modeBits);
+            } catch (Throwable ignored) {
+            }
             out.add(name + "\037" + (isDir ? "1" : "0") + "\037"
                     + (isDir ? 0 : Math.max(0, k.length())) + "\037"
-                    + k.lastModified() + "\037");
+                    + Math.max(0L, mtime) + "\037"
+                    + (isLink ? "1" : "0") + "\037"
+                    + modeStr);
         }
         return out;
     }
@@ -535,7 +570,7 @@ public class ShizukuFileService extends IFileService.Stub {
             final ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
             final File src = f;
             final long cap = maxBytes;
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 try (InputStream in = new FileInputStream(src);
                      OutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
                     byte[] buf = new byte[65536];
@@ -548,7 +583,7 @@ public class ShizukuFileService extends IFileService.Stub {
                     }
                 } catch (Exception ignored) {
                 }
-            }).start();
+            });
             return pipe[0];
         } catch (Exception e) {
             fail(e.getMessage());

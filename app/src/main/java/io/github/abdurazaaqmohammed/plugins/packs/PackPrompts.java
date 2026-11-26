@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.lang.ref.WeakReference;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * "This tool is a downloadable pack" prompt used when a tool id is known
@@ -169,7 +170,7 @@ public final class PackPrompts {
                     return;
                 }
                 File downloaded = PackManager.downloadOutput(appContext, pack.id);
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     String error = PackManager.installDownloadedPack(appContext, pack, downloaded);
                     synchronized (PackPrompts.class) { DOWNLOADING.remove(pack.id); }
                     new Handler(Looper.getMainLooper()).post(() -> {
@@ -183,7 +184,7 @@ public final class PackPrompts {
                             if (button != null) button.setEnabled(true);
                         }
                     });
-                }).start();
+                });
             }
         };
         try {

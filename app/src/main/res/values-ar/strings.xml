@@ -880,6 +880,7 @@
     <string name="logger_modified_dex">تم تعديل %1$d ملف(ملفات) dex</string>
     <string name="logger_target_dex">الفئات المستهدفة موجودة في %1$d ملف(ملفات) dex</string>
     <string name="logger_embedding_fonts">تضمين %1$d خط(خطوط) في أصول APK (assets)</string>
+    <string name="logger_embedding_video">تضمين الفيديو في أصول APK (assets): %1$s</string>
     <string name="logger_injected_overlay">تم حقن تراكب (Overlay) في %1$s</string>
     <string name="logger_skipped_patched">تم التخطي (مصحح مسبقاً) %1$s</string>
     <string name="logger_no_oncreate">لم يتم العثور على onCreate في %1$s</string>
@@ -1314,10 +1315,10 @@
     <string name="rich_text_html">نص منسق (HTML)</string>
     <string name="dialog_title">عنوان مربع الحوار</string>
     <string name="dialog_message">رسالة مربع الحوار</string>
-    <string name="add_positive_button">إضافة الزر الإيجابي (Positive)</string>
+    <string name="add_positive_button">إضافة الزر الإيجابي (يمين)</string>
     <string name="dismiss">تجاهل</string>
     <string name="url">الرابط (URL)</string>
-    <string name="add_negative_button">إضافة الزر السلبي (Negative)</string>
+    <string name="add_negative_button">إضافة الزر السلبي (يسار)</string>
     <string name="remove_positive_button">إزالة الزر الإيجابي</string>
     <string name="text_empty_none">النص (فارغ = لا يوجد)</string>
     <string name="remove_negative_button">إزالة الزر السلبي</string>
@@ -1336,7 +1337,21 @@
     <string name="title_color">لون العنوان</string>
     <string name="cancelable">قابل للإلغاء</string>
     <string name="add_don_t_show_again_option">إضافة خيار \'عدم الإظهار مرة أخرى\'</string>
+    <string name="show_mode">سلوك العرض</string>
+    <string name="always_show">إظهار دائماً</string>
+    <string name="show_once">إظهار مرة واحدة</string>
+    <string name="don_t_show_again_button">إضافة زر \'عدم الإظهار مرة أخرى\'</string>
+    <string name="movable_dialog">قابل للتحريك (السحب)</string>
     <string name="dialog_image">صورة الحوار</string>
+    <string name="dialog_media">وسائط الحوار</string>
+    <string name="media_none">بلا</string>
+    <string name="media_picture">صورة</string>
+    <string name="media_video">فيديو</string>
+    <string name="choose_video">اختر فيديو</string>
+    <string name="video_selected_format">فيديو: %1$s (%2$s)</string>
+    <string name="video_size_warning">تنبيه: تضمين الفيديو يزيد من حجم ملف APK</string>
+    <string name="video_too_large">حجم الفيديو يتجاوز الحد الأقصى 25 ميجابايت</string>
+    <string name="choose_video_required">يرجى اختيار فيديو</string>
     <string name="widghelp">أضف الأدوات، واسحب للتحريك، واضغط للتعديل</string>
     <string name="image">صورة</string>
     <string name="button">زر</string>
@@ -2580,4 +2595,10 @@
 <string name="boot_image_inspector">فاحص صور البوت</string>
 <string name="customize_open_with">ترتيب قائمة فتح بواسطة</string>
 <string name="customize_open_with_hint">اضغط مطولاً للسحب وإعادة الترتيب، أو المس العين للإخفاء والإظهار</string>
+<string name="empty_folder">المجلد فارغ</string>
+<string name="mount_invalid_filesystem">الملف ليس نظام ملفات صالحاً للتصفح</string>
+<string name="mounting_image">جاري فتح وتثبيت صورة %s…</string>
+<string name="image_options_message">نوع الصورة: %1$s%2$s\n\nهل ترغب في استعراض وتصفح محتويات النظام، أو فتحها بتطبيق خارجي؟</string>
+<string name="image_explorer_title">استعراض صورة النظام</string>
+<string name="image_browse_files">استعراض وتصفح</string>
 </resources>

@@ -3,11 +3,11 @@ package io.github.abdurazaaqmohammed.ui.editor.symbols
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
 import com.zerostudio.idea.widget.editor.symbolinput.v2.manager.SymbolDrawerManagerScreen
 import com.zerostudio.idea.widget.editor.symbolinput.v2.settings.SymbolDrawerSettingsScreen
 import io.github.abdurazaaqmohammed.MPManager.R
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity
+import io.github.codehasan.colorpicker.extensions.Extensions
 
 /** A normal app Activity owns the V2 management surfaces and document pickers. */
 class SymbolDrawerActivity : BaseActivity() {
@@ -68,7 +68,7 @@ class SymbolDrawerActivity : BaseActivity() {
                     managerScreen?.promptImportGroupNameAndAdd(json)
                 }
             }.onFailure { err ->
-                Toast.makeText(this, "Import failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                Extensions.showMessage(this, "Import failed: ${err.message}")
             }
         }
     }

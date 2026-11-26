@@ -3,11 +3,9 @@ package io.github.abdurazaaqmohammed.ui.editor;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 
 import android.content.Context;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.ThumbnailUtils;
@@ -19,11 +17,6 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.core.content.res.ResourcesCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
-
-import org.apache.commons.io.FilenameUtils;
-
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -31,7 +24,10 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.github.abdurazaaqmohammed.MPManager.R;
+import org.apache.commons.io.FilenameUtils;
+
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
@@ -40,16 +36,24 @@ public class PickerIconLoader {
     private static final ExecutorService iconLoaderService = Executors.newFixedThreadPool(4);
     private static final LruCache<String, Drawable> iconCache = new LruCache<>(100);
 
-    private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
+    private static Drawable cachedUpFolderIcon, cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon;
     private static boolean cachedNight;
+    private static int cachedEpoch = -1;
+    private static int cachedBucket = -1;
 
     private final Context context;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     public PickerIconLoader(Context context) {
         this.context = context;
-        ensureCachedIcons(context.getResources());
+        ensureCachedIcons(context);
+    }
+
+    public void setupUpView(ImageView fileIconView, TextView fileDateView) {
+        fileIconView.setTag(null);
+        fileIconView.setImageDrawable(cachedUpFolderIcon);
+        if (fileDateView != null) fileDateView.setVisibility(View.INVISIBLE);
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
@@ -61,12 +65,14 @@ public class PickerIconLoader {
             setupNonFolderIconView(file.getPath(), fileIconView);
             fileDateView.setText(formattedDate + ' ' + FileSize.getHumanReadableFileSize(file.length()));
         } else {
+            fileIconView.setTag(null);
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
         }
     }
 
     private void setupNonFolderIconView(String path, ImageView fileIconView) {
+        fileIconView.setTag(null);
         Drawable cached = iconCache.get(path);
         if (cached != null) {
             fileIconView.setImageDrawable(cached);
@@ -93,7 +99,8 @@ public class PickerIconLoader {
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
             fileIconView.setImageDrawable(cachedTextIcon);
         } else {
-            fileIconView.setImageDrawable(cachedFileIcon);
+            FileIconSpec resolved = FileIconSpec.forPath(path, false);
+            fileIconView.setImageDrawable(resolved == FileIconSpec.FILE ? cachedFileIcon : resolved.drawable(context));
         }
     }
 
@@ -128,29 +135,28 @@ public class PickerIconLoader {
         });
     }
 
-    private static void ensureCachedIcons(Resources res) {
-        boolean night = (res.getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                == Configuration.UI_MODE_NIGHT_YES;
-        if (cachedNight == night && cachedFolderIcon != null) return;
+    private static void ensureCachedIcons(Context context) {
+        Resources res = context.getResources();
+        boolean night = ThemeRegistry.isDarkTheme(context);
+        int epoch = ThemeRegistry.currentEpoch();
+        int bucket = (int) (res.getDisplayMetrics().density * 4);
+        if (cachedNight == night && cachedEpoch == epoch
+                && cachedBucket == bucket && cachedFolderIcon != null) {
+            return;
+        }
         cachedNight = night;
-        int color = night ? Color.WHITE : Color.BLACK;
-        cachedFolderIcon  = tintAndCache(res, R.drawable.folder_24px, color);
-        cachedApkIcon     = tintAndCache(res, R.drawable.apk_document_24px, color);
-        cachedImageIcon   = tintAndCache(res, R.drawable.image_24px, color);
-        cachedVideoIcon   = tintAndCache(res, R.drawable.video_24px, color);
-        cachedMusicIcon   = tintAndCache(res, R.drawable.music_24px, color);
-        cachedArchiveIcon = tintAndCache(res, R.drawable.baseline_folder_zip_24, color);
-        cachedPdfIcon     = tintAndCache(res, R.drawable.pdf_24px, color);
-        cachedTextIcon    = tintAndCache(res, R.drawable.baseline_text_snippet_24, color);
-        cachedFileIcon    = tintAndCache(res, R.drawable.baseline_insert_drive_file_24, color);
-    }
-
-    private static Drawable tintAndCache(Resources res, int id, int color) {
-        Drawable d = ResourcesCompat.getDrawable(res, id, null);
-        if (d == null) return null;
-        d = d.mutate();
-        DrawableCompat.setTint(d, color);
-        return d;
+        cachedEpoch = epoch;
+        cachedBucket = bucket;
+        cachedUpFolderIcon = FileIconSpec.parentDrawable(context);
+        cachedFolderIcon = FileIconSpec.FOLDER.drawable(context);
+        cachedApkIcon = FileIconSpec.APK.drawable(context);
+        cachedImageIcon = FileIconSpec.IMAGE.drawable(context);
+        cachedVideoIcon = FileIconSpec.VIDEO.drawable(context);
+        cachedMusicIcon = FileIconSpec.AUDIO.drawable(context);
+        cachedArchiveIcon = FileIconSpec.ARCHIVE.drawable(context);
+        cachedPdfIcon = FileIconSpec.PDF.drawable(context);
+        cachedTextIcon = FileIconSpec.TEXT.drawable(context);
+        cachedFileIcon = FileIconSpec.FILE.drawable(context);
     }
 
     private static String resolveAccessiblePath(String path) {

@@ -42,6 +42,7 @@ import io.github.abdurazaaqmohammed.data.DexWorkspaceStore;
 import io.github.abdurazaaqmohammed.util.misc.AppLogs;
 import io.github.ratul.topactivity.manager.NotificationUiManager;
 import io.github.ratul.topactivity.ui.ClipboardActivity;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class App extends Application {
 
@@ -87,15 +88,15 @@ public class App extends Application {
         // check (PackageManager IPC), a resources.arsc parse and a
         // DexClassLoader dexopt. None of it is needed before first paint;
         // ToolsHub rebuilds its list in onResume, so late arrival is picked up.
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 // Tools (except a few built-ins like Storage Manager) ship as
                 // downloadable packs now; load whatever the user installed.
                 PackManager.loadInstalledPacks(this);
             } catch (Exception ignored) {
             }
-        }, "packs-load").start();
-        new Thread(() -> {
+        });
+        AppExecutors.io().execute(() -> {
             try {
                 // Allow a restored task to claim its existing workspace before orphan cleanup.
                 Thread.sleep(60_000);
@@ -103,7 +104,7 @@ public class App extends Application {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-        }, "dex-workspace-cleanup").start();
+        });
         clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

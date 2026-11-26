@@ -133,6 +133,7 @@ import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import io.github.abdurazaaqmohammed.util.io.ProgressManager;
 import io.github.abdurazaaqmohammed.ui.main.FileIconLoader;
 import mt.modder.hub.apkCloner.util.ApkCloner;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * APK info + decompile option dialogs extracted from ApkToolsHandler.
@@ -253,7 +254,7 @@ public class ApkInfoDialogs {
         final List<Il2CppDumperUtil.Target> targets = new ArrayList<>();
         final String[] target = {null};
         targetLayout.setEnabled(false);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             List<Il2CppDumperUtil.Target> found = new ArrayList<>();
             List<String> abis = new ArrayList<>();
             try {
@@ -302,7 +303,7 @@ public class ApkInfoDialogs {
                     abiBox.addView(none);
                 }
             });
-        }).start();
+        });
         targetView.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= targets.size()) return;
             target[0] = targets.get(position).className;
@@ -330,7 +331,7 @@ public class ApkInfoDialogs {
                     Runnable doPatch = () -> {
                         ProgressManager pm = new ProgressManager(context, true).show();
                         APKLogger logger = pm.getLogger();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try {
                                 File out = Il2CppDumperUtil.patchApk(context, file, chosen,
                                         target[0], injectProvider, logger);
@@ -344,7 +345,7 @@ public class ApkInfoDialogs {
                                 pm.dismiss();
                                 new ErrorUtil(context).showError(e);
                             }
-                        }).start();
+                        });
                     };
                     if (sign[0]) SignWrapper.requireAuth(context, sw -> {
                         wrapper[0] = sw;
@@ -415,7 +416,7 @@ public class ApkInfoDialogs {
         final List<String> libEntries = new ArrayList<>();
         final List<String> libDisplay = new ArrayList<>();
         final String[] chosenEntry = {null};
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             Map<String, String> libs = NativeLibPatcher.nativeLibArchives(file);
             List<String> entries = new ArrayList<>(libs.keySet());
             List<String> display = new ArrayList<>();
@@ -437,7 +438,7 @@ public class ApkInfoDialogs {
                 archView.setVisibility(View.VISIBLE);
                 archView.setText(libDisplay.get(0).substring(libDisplay.get(0).indexOf('[')));
             });
-        }).start();
+        });
         libInput.setOnItemClickListener((parent, view, position, id) -> {
             chosenEntry[0] = position >= 0 && position < libEntries.size() ? libEntries.get(position) : null;
             if (position >= 0 && position < libDisplay.size()) {
@@ -475,7 +476,7 @@ public class ApkInfoDialogs {
                     Runnable doPatch = () -> {
                         ProgressManager pm = new ProgressManager(context, true).show();
                         APKLogger logger = pm.getLogger();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             File workDir = new File(context.getCacheDir(),
                                     "libpatch_" + System.currentTimeMillis());
                             try {
@@ -509,7 +510,7 @@ public class ApkInfoDialogs {
                                 //noinspection ResultOfMethodCallIgnored
                                 workDir.delete();
                             }
-                        }).start();
+                        });
                     };
                     if (sign[0]) SignWrapper.requireAuth(context, sw -> {
                         wrapper[0] = sw;
@@ -707,7 +708,7 @@ public class ApkInfoDialogs {
                         Runnable doOpt = () -> {
                             ProgressManager pm = new ProgressManager(context, true).show();
                             APKLogger logger = pm.getLogger();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 try {
                                     File opt;
                                     if (deepOpt[0]) {
@@ -725,7 +726,7 @@ public class ApkInfoDialogs {
                                     pm.dismiss();
                                     new ErrorUtil(context).showError(e);
                                 }
-                            }).start();
+                            });
                         };
                         Runnable startOpt = () -> {
                             if (sign[0]) SignWrapper.requireAuth(context, sw -> {
@@ -800,7 +801,7 @@ public class ApkInfoDialogs {
                         options.force = settings.getBoolean("flagForce", false);
                         ProgressManager pm = new ProgressManager(context, true).show();
                         APKLogger logger = pm.getLogger();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try {
                                 String pXmlFilePath = publicXmlPath[0];
                                 if (!TextUtils.isEmpty(pXmlFilePath)) options.publicXml = new File(pXmlFilePath);
@@ -814,7 +815,7 @@ public class ApkInfoDialogs {
                                 context.handler.post(() -> new ErrorUtil(context).showError(e));
                                 logger.close();
                             }
-                        }).start();
+                        });
                     }).create());
         } else if (ApkMoreMenuOrder.PROTECT.equals(actionId)) {
             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
@@ -876,7 +877,7 @@ public class ApkInfoDialogs {
                         options.outputFile = options.generateOutputFromInput(file);
                         ProgressManager pm = new ProgressManager(context, true).show();
                         APKLogger logger = pm.getLogger();
-                        new Thread(() -> {
+                        AppExecutors.io().execute(() -> {
                             try {
                                 options.newCommandExecutor(logger).runCommand();
                                 logger.close();
@@ -892,7 +893,7 @@ public class ApkInfoDialogs {
                                 new ErrorUtil(context).showError(e);
                                 logger.close();
                             }
-                        }).start();
+                        });
                     }).create());
         } else if (ApkMoreMenuOrder.CLONE.equals(actionId)) {
             View ll = LayoutInflater.from(context).inflate(R.layout.dialog_clone, null);
@@ -912,7 +913,7 @@ public class ApkInfoDialogs {
                         Runnable doClone = () -> {
                             ProgressManager pm = new ProgressManager(context, false).show();
                             APKLogger logger = pm.getLogger();
-                            new Thread(() -> {
+                            AppExecutors.io().execute(() -> {
                                 ApkCloner apkCloner = new ApkCloner(context, new ApkCloner.ApkClonerCallBack() {
                                     @Override public void onMessage(String msg) { logger.logMessage(msg); }
                                     @Override public void onProgress(int progress, int total) { pm.setProgress(progress, total); }
@@ -928,7 +929,7 @@ public class ApkInfoDialogs {
                                     pm.dismiss();
                                     context.handler.post(context::refreshAllPanes);
                                 } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
-                            }).start();
+                            });
                         };
                         if (sign[0]) SignWrapper.requireAuth(context, sw -> {
                             wrapper[0] = sw;
@@ -1150,15 +1151,15 @@ public class ApkInfoDialogs {
         pm.show();
         pm.setText(context.getString(R.string.loading));
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 session.done.await();
             } catch (InterruptedException e) {
                 return;
             }
-            context.runOnUiThread(pm::dismiss);
+            AppExecutors.runOnUiIfAlive(context, pm::dismiss);
             if (session.error != null) {
-                context.runOnUiThread(() -> new ErrorUtil(context).showError(session.error));
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(session.error));
                 return;
             }
             List<File> dexFiles = new ArrayList<>();
@@ -1171,23 +1172,23 @@ public class ApkInfoDialogs {
                     dexPaths.add(f.getAbsolutePath());
                 }
             } catch (Exception e) {
-                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                AppExecutors.runOnUiIfAlive(context, () -> new ErrorUtil(context).showError(e));
                 return;
             }
 
             if (dexFiles.isEmpty()) {
-                context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_files_found));
+                AppExecutors.runOnUiIfAlive(context, () -> Extensions.showMessage(context, R.string.no_files_found));
                 return;
             }
 
-            context.runOnUiThread(() -> JadxDecompileHelper.promptDecompileAction(
+            AppExecutors.runOnUiIfAlive(context, () -> JadxDecompileHelper.promptDecompileAction(
                     context, dexFiles, file, baseName,
                     () -> {
                         DexTools dexTools = new DexTools(context, dialogUtil, pane1, null);
                         dexTools.openDexPlusFiles(dexPaths, null, file, "classes.dex", true);
                     }
             ));
-        }).start();
+        });
     }
 
     public void showDecompileOptionsDialog(File file, String fileName) {
@@ -1275,7 +1276,7 @@ public class ApkInfoDialogs {
                     ProgressManager pm = new ProgressManager(context, true).show();
                     APKLogger logger = pm.getLogger();
 
-                    new Thread(() -> {
+                    AppExecutors.io().execute(() -> {
                         try {
                             int fwVer = settings.getInt("fwVer", 35);
                             int loadDexValue = settings.getInt("loadDex", 3);
@@ -1320,7 +1321,7 @@ public class ApkInfoDialogs {
                             new ErrorUtil(context).showError(e);
                             logger.close();
                         }
-                    }).start();
+                    });
                 })
                 .setNegativeButton(android.R.string.cancel, null);
         builder.show();
@@ -1377,7 +1378,7 @@ public class ApkInfoDialogs {
             if (permissionsLoaded[0] || permissionsLoading[0]) return;
             permissionsLoading[0] = true;
             apkPermissions.setText(R.string.loading);
-            new Thread(() -> {
+            AppExecutors.io().execute(() -> {
                 CharSequence perms = "";
                 try {
                     PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(filePath, PackageManager.GET_PERMISSIONS);
@@ -1393,7 +1394,7 @@ public class ApkInfoDialogs {
                     permissionsLoading[0] = false;
                     apkPermissions.setText(TextUtils.isEmpty(finalPerms) ? context.getString(R.string.permissions_none) : finalPerms);
                 });
-            }).start();
+            });
         });
         apkIcon.setImageDrawable(FileIconLoader.getCachedApkIcon());
         apkTitle.setText(R.string.loading);
@@ -1451,7 +1452,7 @@ public class ApkInfoDialogs {
                 loading.setTextSize(12);
                 loading.setPadding(0, dp(4), 0, dp(4));
                 rootInfoContent.addView(loading);
-                new Thread(() -> {
+                AppExecutors.io().execute(() -> {
                     // Capture the package name on the UI thread first — posting
                     // then sleeping races the APK-info loader below that fills
                     // pkgName, so the old code read "" and bailed out early.
@@ -1542,7 +1543,7 @@ public class ApkInfoDialogs {
                             rootInfoContent.addView(empty);
                         }
                     });
-                }).start();
+                });
             });
         }
 
@@ -1760,7 +1761,7 @@ public class ApkInfoDialogs {
     }
 
     private void exportApkIconZip(File apkFile, String appName, String versionName) {
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 File parentDir = apkFile.getParentFile();
                 if (parentDir == null) parentDir = new File(Environment.getExternalStorageDirectory(), "Download");
@@ -1833,7 +1834,7 @@ public class ApkInfoDialogs {
             } catch (Exception e) {
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
-        }).start();
+        });
     }
 
 }

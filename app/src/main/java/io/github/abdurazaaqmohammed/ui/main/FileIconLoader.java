@@ -63,6 +63,8 @@ import io.github.abdurazaaqmohammed.util.text.PackageGuards;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.ratul.topactivity.App;
+import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class FileIconLoader {
 
@@ -115,11 +117,13 @@ public class FileIconLoader {
     }
     private static final Handler badgeHandler = new Handler(Looper.getMainLooper());
 
-    private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
+    private static Drawable cachedUpFolderIcon, cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon, cachedImgIcon,
             cachedDbIcon, cachedFontIcon, cachedBinaryIcon, cachedProtoIcon, cachedDocIcon, cachedSheetIcon, cachedSlideIcon, cachedScriptIcon, cachedBackupIcon, cachedCertIcon;
     private static int cachedIconTheme = -1;
+    private static int cachedIconEpoch = -1;
+    private static boolean cachedIconDark;
     private static int cachedIconBucket = -1;
 
     private final MainActivity context;
@@ -213,12 +217,22 @@ public class FileIconLoader {
         return cachedApkIcon;
     }
 
+    /** Configures the ".." parent navigation row with its distinct 3D parent folder icon. */
+    public void setupUpView(ImageView icon, TextView detail) {
+        icon.setTag(null);
+        icon.setImageDrawable(cachedUpFolderIcon);
+        if (detail != null) {
+            detail.setTag(null);
+            detail.setVisibility(View.GONE);
+        }
+    }
+
     /** Listing metadata only: no thumbnails, content sniffing, shell stats or folder walks. */
     public void setupMetadataView(String name, boolean directory, long size, long modified,
                                   boolean up, ImageView icon, TextView detail) {
         icon.setTag(null);
         detail.setTag(null);
-        icon.setImageDrawable(directory || up ? cachedFolderIcon : resolveNonFolderIcon(name, icon, false));
+        icon.setImageDrawable(up ? cachedUpFolderIcon : (directory ? cachedFolderIcon : resolveNonFolderIcon(name, icon, false)));
         applyDateTextSize(detail);
         if (up) {
             detail.setText("");
@@ -236,7 +250,7 @@ public class FileIconLoader {
     public void setupZipEntryView(ZipEntryInfo zipEntry, ImageView fileIconView, TextView fileDateView) {
         if (zipEntry == null) return;
         if (zipEntry.isDirectory() && "..".equals(zipEntry.getName())) {
-            fileIconView.setImageDrawable(cachedFolderIcon);
+            fileIconView.setImageDrawable(cachedUpFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
             return;
         }
@@ -316,7 +330,7 @@ public class FileIconLoader {
             if (result == null) result = cachedImageIcon;
             final Drawable finalResult = result;
             zipThumbCache.put(key, finalResult);
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (key.equals(fileIconView.getTag())) fileIconView.setImageDrawable(finalResult);
             });
         });
@@ -393,11 +407,23 @@ public class FileIconLoader {
         } else {
             long len = meta[1];
             long mt = meta[2];
-            boolean ghost = len <= 0 && mt <= 0 && isGhostFile(file);
-            if ((len > 0 || mt > 0) || ghost || !elevatedFileOps) {
+            boolean listedStat = (file instanceof RootFile rf && rf.hasRootStat())
+                    || (file instanceof ShizukuFile sf && sf.hasStat());
+            boolean ghost = !listedStat && len <= 0 && mt <= 0 && isGhostFile(file);
+            if ((len > 0 || mt > 0) || ghost || !elevatedFileOps || listedStat) {
                 fileDateView.setTag(null);
-                if (ghost) {
+                if (ghost || (listedStat && len <= 0 && mt <= 0 && !showPerms)) {
                     fileDateView.setVisibility(View.INVISIBLE);
+                } else if (listedStat && len <= 0 && mt <= 0) {
+                    String perms = detailPrefixIfPerms(file);
+                    if (perms != null) {
+                        fileDateView.setVisibility(View.VISIBLE);
+                        applyDateTextSize(fileDateView);
+                        fileDateView.setText(new StringBuilder(perms)
+                                .append(' ').append(FileSize.getHumanReadableFileSize(0)));
+                    } else {
+                        fileDateView.setVisibility(View.INVISIBLE);
+                    }
                 } else {
                     showFileStats(file, fileDateView, len, mt);
                     maybeFetchPerms(file, fileDateView, len, mt);
@@ -406,6 +432,16 @@ public class FileIconLoader {
                 showFileStatsAsync(file, fileDateView);
             }
             setupNonFolderIconView(file.getPath(), fileIconView);
+        }
+    }
+
+    private String detailPrefixIfPerms(File file) {
+        if (!showPerms || file == null) return null;
+        try {
+            String path = file.getAbsolutePath();
+            return isUserStorage(path) ? null : permOf(file, path);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -447,25 +483,29 @@ public class FileIconLoader {
 
     /**
      * Permission display for a path ("rwxr-x--x (750)"), or null when unknown.
-     * Listing-carried metadata first ({@link RootFile} caches either the
-     * {@code ls -l} mode column or the octal {@code stat %a} output depending
-     * on which listing strategy answered), then a local {@code lstat}, which
-     * answers every world-stat-able path such as /system with no shell at all.
-     * Misses are not memoized here so the async backend lookup can fill the
-     * memo.
+     * Listing-carried metadata first ({@link RootFile} and {@link ShizukuFile} cache
+     * either the {@code ls -l} mode column or octal stat output), then a local
+     * {@code lstat}, which answers every world-stat-able path such as /system
+     * with no shell at all. Misses are not memoized here so the async backend
+     * lookup can fill the memo.
      */
     private String permOf(File file, String path) {
         String memo = permMemo.get(path);
         if (memo != null) return memo.isEmpty() ? null : memo;
         String perms = null;
+        String mode = null;
         if (file instanceof RootFile) {
-            String mode = ((RootFile) file).getRootMode();
+            mode = ((RootFile) file).getRootMode();
+        } else if (file instanceof ShizukuFile) {
+            mode = ((ShizukuFile) file).getMode();
+        }
+        if (mode != null) {
             perms = FilePermissions.formatLsMode(mode);
             if (perms == null) perms = FilePermissions.formatOctal(mode);
         }
         if (perms == null) {
-            int mode = statModeLocal(path);
-            if (mode >= 0) perms = FilePermissions.formatMode(mode);
+            int stMode = statModeLocal(path);
+            if (stMode >= 0) perms = FilePermissions.formatMode(stMode);
         }
         if (perms != null) permMemo.put(path, perms);
         return perms;
@@ -558,7 +598,7 @@ public class FileIconLoader {
             permMemo.put(path, resolved != null ? resolved : "");
             if (!path.equals(view.getTag())) return;
             final String perms = resolved;
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (!path.equals(view.getTag())) return;
                 if (perms != null) {
                     if (treatAsFolder(file)) {
@@ -683,7 +723,7 @@ public class FileIconLoader {
             if (size <= 0 && mtime <= 0) return;
             final long finalSize = memo[1];
             final long finalMtime = memo[2];
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (tag.equals(fileDateView.getTag())) showFileStats(file, fileDateView, finalSize, finalMtime);
             });
         });
@@ -777,7 +817,9 @@ public class FileIconLoader {
             return;
         }
 
-        boolean canElevate = canElevateStats();
+        boolean canElevate = canElevateStats()
+                && !(file instanceof RootFile rf && rf.hasRootStat())
+                && !(file instanceof ShizukuFile sf && sf.hasStat());
 
         if (!canElevate) {
             fileDateView.setTag(null);
@@ -806,7 +848,7 @@ public class FileIconLoader {
             long[] memo = metaMemo.get(tag);
             if (memo != null) memo[2] = m;
             final long finalM = m;
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (tag.equals(fileDateView.getTag())) {
                     if (sizeMode == UiPrefs.FOLDER_SIZE_NONE) {
                         fileDateView.setVisibility(View.VISIBLE);
@@ -862,7 +904,7 @@ public class FileIconLoader {
             if (size < 0) return; // walk aborted; leave uncached so it can retry later
             DirSizeCache.record(file, size);
             DirSizeCache.scheduleSave();
-            context.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(context, () -> {
                 if (tag.equals(fileDateView.getTag()) && size >= 0) {
                     fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
                 }
@@ -1070,7 +1112,7 @@ public class FileIconLoader {
                             }
                             if (icon != null) {
                                 final Drawable finalIcon = icon;
-                                context.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(context, () -> {
                                     if (tag.equals(badgeView.getTag())) {
                                         badgeView.setImageDrawable(finalIcon);
                                         badgeView.setVisibility(View.VISIBLE);
@@ -1092,7 +1134,7 @@ public class FileIconLoader {
                     }
                     if (icon != null) {
                         final Drawable finalIcon = icon;
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (tag.equals(badgeView.getTag())) {
                                 badgeView.setImageDrawable(finalIcon);
                                 badgeView.setVisibility(View.VISIBLE);
@@ -1352,7 +1394,7 @@ public class FileIconLoader {
                 if (magicIcon != null) {
                     iconMemo.put(path, magicIcon);
                     iconCache.put(path, magicIcon);
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(magicIcon);
                     });
                 }
@@ -1448,7 +1490,7 @@ public class FileIconLoader {
                 Drawable icon = ApkIconHelper.getApkIcon(context, path);
                 if (icon != null) {
                     iconCache.put(path, icon);
-                    context.runOnUiThread(() -> {
+                    AppExecutors.runOnUiIfAlive(context, () -> {
                         if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                     });
                 }
@@ -1465,7 +1507,7 @@ public class FileIconLoader {
                 if (!path.equals(fileIconView.getTag())) return;
                 Drawable icon = new BitmapDrawable(context.getResources(), bitmap);
                 iconCache.put(path, icon);
-                context.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(context, () -> {
                     if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                 });
             } else if (!isVideo) {
@@ -1478,12 +1520,12 @@ public class FileIconLoader {
                         Bitmap stickerBm = StickerUtil.renderThumbnailBitmap(f, 160);
                         Drawable icon = stickerBm != null ? new BitmapDrawable(context.getResources(), stickerBm) : cachedStickerIcon;
                         iconCache.put(path, icon);
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                         });
                     } else if (isZipFileFormat(path)) {
                         iconCache.put(path, cachedArchiveIcon);
-                        context.runOnUiThread(() -> {
+                        AppExecutors.runOnUiIfAlive(context, () -> {
                             if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedArchiveIcon);
                         });
                     }
@@ -1513,9 +1555,15 @@ public class FileIconLoader {
         Resources res = context.getResources();
         float density = res.getDisplayMetrics().density;
         int bucket = (int) (density * 4);
-        if (cachedIconTheme == theme && cachedIconBucket == bucket) return;
+        int epoch = ThemeRegistry.currentEpoch();
+        boolean dark = ThemeRegistry.isDarkTheme(context);
+        if (cachedIconTheme == theme && cachedIconEpoch == epoch
+                && cachedIconDark == dark && cachedIconBucket == bucket) return;
         cachedIconTheme = theme;
+        cachedIconEpoch = epoch;
+        cachedIconDark = dark;
         cachedIconBucket = bucket;
+        cachedUpFolderIcon = FileIconSpec.parentDrawable(context);
         cachedFolderIcon = FileIconSpec.FOLDER.drawable(context);
         cachedApkIcon = FileIconSpec.APK.drawable(context);
         cachedImageIcon = FileIconSpec.IMAGE.drawable(context);

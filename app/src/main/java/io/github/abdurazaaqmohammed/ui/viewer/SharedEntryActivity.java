@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
@@ -46,6 +47,7 @@ import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.util.text.ShellQuote;
 import io.github.abdurazaaqmohammed.privilege.api.ShellSession;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Single share/view entry point replacing the old Locate / Save / Image-edit /
@@ -412,12 +414,12 @@ public class SharedEntryActivity extends BaseActivity {
             ItemState item = items.get(i);
             queryMeta(item);
             final int index = i;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 if (index == selected) renderSelection();
                 renderFileList();
             });
         }
-        runOnUiThread(this::updateCapabilities);
+        AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, this::updateCapabilities);
         for (int i = 0; i < items.size() && !cancelled; i++) {
             ItemState item = items.get(i);
             SharedPathResolver.Result r;
@@ -430,12 +432,12 @@ public class SharedEntryActivity extends BaseActivity {
             item.resolving = false;
             if (item.name == null || item.name.isEmpty()) item.name = r.displayName;
             final int index = i;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 if (index == selected) renderSelection();
                 renderFileList();
             });
         }
-        runOnUiThread(() -> {
+        AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
             progress.setVisibility(View.GONE);
             progress.setIndeterminate(false);
             renderSelection();
@@ -508,7 +510,8 @@ public class SharedEntryActivity extends BaseActivity {
             meta.append(sourcePackage);
         }
         metaView.setText(meta.toString());
-        iconView.setImageResource(iconFor(item.mime, item.name));
+        iconView.setColorFilter(null);
+        iconView.setImageDrawable(specFor(item.mime, item.name).drawable(this));
 
         if (item.resolving) {
             progress.setVisibility(View.VISIBLE);
@@ -828,7 +831,7 @@ public class SharedEntryActivity extends BaseActivity {
     private void stageTempCopy(ItemState item, StageConsumer consumer) {
         ProgressManager pm = new ProgressManager(this, true).show();
         Uri uri = item.uri;
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             File staged = null;
             try {
                 File base = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
@@ -849,7 +852,7 @@ public class SharedEntryActivity extends BaseActivity {
                 staged = null;
             }
             final File result = staged;
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 try {
                     pm.dismiss();
                 } catch (Exception ignored) {
@@ -861,7 +864,7 @@ public class SharedEntryActivity extends BaseActivity {
                     Extensions.showMessage(this, getString(R.string.shared_entry_stage_failed));
                 }
             });
-        }).start();
+        });
     }
 
     private void pickSaveFolder() {
@@ -886,7 +889,7 @@ public class SharedEntryActivity extends BaseActivity {
         List<Uri> copy = new ArrayList<>(uris);
         String text = sharedText;
         ProgressManager pm = new ProgressManager(this, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int done = 0;
             int total = copy.size() + ((text != null && !text.isEmpty() && copy.isEmpty()) ? 1 : 0);
             int n = 0;
@@ -923,12 +926,12 @@ public class SharedEntryActivity extends BaseActivity {
             }
             int doneCount = done;
             int totalCount = Math.max(total, 1);
-            runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(SharedEntryActivity.this, () -> {
                 Extensions.showMessage(this,
                         getString(R.string.saved_i_of_i_to_x, doneCount, totalCount, dir.getName()));
                 finish();
             });
-        }).start();
+        });
     }
 
     private File uniqueDest(File dir, String name) {
@@ -1045,19 +1048,26 @@ public class SharedEntryActivity extends BaseActivity {
         return null;
     }
 
-    private int iconFor(String mime, String name) {
+    private FileIconSpec specFor(String mime, String name) {
         try {
-            String ext = extensionOf(name);
-            if (isImage(mime, ext)) return R.drawable.image_24px;
+            if (name != null && !name.isEmpty()) {
+                FileIconSpec byExt = FileIconSpec.forPath(name, false);
+                if (byExt != FileIconSpec.FILE) return byExt;
+            }
             if (mime != null) {
                 String m = mime.toLowerCase(Locale.US);
-                if (m.startsWith("video/")) return R.drawable.video_24px;
-                if (m.startsWith("audio/")) return R.drawable.music_24px;
-                if (m.equals("application/pdf")) return R.drawable.pdf_24px;
-                if (m.startsWith("text/")) return R.drawable.ic_edit_mt;
+                if (m.startsWith("image/")) return FileIconSpec.IMAGE;
+                if (m.startsWith("video/")) return FileIconSpec.VIDEO;
+                if (m.startsWith("audio/")) return FileIconSpec.AUDIO;
+                if ("application/pdf".equals(m)) return FileIconSpec.PDF;
+                if ("application/vnd.android.package-archive".equals(m)) return FileIconSpec.APK;
+                if (m.contains("zip") || m.contains("rar") || m.contains("7z") || m.contains("archive")) {
+                    return FileIconSpec.ARCHIVE;
+                }
+                if (m.startsWith("text/")) return FileIconSpec.TEXT;
             }
         } catch (Exception ignored) {
         }
-        return R.drawable.baseline_insert_drive_file_24;
+        return FileIconSpec.FILE;
     }
 }

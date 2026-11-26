@@ -24,6 +24,7 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.data.prefs.WorkingModePrefs;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Owns the logcat capture so it can outlive {@link LogcatActivity}: while
@@ -110,13 +111,13 @@ public class LogcatService extends Service implements LogcatReader.Listener {
         startForeground(NOTIFICATION_ID, buildNotification());
         mode = determineMode(this);
         reader = new LogcatReader(this, mode);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 reader.start(LogcatService.this);
             } catch (Exception e) {
                 new Handler(Looper.getMainLooper()).post(() -> onEof(e.getMessage()));
             }
-        }, "logcat-start").start();
+        });
     }
 
     @Override

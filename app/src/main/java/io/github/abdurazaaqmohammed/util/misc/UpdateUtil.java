@@ -63,7 +63,7 @@ public class UpdateUtil {
         Resources rss = context.getResources();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String lastVerChecked = prefs.getString(PREF_LAST_VER_CHECKED, null);
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 String json = read(getHttpURLConnection());
                 String currentVer;
@@ -142,7 +142,7 @@ public class UpdateUtil {
             } catch (Exception e) {
                 if (toast) Extensions.showMessage(context, R.string.failed_to_check_for_update);
             }
-        }).start();
+        });
     }
 
     /**

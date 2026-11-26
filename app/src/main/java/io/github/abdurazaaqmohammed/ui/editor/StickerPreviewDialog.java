@@ -21,6 +21,7 @@ import java.io.File;
 
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class StickerPreviewDialog {
 
@@ -76,9 +77,9 @@ public class StickerPreviewDialog {
 
         dialog.show();
 
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             String json = StickerUtil.extractLottieJson(stickerFile);
-            activity.runOnUiThread(() -> {
+            AppExecutors.runOnUiIfAlive(activity, () -> {
                 if (json == null || dialog.isShowing() == false) return;
                 progressBar.setVisibility(View.GONE);
 
@@ -105,6 +106,6 @@ public class StickerPreviewDialog {
 
                 webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null);
             });
-        }).start();
+        });
     }
 }

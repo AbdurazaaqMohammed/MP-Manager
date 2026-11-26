@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.preference.PreferenceManager;
@@ -21,6 +22,9 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 /** Gives each editor its own task without breaking activity-result callers. */
 public final class EditorTasks {
     public static final String PREF_SHOW_EDITOR_TASKS_IN_RECENTS = "show_editor_tasks_in_recents";
+    public static final String EXTRA_RESTORED_FROM_MINIMIZED = "mp.editor.restored_from_minimized";
+    public static final String EXTRA_SINGLE_TASK_REQUEST = "mp.editor.single_task_request";
+    public static final String EXTRA_MINIMIZE_TOKEN = "mp.editor.minimize_token";
     private static final String OWNER = "mp.editor.owner";
     private static final String RESULT = "mp.editor.result";
     private static final Map<String, WeakReference<BaseActivity>> owners = new HashMap<>();
@@ -66,34 +70,67 @@ public final class EditorTasks {
 
     public static void saveOwner(Bundle state, String id) { state.putString(OWNER, id); }
 
+    public static int taskIdOf(ActivityManager.RecentTaskInfo info) {
+        if (info == null) return -1;
+        return Build.VERSION.SDK_INT >= 29 ? info.taskId : info.id;
+    }
+
+    private static boolean isExcludedTransient(String cls) {
+        return MainActivity.class.getName().equals(cls)
+                || "io.github.abdurazaaqmohammed.ui.editor.PickFileActivity".equals(cls)
+                || "io.github.abdurazaaqmohammed.ui.viewer.SharedEntryActivity".equals(cls)
+                || "io.github.abdurazaaqmohammed.feature.system.ToolShortcutActivity".equals(cls)
+                || "io.github.ratul.topactivity.ui.ClipboardActivity".equals(cls);
+    }
+
+    private static boolean isEditorClassName(String name) {
+        return "io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity".equals(name)
+                || "io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity".equals(name)
+                || "modder.hub.dexeditor.activity.DexEditorActivity".equals(name)
+                || "io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity".equals(name)
+                || "io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity".equals(name)
+                || "io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity".equals(name);
+    }
+
     public static boolean isEditor(Activity activity) {
-        if (activity == null) return false;
-        String name = activity.getClass().getName();
-        return name.equals("io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity")
-                || name.equals("modder.hub.dexeditor.activity.DexEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity")
-                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity");
+        return activity != null && isEditorClassName(activity.getClass().getName());
     }
 
     public static boolean isEditor(Intent intent) {
-        if (intent.getComponent() == null) return false;
-        String name = intent.getComponent().getClassName();
-        return name.equals("io.github.abdurazaaqmohammed.ui.editor.TextEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.ui.editor.HexEditorActivity")
-                || name.equals("modder.hub.dexeditor.activity.DexEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorActivity")
-                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscEditorPlusActivity")
-                || name.equals("io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity");
+        return intent != null && intent.getComponent() != null
+                && isEditorClassName(intent.getComponent().getClassName());
     }
 
     private static boolean isSecondaryTask(ActivityManager.RecentTaskInfo info) {
         if (info == null || info.baseIntent == null || info.baseIntent.getComponent() == null) {
             return false;
         }
-        String cls = info.baseIntent.getComponent().getClassName();
-        return !MainActivity.class.getName().equals(cls);
+        return !isExcludedTransient(info.baseIntent.getComponent().getClassName());
+    }
+
+    /**
+     * True only when {@code activity} is actually the root of a standalone task
+     * outside {@link MainActivity}'s back stack (e.g. multi-task mode enabled or
+     * launched standalone from a notification/shortcut), excluding transient
+     * entry/picker helpers and activities pushed onto an existing task.
+     */
+    public static boolean isSecondaryTaskRoot(Activity activity) {
+        if (activity == null) return false;
+        String cls = activity.getClass().getName();
+        if (isExcludedTransient(cls) || !activity.isTaskRoot()) return false;
+        try {
+            ActivityManager am = (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am == null) return false;
+            int taskId = activity.getTaskId();
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                if (info != null && taskIdOf(info) == taskId && isSecondaryTask(info)) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     public static boolean showEditorTasksInRecents(Context context) {
@@ -127,7 +164,7 @@ public final class EditorTasks {
             int taskId = activity.getTaskId();
             for (ActivityManager.AppTask task : am.getAppTasks()) {
                 ActivityManager.RecentTaskInfo info = task.getTaskInfo();
-                if (info != null && info.taskId == taskId && isSecondaryTask(info)) {
+                if (info != null && taskIdOf(info) == taskId && isSecondaryTask(info)) {
                     task.setExcludeFromRecents(exclude);
                     break;
                 }
@@ -136,12 +173,9 @@ public final class EditorTasks {
         }
     }
 
-    public static Intent prepare(Intent source, String owner, int request) {
-        return prepare(null, source, owner, request);
-    }
-
-    public static Intent prepare(Context context, Intent source, String owner, int request) {
-        Intent intent = new Intent(source);
+    /** Configures standalone task and Recents visibility flags without altering result tokens. */
+    public static void applyTaskFlags(Context context, Intent intent) {
+        if (intent == null) return;
         int flags = (intent.getFlags() & ~(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP))
                 | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK;
@@ -149,6 +183,37 @@ public final class EditorTasks {
             flags |= Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS;
         }
         intent.setFlags(flags);
+    }
+
+    /** Clears standalone task flags so an editor launches cleanly inside the caller's task stack. */
+    public static void applySingleTaskFlags(Intent intent) {
+        if (intent == null) return;
+        intent.setFlags(intent.getFlags() & ~(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS));
+    }
+
+    public static Intent prepareSingleTask(Intent source, int requestCode) {
+        Intent intent = new Intent(source);
+        applySingleTaskFlags(intent);
+        intent.removeExtra(RESULT);
+        intent.removeExtra(EXTRA_RESTORED_FROM_MINIMIZED);
+        intent.removeExtra(EXTRA_MINIMIZE_TOKEN);
+        if (requestCode >= 0) {
+            intent.putExtra(EXTRA_SINGLE_TASK_REQUEST, requestCode);
+        } else {
+            intent.removeExtra(EXTRA_SINGLE_TASK_REQUEST);
+        }
+        return intent;
+    }
+
+    public static Intent prepare(Intent source, String owner, int request) {
+        return prepare(null, source, owner, request);
+    }
+
+    public static Intent prepare(Context context, Intent source, String owner, int request) {
+        Intent intent = new Intent(source);
+        applyTaskFlags(context, intent);
         // NEW_TASK cancels Android's native result link. Keep a process-local link
         // instead, including ActivityResultRegistry's generated request codes.
         intent.removeExtra(RESULT);

@@ -6,6 +6,7 @@ import android.app.Activity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost.ExternalPlugin;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * First-seen / rotation consent for external plugins. Shows who is asking
@@ -42,7 +43,7 @@ public final class PluginTrust {
                 return;
             }
             if (PluginHost.canInvoke(activity, plugin)) {
-                activity.runOnUiThread(() -> {
+                AppExecutors.runOnUiIfAlive(activity, () -> {
                     if (!activity.isFinishing() && !activity.isDestroyed()
                             && PluginHost.canInvoke(activity, plugin)) onTrust.run();
                     else onDeclined.run();
@@ -52,7 +53,7 @@ public final class PluginTrust {
         } catch (Exception ignored) {
         }
         try {
-            activity.runOnUiThread(() -> showPrompt(activity, plugin, onTrust, onDeclined));
+            AppExecutors.runOnUiIfAlive(activity, () -> showPrompt(activity, plugin, onTrust, onDeclined));
         } catch (Exception ignored) {
             onDeclined.run();
         }

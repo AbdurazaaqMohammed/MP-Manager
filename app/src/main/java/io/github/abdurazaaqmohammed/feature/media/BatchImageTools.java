@@ -27,6 +27,7 @@ import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 /**
  * Batch JPEG/PNG operations (crop, EXIF edit, metadata strip) extracted
@@ -189,7 +190,7 @@ public class BatchImageTools {
 
     private void runBatchCrop(List<File> images, int reqW, int reqH, boolean forceLossy) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             try {
                 boolean useJni = PrivilegeManager.Native.loadJpegtranJni(context);
                 int done = 0;
@@ -275,7 +276,7 @@ public class BatchImageTools {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
             }
-        }).start();
+        });
     }
 
     private void showBatchExifDialog(List<File> images) {
@@ -321,7 +322,7 @@ public class BatchImageTools {
 
     private void runBatchExif(List<File> images, String[] tags, String[] vals) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int done = 0;
             for (File f : images) {
                 pm.setText(context.rss.getString(R.string.processing_x, f.getName()));
@@ -340,7 +341,7 @@ public class BatchImageTools {
             pm.dismiss();
             int doneCount = done;
             context.handler.post(() -> finishBatchOp(context.rss.getString(R.string.updated_i_of_i, doneCount, images.size())));
-        }).start();
+        });
     }
 
     private void confirmBatchStrip(List<File> images) {
@@ -354,7 +355,7 @@ public class BatchImageTools {
 
     private void runBatchStrip(List<File> images) {
         ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
+        AppExecutors.io().execute(() -> {
             int done = 0;
             for (File f : images) {
                 pm.setText(context.rss.getString(R.string.processing_x, f.getName()));
@@ -368,6 +369,6 @@ public class BatchImageTools {
             pm.dismiss();
             int doneCount = done;
             context.handler.post(() -> finishBatchOp(context.getString(R.string.removed_metadata_fromxofx, doneCount, images.size())));
-        }).start();
+        });
     }
 }

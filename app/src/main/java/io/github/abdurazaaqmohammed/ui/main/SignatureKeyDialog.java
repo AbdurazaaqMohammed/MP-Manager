@@ -58,6 +58,7 @@ import java.util.concurrent.Executor;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import mt.signature.generate.KeyStoreMakerDialog;
+import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
 public class SignatureKeyDialog {
 
@@ -276,7 +277,7 @@ public class SignatureKeyDialog {
                                         @NonNull BiometricPrompt.AuthenticationResult result) {
                                     super.onAuthenticationSucceeded(result);
                                     Extensions.showMessage(activity, activity.getString(R.string.sig_auth_ok));
-                                    new Thread(() -> {
+                                    AppExecutors.io().execute(() -> {
                                         try {
                                             String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", "android"));
                                             SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath())),
@@ -304,7 +305,7 @@ public class SignatureKeyDialog {
                                                 }
                                             } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
                                             pm.dismiss();
-                                            activity.runOnUiThread(() -> {
+                                            AppExecutors.runOnUiIfAlive(activity, () -> {
                                                 Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
                                                 if (activity instanceof MainActivity) ((MainActivity) activity).reloadCurrentFolder();
                                             });
@@ -312,7 +313,7 @@ public class SignatureKeyDialog {
                                             pm.dismiss();
                                             new ErrorUtil(activity).showError(e);
                                         }
-                                    }).start();  }
+                                    });  }
 
                                 @Override
                                 public void onAuthenticationFailed() {
@@ -327,7 +328,7 @@ public class SignatureKeyDialog {
                                 auth.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
                             } else auth.setDeviceCredentialAllowed(true);
                             biometricPrompt.authenticate(auth.build());
-                        } else new Thread(() -> {
+                        } else AppExecutors.io().execute(() -> {
                             try {
                                 SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath())),
                                         resolvedPassword, v1, v2, v3, v4, signedByS, zipalign);
@@ -354,7 +355,7 @@ public class SignatureKeyDialog {
                                     }
                                 } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
                                 pm.dismiss();
-                                activity.runOnUiThread(() -> {
+                                AppExecutors.runOnUiIfAlive(activity, () -> {
                                     Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
                                     if (activity instanceof MainActivity) ((MainActivity) activity).reloadCurrentFolder();
                                 });
@@ -362,7 +363,7 @@ public class SignatureKeyDialog {
                                 pm.dismiss();
                                 new ErrorUtil(activity).showError(e);
                             }
-                        }).start();
+                        });
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
