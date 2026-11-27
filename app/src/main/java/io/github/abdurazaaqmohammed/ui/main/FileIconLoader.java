@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.ui.main;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
+import io.github.abdurazaaqmohammed.ui.viewer.SvgRenderer;
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 import io.github.abdurazaaqmohammed.data.prefs.UiPrefs;
 
@@ -39,14 +40,22 @@ import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
+import io.github.abdurazaaqmohammed.util.io.FileTreeStats;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -121,9 +130,11 @@ public class FileIconLoader {
             cachedDexIcon, cachedArscIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon, cachedStickerIcon, cachedElfIcon, cachedImgIcon,
             cachedDbIcon, cachedFontIcon, cachedBinaryIcon, cachedProtoIcon, cachedDocIcon, cachedSheetIcon, cachedSlideIcon, cachedScriptIcon, cachedBackupIcon, cachedCertIcon;
+    private static final Map<FileIconSpec, Drawable> cachedCodeIcons = new IdentityHashMap<>();
     private static int cachedIconTheme = -1;
     private static int cachedIconEpoch = -1;
     private static boolean cachedIconDark;
+    private static boolean cachedIcon3d;
     private static int cachedIconBucket = -1;
 
     private final MainActivity context;
@@ -155,6 +166,45 @@ public class FileIconLoader {
     private final Map<String, String> permMemo = new ConcurrentHashMap<>();
     /** Per-listing memo of resolved icons, so classification runs once per path. */
     private final Map<String, Drawable> iconMemo = new ConcurrentHashMap<>();
+    private volatile boolean cancelled = false;
+
+    private static final class PendingFolderRow {
+        final File file;
+        final String path;
+        final String prefix;
+
+        PendingFolderRow(File file, String path, String prefix) {
+            this.file = file;
+            this.path = path;
+            this.prefix = prefix;
+        }
+    }
+
+    /** UI-thread-only map of visible TextViews waiting for a batch dir size measurement. */
+    private final Map<TextView, PendingFolderRow> pendingFolderRows = new WeakHashMap<>();
+    private final Object scrollBatchLock = new Object();
+    private final List<File> pendingScrollDirs = new ArrayList<>();
+    private final Set<String> pendingScrollPaths = new HashSet<>();
+    private ScheduledFuture<?> scrollBatchFuture;
+
+    private static final int SIZE_BATCH_FIRST_CHUNK = 12;
+    private static final int SIZE_BATCH_NEXT_CHUNK = 24;
+    private static final long SIZE_SCROLL_COALESCE_MS = 60L;
+
+    /** Cancels in-flight batch folder size prefetching when navigating away or detaching adapter. */
+    public void cancel() {
+        cancelled = true;
+        synchronized (scrollBatchLock) {
+            if (scrollBatchFuture != null) {
+                scrollBatchFuture.cancel(false);
+                scrollBatchFuture = null;
+            }
+            pendingScrollDirs.clear();
+            pendingScrollPaths.clear();
+        }
+        AppExecutors.runOnUiIfAlive(context, pendingFolderRows::clear);
+    }
+
     /**
      * Ceiling on backend stat lookups for one listing. A listing normally has
      * the metadata already (RootFile caches it, ShizukuFile now parses it out of
@@ -222,6 +272,7 @@ public class FileIconLoader {
         icon.setTag(null);
         icon.setImageDrawable(cachedUpFolderIcon);
         if (detail != null) {
+            pendingFolderRows.remove(detail);
             detail.setTag(null);
             detail.setVisibility(View.GONE);
         }
@@ -376,6 +427,9 @@ public class FileIconLoader {
     }
 
     private static Bitmap decodeZipBitmap(File zip, String entryPath) {
+        if (SvgRenderer.isSvgName(entryPath)) {
+            return SvgRenderer.decodeBytes(readZipEntry(zip, entryPath), THUMB_RENDER_PX);
+        }
         try (InputStream in = ArchiveBrowseUtil.openEntry(zip, entryPath)) {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
@@ -405,12 +459,13 @@ public class FileIconLoader {
             fileIconView.setImageDrawable(cachedFolderIcon);
             showFolderDate(file, fileDateView, meta);
         } else {
+            pendingFolderRows.remove(fileDateView);
             long len = meta[1];
             long mt = meta[2];
             boolean listedStat = (file instanceof RootFile rf && rf.hasRootStat())
                     || (file instanceof ShizukuFile sf && sf.hasStat());
             boolean ghost = !listedStat && len <= 0 && mt <= 0 && isGhostFile(file);
-            if ((len > 0 || mt > 0) || ghost || !elevatedFileOps || listedStat) {
+            if ((len > 0 || mt > 0) || ghost || !elevatedStatsAvailable || listedStat) {
                 fileDateView.setTag(null);
                 if (ghost || (listedStat && len <= 0 && mt <= 0 && !showPerms)) {
                     fileDateView.setVisibility(View.INVISIBLE);
@@ -532,12 +587,16 @@ public class FileIconLoader {
      */
     private String backendPermissions(String path) {
         try {
-            PrivilegeManager.Backend backend = PrivilegeManager.active(context);
-            if (backend == PrivilegeManager.Backend.ROOT) {
+            if (PrivilegeManager.Root.isRootAvailable(context)) {
+                PrivilegeManager.Root.StatInfo st = PrivilegeManager.Root.statInfo(context, path);
+                if (st != null && st.exists() && st.mode() != null) {
+                    return FilePermissions.formatOctal(st.mode());
+                }
                 return FilePermissions.formatOctal(
                         PrivilegeManager.Root.getPermissions(context, path));
             }
-            if (backend == PrivilegeManager.Backend.SHIZUKU) {
+            if (PrivilegeManager.active(context) == PrivilegeManager.Backend.SHIZUKU
+                    || PrivilegeManager.Shizuku.ready()) {
                 ShellSession.Result r = PrivilegeManager.shell().exec(
                         "stat -c %a " + ShellQuote.escapeShellArg(path), 30);
                 if (r.success && r.stdout != null) {
@@ -699,17 +758,35 @@ public class FileIconLoader {
             }
             long size = -1;
             long mtime = 0;
+            boolean usedSingleStat = false;
             try {
-                size = PrivilegeManager.Files.getSize(context, tag);
-            } catch (Exception ignored) {}
-            try {
-                mtime = PrivilegeManager.Files.getMtime(context, tag);
-            } catch (Exception ignored) {}
-            // Piggyback the permission lookup on the same backend round trip
-            // instead of queueing a second shell stat for the row.
-            if (showPerms && !isUserStorage(tag) && permMemo.get(tag) == null) {
-                String resolved = backendPermissions(tag);
-                permMemo.put(tag, resolved != null ? resolved : "");
+                if (PrivilegeManager.Root.isRootAvailable(context)) {
+                    PrivilegeManager.Root.StatInfo st = PrivilegeManager.Root.statInfo(context, tag);
+                    if (st != null && st.exists()) {
+                        usedSingleStat = true;
+                        size = st.isDirectory() ? 0L : Math.max(0L, st.length());
+                        mtime = Math.max(0L, st.lastModified());
+                        if (showPerms && !isUserStorage(tag) && permMemo.get(tag) == null) {
+                            String resolved = st.mode() != null ? FilePermissions.formatOctal(st.mode()) : null;
+                            permMemo.put(tag, resolved != null ? resolved : "");
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            if (!usedSingleStat) {
+                try {
+                    size = PrivilegeManager.Files.getSize(context, tag);
+                } catch (Exception ignored) {}
+                try {
+                    mtime = PrivilegeManager.Files.getMtime(context, tag);
+                } catch (Exception ignored) {}
+                // Piggyback the permission lookup on the same backend round trip
+                // instead of queueing a second shell stat for the row.
+                if (showPerms && !isUserStorage(tag) && permMemo.get(tag) == null) {
+                    String resolved = backendPermissions(tag);
+                    permMemo.put(tag, resolved != null ? resolved : "");
+                }
             }
             releasePending(tag);
             sizeCache.put(tag, size);
@@ -872,81 +949,298 @@ public class FileIconLoader {
                 || path.equals("/sdcard");
     }
 
+    private boolean shouldMeasureFolder(File file, int mode) {
+        if (file == null || mode == UiPrefs.FOLDER_SIZE_NONE || !treatAsFolder(file)) return false;
+        String path;
+        try {
+            path = file.getAbsolutePath();
+        } catch (Exception e) {
+            return false;
+        }
+        if (FileTreeStats.virtualFilesystem(path)) return false;
+        if (mode == UiPrefs.FOLDER_SIZE_USER && !isUserStorage(path)) return false;
+        return true;
+    }
+
+    /**
+     * Upfront batch prefetcher called when an adapter binds a folder listing.
+     * Measures uncached visible subdirectories first via one persistent {@code mpio serve}
+     * batch round-trip (or Shizuku {@code dirSizeTree} fallback when unrooted),
+     * then remaining folders in chunked low-priority slices.
+     */
+    public void prefetchListingSizes(Object[] values) {
+        if (cancelled || isInZip || values == null || values.length == 0) return;
+        final int mode = UiPrefs.folderSizeMode(context);
+        if (mode == UiPrefs.FOLDER_SIZE_NONE) return;
+        final List<File> candidates = new ArrayList<>();
+        for (Object item : values) {
+            if (item instanceof File f && shouldMeasureFolder(f, mode)) {
+                candidates.add(f);
+            }
+        }
+        if (candidates.isEmpty()) return;
+        folderSizeService.execute(() -> runBatchPrefetch(candidates));
+    }
+
+    private void runBatchPrefetch(List<File> candidates) {
+        if (cancelled) return;
+        Map<String, Long> cachedHits = new HashMap<>();
+        List<File> uncached = new ArrayList<>();
+        for (File dir : candidates) {
+            if (cancelled) return;
+            Long cached = DirSizeCache.peek(dir);
+            if (cached != null) {
+                cachedHits.put(dir.getAbsolutePath(), cached);
+            } else if (!DirSizeCache.isInCooldown(dir)) {
+                uncached.add(dir);
+            }
+        }
+        if (!cachedHits.isEmpty()) {
+            postApplyFolderSizes(cachedHits);
+        }
+        if (uncached.isEmpty() || cancelled) return;
+
+        int endFirst = Math.min(SIZE_BATCH_FIRST_CHUNK, uncached.size());
+        measureDirectoryBatch(uncached.subList(0, endFirst));
+        for (int i = endFirst; i < uncached.size(); i += SIZE_BATCH_NEXT_CHUNK) {
+            if (cancelled) return;
+            int end = Math.min(i + SIZE_BATCH_NEXT_CHUNK, uncached.size());
+            measureDirectoryBatch(uncached.subList(i, end));
+        }
+    }
+
+    private void enqueueScrollFolder(File file) {
+        if (cancelled || file == null) return;
+        String path = file.getAbsolutePath();
+        synchronized (scrollBatchLock) {
+            if (pendingScrollPaths.contains(path) || pendingScrollDirs.size() >= 64) return;
+            pendingScrollPaths.add(path);
+            pendingScrollDirs.add(file);
+            if (scrollBatchFuture == null || scrollBatchFuture.isDone()) {
+                scrollBatchFuture = folderSizeService.schedule(
+                        this::drainScrollBatch, SIZE_SCROLL_COALESCE_MS, TimeUnit.MILLISECONDS);
+            }
+        }
+    }
+
+    private void drainScrollBatch() {
+        List<File> batch;
+        synchronized (scrollBatchLock) {
+            scrollBatchFuture = null;
+            if (pendingScrollDirs.isEmpty() || cancelled) {
+                pendingScrollDirs.clear();
+                pendingScrollPaths.clear();
+                return;
+            }
+            batch = new ArrayList<>(pendingScrollDirs);
+            pendingScrollDirs.clear();
+            pendingScrollPaths.clear();
+        }
+        List<File> needed = new ArrayList<>(batch.size());
+        Map<String, Long> hits = new HashMap<>();
+        for (File dir : batch) {
+            Long cached = DirSizeCache.peek(dir);
+            if (cached != null) {
+                hits.put(dir.getAbsolutePath(), cached);
+            } else if (!DirSizeCache.isInCooldown(dir)) {
+                needed.add(dir);
+            }
+        }
+        if (!hits.isEmpty()) postApplyFolderSizes(hits);
+        if (!needed.isEmpty() && !cancelled) measureDirectoryBatch(needed);
+    }
+
+    private void measureDirectoryBatch(List<File> dirs) {
+        if (cancelled || dirs == null || dirs.isEmpty()) return;
+        List<File> claimed = new ArrayList<>(dirs.size());
+        List<String> claimedPaths = new ArrayList<>(dirs.size());
+        for (File d : dirs) {
+            String p = d.getAbsolutePath();
+            if (DirSizeCache.tryClaimScan(p)) {
+                claimed.add(d);
+                claimedPaths.add(p);
+            }
+        }
+        if (claimed.isEmpty()) return;
+        try {
+            boolean needsElevatedProbe = PrivilegeManager.Root.isRootAvailableCached(context)
+                    || PrivilegeManager.active(context) == PrivilegeManager.Backend.ROOT;
+            if (!needsElevatedProbe) {
+                for (File d : claimed) {
+                    String p = d.getAbsolutePath();
+                    if (!isUserStorage(p) || PrivilegeManager.Shizuku.isAndroidDataPath(p) || !d.canRead()) {
+                        needsElevatedProbe = true;
+                        break;
+                    }
+                }
+            }
+            boolean rootAvail = false;
+            if (needsElevatedProbe) {
+                try {
+                    rootAvail = PrivilegeManager.Root.isRootAvailable(context);
+                } catch (Exception ignored) {
+                }
+            }
+            if (rootAvail) {
+                final Map<String, Long> uiBuffer = new HashMap<>();
+                final long[] lastFlushMs = {System.currentTimeMillis()};
+                PrivilegeManager.Native.BatchResult batch =
+                        PrivilegeManager.Native.measureSizesBatch(context, claimedPaths, 500L, 2000L,
+                                (path, bytes) -> {
+                                    DirSizeCache.record(new File(path), bytes);
+                                    if (!cancelled) {
+                                        uiBuffer.put(path, bytes);
+                                        long now = System.currentTimeMillis();
+                                        if (now - lastFlushMs[0] >= 80L) {
+                                            lastFlushMs[0] = now;
+                                            Map<String, Long> flush = new HashMap<>(uiBuffer);
+                                            uiBuffer.clear();
+                                            postApplyFolderSizes(flush);
+                                        }
+                                    }
+                                });
+                if (!cancelled && !uiBuffer.isEmpty()) {
+                    postApplyFolderSizes(new HashMap<>(uiBuffer));
+                    uiBuffer.clear();
+                }
+                if (!batch.sizes().isEmpty()) {
+                    DirSizeCache.scheduleSave();
+                }
+                for (String t : batch.timedOut()) {
+                    DirSizeCache.recordCooldown(t, DirSizeCache.COOLDOWN_TIMEOUT_MS);
+                }
+                for (String f : batch.failed()) {
+                    DirSizeCache.recordCooldown(f, DirSizeCache.COOLDOWN_ERROR_MS);
+                }
+                return;
+            }
+
+            // Unrooted path: try parent tree once via Shizuku outside user storage / Android/{data,obb},
+            // then local stack walk for normal app-readable folders.
+            Map<String, Long> resolved = new HashMap<>();
+            Set<String> queriedParents = new HashSet<>();
+            List<File> remaining = new ArrayList<>();
+            for (File d : claimed) {
+                if (cancelled) return;
+                String p = d.getAbsolutePath();
+                boolean needsShell = !isUserStorage(p)
+                        || PrivilegeManager.Shizuku.isAndroidDataPath(p)
+                        || !d.canRead();
+                if (!needsShell) {
+                    long sz = calculateLocalFolderSize(d);
+                    if (sz >= 0L) {
+                        resolved.put(p, sz);
+                        postApplyFolderSizes(java.util.Collections.singletonMap(p, sz));
+                    } else {
+                        DirSizeCache.recordCooldown(p, DirSizeCache.COOLDOWN_TIMEOUT_MS);
+                    }
+                    continue;
+                }
+                File parent = d.getParentFile();
+                if (parent != null && queriedParents.add(parent.getAbsolutePath())) {
+                    Map<String, Long> tree = PrivilegeManager.Files.dirSizeTree(context, parent.getAbsolutePath());
+                    if (tree != null && !tree.isEmpty()) {
+                        resolved.putAll(tree);
+                        postApplyFolderSizes(tree);
+                    }
+                }
+                if (!resolved.containsKey(p)) {
+                    remaining.add(d);
+                }
+            }
+            for (File d : remaining) {
+                if (cancelled) return;
+                String p = d.getAbsolutePath();
+                long du = PrivilegeManager.Files.dirSize(context, p);
+                if (du >= 0L) {
+                    resolved.put(p, du);
+                    postApplyFolderSizes(java.util.Collections.singletonMap(p, du));
+                } else {
+                    DirSizeCache.recordCooldown(p,
+                            du == PrivilegeManager.Native.DIR_SIZE_TIMED_OUT
+                                    ? DirSizeCache.COOLDOWN_TIMEOUT_MS
+                                    : DirSizeCache.COOLDOWN_ERROR_MS);
+                }
+            }
+            if (!resolved.isEmpty()) {
+                DirSizeCache.recordBatch(resolved);
+            }
+        } finally {
+            DirSizeCache.releaseScans(claimedPaths);
+        }
+    }
+
+    private void postApplyFolderSizes(Map<String, Long> sizes) {
+        if (cancelled || sizes == null || sizes.isEmpty()) return;
+        AppExecutors.runOnUiIfAlive(context, () -> {
+            if (cancelled) return;
+            Iterator<Map.Entry<TextView, PendingFolderRow>> it = pendingFolderRows.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<TextView, PendingFolderRow> entry = it.next();
+                TextView tv = entry.getKey();
+                PendingFolderRow row = entry.getValue();
+                if (tv == null || row == null || !row.path.equals(tv.getTag())) {
+                    it.remove();
+                    continue;
+                }
+                Long sz = sizes.get(row.path);
+                if (sz != null && sz >= 0L) {
+                    tv.setText(new StringBuilder(row.prefix)
+                            .append(' ')
+                            .append(FileSize.getHumanReadableFileSize(sz)));
+                    it.remove();
+                }
+            }
+        });
+    }
+
     private void showFolderSizeAndDate(File file, TextView fileDateView, String dateStr) {
         fileDateView.setVisibility(View.VISIBLE);
         applyDateTextSize(fileDateView);
         if (file == null) {
+            pendingFolderRows.remove(fileDateView);
             fileDateView.setText(dateStr);
             return;
         }
         int mode = UiPrefs.folderSizeMode(context);
         if (mode == UiPrefs.FOLDER_SIZE_NONE) {
+            pendingFolderRows.remove(fileDateView);
             fileDateView.setText(dateStr);
             return;
         }
         String path = file.getAbsolutePath();
         if (mode == UiPrefs.FOLDER_SIZE_USER && !isUserStorage(path)) {
+            pendingFolderRows.remove(fileDateView);
             fileDateView.setText(dateStr);
             return;
         }
         Long cached = DirSizeCache.peek(file);
         if (cached != null) {
+            pendingFolderRows.remove(fileDateView);
+            fileDateView.setTag(null);
             fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(cached)));
             return;
         }
         fileDateView.setText(dateStr);
-        if (!DirSizeCache.isReady()) return; // preload in flight; rows rebind and pick it up
-        String tag = path;
-        fileDateView.setTag(tag);
-        folderSizeService.schedule(() -> {
-            if (!tag.equals(fileDateView.getTag())) return;
-            long size = calculateFolderSize(file, context);
-            if (size < 0) return; // walk aborted; leave uncached so it can retry later
-            DirSizeCache.record(file, size);
-            DirSizeCache.scheduleSave();
-            AppExecutors.runOnUiIfAlive(context, () -> {
-                if (tag.equals(fileDateView.getTag()) && size >= 0) {
-                    fileDateView.setText(new StringBuilder(dateStr).append(' ').append(FileSize.getHumanReadableFileSize(size)));
-                }
-            });
-        }, SIZE_WALK_DELAY_MS, TimeUnit.MILLISECONDS);
+        if (!shouldMeasureFolder(file, mode) || DirSizeCache.isInCooldown(path)) {
+            pendingFolderRows.remove(fileDateView);
+            return;
+        }
+        fileDateView.setTag(path);
+        pendingFolderRows.put(fileDateView, new PendingFolderRow(file, path, dateStr));
+        if (DirSizeCache.isReady() && !DirSizeCache.isInFlight(path)) {
+            enqueueScrollFolder(file);
+        }
     }
 
-    /** Delay before a folder-size walk starts, so listing and icons go first. */
-    private static final long SIZE_WALK_DELAY_MS = 500;
     private static final int SIZE_WALK_MAX_ENTRIES = 20000;
     private static final long SIZE_WALK_MAX_TIME_MS = 4000;
 
-    /**
-     * Iterative walk with entry and time budgets. A whole-subtree scan of a big
-     * storage root could otherwise run for minutes; an aborted walk returns -1
-     * and is not cached, so it can be retried later. Outside user storage the
-     * backend (root/Shizuku) {@code du} is tried first, since those trees are
-     * not readable by the app user at all.
-     */
-    private static long calculateFolderSize(File dir, Context ctx) {
+    private static long calculateLocalFolderSize(File dir) {
         if (dir == null || !treatAsFolder(dir)) return 0;
         String path = dir.getAbsolutePath();
-        if (path.equals("/proc") || path.startsWith("/proc/")
-                || path.equals("/sys") || path.startsWith("/sys/")
-                || path.equals("/dev") || path.startsWith("/dev/")
-                || path.equals("/acct") || path.startsWith("/acct/")
-                || path.equals("/config") || path.startsWith("/config/")
-                || path.equals("/d") || path.startsWith("/d/")
-                || path.equals("/linkerconfig") || path.startsWith("/linkerconfig/")
-                || path.equals("/data_mirror") || path.startsWith("/data_mirror/")) {
-            return 0;
-        }
-        if (!isUserStorage(path)) {
-            try {
-                long du = PrivilegeManager.Files.dirSize(ctx, path);
-                if (du >= 0) return du;
-            } catch (Exception ignored) {}
-            // Outside user storage, if directory is not readable by normal Java IO,
-            // never run stack.push(dir) which would result in listFiles() returning null
-            // and wrongly returning 0 (cached as 0B).
-            if (!dir.canRead()) return -1;
-        }
+        if (FileTreeStats.virtualFilesystem(path)) return 0;
+        if (!dir.canRead()) return -1;
         long deadline = System.currentTimeMillis() + SIZE_WALK_MAX_TIME_MS;
         ArrayDeque<File> stack = new ArrayDeque<>();
         stack.push(dir);
@@ -1286,104 +1580,48 @@ public class FileIconLoader {
             resolved = cachedDexIcon;
         } else if (".arsc".equals(ext)) {
             resolved = cachedArscIcon;
-        } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
-            resolved = cachedTextIcon;
-        } else if (isDatabaseExt(ext)) {
-            resolved = cachedDbIcon;
-        } else if (isFontExt(ext)) {
-            resolved = cachedFontIcon;
-        } else if (isBinaryExt(ext)) {
-            resolved = cachedBinaryIcon;
-        } else if (isProtoExt(ext)) {
-            resolved = cachedProtoIcon;
-        } else if (isWordExt(ext)) {
-            resolved = cachedDocIcon;
-        } else if (isSheetExt(ext)) {
-            resolved = cachedSheetIcon;
-        } else if (isSlideExt(ext)) {
-            resolved = cachedSlideIcon;
-        } else if (isScriptExt(ext)) {
-            resolved = cachedScriptIcon;
-        } else if (isBackupExt(ext)) {
-            resolved = cachedBackupIcon;
-        } else if (isCertExt(ext)) {
-            resolved = cachedCertIcon;
-        } else if (".img".equals(ext) || ".iso".equals(ext) || ".vdi".equals(ext) || ".vhd".equals(ext)
-                || ".vhdx".equals(ext) || ".vmdk".equals(ext) || ".qcow2".equals(ext) || ".ext4".equals(ext)
-                || ".wad".equals(ext) || ".payload".equals(ext) || "payload.bin".equalsIgnoreCase(FilenameUtils.getName(path))) {
-            resolved = cachedImgIcon;
-        } else if (FileUtils.isElf(path)) {
-            resolved = cachedElfIcon;
-        } else if (!isInZip) {
-            resolved = cachedFileIcon;
-            loadMagicOrElfIconAsync(path, fileIconView);
         } else {
-            resolved = cachedFileIcon;
+            FileIconSpec codeSpec = FileIconSpec.codeSpecForExt(ext);
+            Drawable codeDrawable = codeSpec != null ? cachedCodeIcons.get(codeSpec) : null;
+            if (codeDrawable != null) {
+                resolved = codeDrawable;
+            } else if (FileIconSpec.isDatabaseExt(ext)) {
+                resolved = cachedDbIcon;
+            } else if (FileIconSpec.isFontExt(ext)) {
+                resolved = cachedFontIcon;
+            } else if (FileIconSpec.isBinaryExt(ext)) {
+                resolved = cachedBinaryIcon;
+            } else if (FileIconSpec.isProtoExt(ext)) {
+                resolved = cachedProtoIcon;
+            } else if (FileIconSpec.isWordExt(ext)) {
+                resolved = cachedDocIcon;
+            } else if (FileIconSpec.isSheetExt(ext)) {
+                resolved = cachedSheetIcon;
+            } else if (FileIconSpec.isSlideExt(ext)) {
+                resolved = cachedSlideIcon;
+            } else if (FileIconSpec.isScriptExt(ext)) {
+                resolved = cachedScriptIcon;
+            } else if (FileIconSpec.isBackupExt(ext)) {
+                resolved = cachedBackupIcon;
+            } else if (FileIconSpec.isCertExt(ext)) {
+                resolved = cachedCertIcon;
+            } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
+                resolved = cachedTextIcon;
+            } else if (".img".equals(ext) || ".iso".equals(ext) || ".vdi".equals(ext) || ".vhd".equals(ext)
+                    || ".vhdx".equals(ext) || ".vmdk".equals(ext) || ".qcow2".equals(ext) || ".ext4".equals(ext)
+                    || ".wad".equals(ext) || ".payload".equals(ext) || "payload.bin".equalsIgnoreCase(FilenameUtils.getName(path))) {
+                resolved = cachedImgIcon;
+            } else if (FileUtils.isElf(path)) {
+                resolved = cachedElfIcon;
+            } else if (!isInZip) {
+                resolved = cachedFileIcon;
+                loadMagicOrElfIconAsync(path, fileIconView);
+            } else {
+                resolved = cachedFileIcon;
+            }
         }
         iconMemo.put(path, resolved);
         return resolved;
-    }
-
-    static boolean isDatabaseExt(String ext) {
-        return ".db".equals(ext) || ".sqlite".equals(ext) || ".sqlite3".equals(ext)
-                || ".db-wal".equals(ext) || ".db-shm".equals(ext) || ".db-journal".equals(ext)
-                || ".workdb".equals(ext) || ".workdb-wal".equals(ext) || ".workdb-shm".equals(ext)
-                || ".ldb".equals(ext) || ".dbf".equals(ext) || ".mdb".equals(ext) || ".accdb".equals(ext)
-                || ".rdb".equals(ext) || ".realm".equals(ext) || ".kdbx".equals(ext)
-                || ".wallet".equals(ext) || ".keychain".equals(ext);
-    }
-
-    static boolean isFontExt(String ext) {
-        return ".ttf".equals(ext) || ".otf".equals(ext) || ".woff".equals(ext) || ".woff2".equals(ext) || ".ttc".equals(ext);
-    }
-
-    static boolean isBinaryExt(String ext) {
-        return ".so".equals(ext) || ".bin".equals(ext) || ".dat".equals(ext) || ".vdex".equals(ext)
-                || ".odex".equals(ext) || ".art".equals(ext) || ".o".equals(ext) || ".dylib".equals(ext) || ".dll".equals(ext)
-                || ".binproto".equals(ext) || ".binwalk".equals(ext) || ".bios".equals(ext) || ".rom".equals(ext)
-                || ".dtbo".equals(ext) || ".vbmeta".equals(ext) || ".sparse".equals(ext) || ".chd".equals(ext)
-                || ".cso".equals(ext) || ".pbp".equals(ext) || ".gb".equals(ext) || ".gba".equals(ext)
-                || ".gbc".equals(ext) || ".nds".equals(ext) || ".nes".equals(ext) || ".n64".equals(ext)
-                || ".z64".equals(ext) || ".sfc".equals(ext) || ".smc".equals(ext) || ".oat".equals(ext)
-                || ".pyc".equals(ext) || ".wasm".equals(ext) || ".tflite".equals(ext) || ".onnx".equals(ext)
-                || ".h5".equals(ext) || ".mat".equals(ext) || ".msgpack".equals(ext) || ".pcap".equals(ext)
-                || ".pcapng".equals(ext) || ".cap".equals(ext) || ".snoop".equals(ext) || ".trace".equals(ext)
-                || ".hprof".equals(ext) || ".shm".equals(ext) || ".wal".equals(ext) || ".seed".equals(ext)
-                || ".xpo".equals(ext) || ".crypt14".equals(ext) || ".crypt15".equals(ext);
-    }
-
-    static boolean isProtoExt(String ext) {
-        return ".pb".equals(ext) || ".proto".equals(ext) || ".preferences_pb".equals(ext) || ".pma".equals(ext) || ".bson".equals(ext)
-                || ".parquet".equals(ext) || ".arrow".equals(ext) || ".avro".equals(ext);
-    }
-
-    static boolean isWordExt(String ext) {
-        return ".doc".equals(ext) || ".docx".equals(ext) || ".odt".equals(ext) || ".rtf".equals(ext);
-    }
-
-    static boolean isSheetExt(String ext) {
-        return ".xls".equals(ext) || ".xlsx".equals(ext) || ".csv".equals(ext) || ".ods".equals(ext) || ".tsv".equals(ext);
-    }
-
-    static boolean isSlideExt(String ext) {
-        return ".ppt".equals(ext) || ".pptx".equals(ext) || ".odp".equals(ext);
-    }
-
-    static boolean isScriptExt(String ext) {
-        return ".sh".equals(ext) || ".bash".equals(ext) || ".py".equals(ext) || ".c".equals(ext)
-                || ".cpp".equals(ext) || ".h".equals(ext) || ".hpp".equals(ext) || ".cs".equals(ext)
-                || ".rs".equals(ext) || ".go".equals(ext) || ".lua".equals(ext);
-    }
-
-    static boolean isBackupExt(String ext) {
-        return ".bak".equals(ext) || ".backup".equals(ext) || ".old".equals(ext) || ".orig".equals(ext) || ".save".equals(ext);
-    }
-
-    static boolean isCertExt(String ext) {
-        return ".pem".equals(ext) || ".crt".equals(ext) || ".cer".equals(ext) || ".key".equals(ext)
-                || ".keystore".equals(ext) || ".jks".equals(ext) || ".bks".equals(ext) || ".der".equals(ext) || ".p12".equals(ext) || ".pfx".equals(ext)
-                || ".asc".equals(ext) || ".gpg".equals(ext) || ".csr".equals(ext) || ".crl".equals(ext)
-                || ".sig".equals(ext) || ".idsig".equals(ext) || ".pub".equals(ext) || ".p8".equals(ext) || ".pk8".equals(ext);
     }
 
     private void loadMagicOrElfIconAsync(String path, ImageView fileIconView) {
@@ -1557,11 +1795,14 @@ public class FileIconLoader {
         int bucket = (int) (density * 4);
         int epoch = ThemeRegistry.currentEpoch();
         boolean dark = ThemeRegistry.isDarkTheme(context);
+        boolean use3d = UiPrefs.use3dIcons(context);
         if (cachedIconTheme == theme && cachedIconEpoch == epoch
-                && cachedIconDark == dark && cachedIconBucket == bucket) return;
+                && cachedIconDark == dark && cachedIcon3d == use3d
+                && cachedIconBucket == bucket) return;
         cachedIconTheme = theme;
         cachedIconEpoch = epoch;
         cachedIconDark = dark;
+        cachedIcon3d = use3d;
         cachedIconBucket = bucket;
         cachedUpFolderIcon = FileIconSpec.parentDrawable(context);
         cachedFolderIcon = FileIconSpec.FOLDER.drawable(context);
@@ -1575,6 +1816,11 @@ public class FileIconLoader {
         cachedStickerIcon = FileIconSpec.STICKER.drawable(context);
         cachedPdfIcon = FileIconSpec.PDF.drawable(context);
         cachedTextIcon = FileIconSpec.TEXT.drawable(context);
+        for (FileIconSpec codeSpec : new FileIconSpec[]{
+                FileIconSpec.JAVA, FileIconSpec.KOTLIN, FileIconSpec.XML,
+                FileIconSpec.JSON, FileIconSpec.PYTHON, FileIconSpec.SMALI, FileIconSpec.JS}) {
+            cachedCodeIcons.put(codeSpec, codeSpec.drawable(context));
+        }
         cachedElfIcon = FileIconSpec.ELF.drawable(context);
         cachedImgIcon = FileIconSpec.DISK.drawable(context);
         cachedDbIcon = FileIconSpec.DATABASE.drawable(context);
@@ -1602,6 +1848,9 @@ public class FileIconLoader {
 
     public static Bitmap loadImageThumbnail(String path) {
         if (SafFs.isSafPath(path)) {
+            if (SvgRenderer.isSvgName(path)) {
+                return SvgRenderer.decodeThumbnail(path, 160);
+            }
             // Provider documents have no readable path: decode through the
             // ContentResolver stream (bounds pass, then the scaled pass).
             try (InputStream in = FileUtils.getInputStream(new File(path))) {
@@ -1648,6 +1897,9 @@ public class FileIconLoader {
         try {
             File f = new File(filePath);
             if (!f.canRead()) return null;
+            if (SvgRenderer.isSvgName(filePath)) {
+                return SvgRenderer.decodeThumbnail(filePath, 160);
+            }
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             BitmapFactory.decodeFile(filePath, options);
@@ -1678,6 +1930,9 @@ public class FileIconLoader {
             PrivilegeManager.Root.streamFromRoot(App.getInstance(), path, baos, 2 * 1024 * 1024); // Up to 2MB for thumbnail
             byte[] data = baos.toByteArray();
             if (data == null || data.length == 0) return null;
+            if (SvgRenderer.isSvgName(path)) {
+                return SvgRenderer.decodeBytes(data, 160);
+            }
 
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;

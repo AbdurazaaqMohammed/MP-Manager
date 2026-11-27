@@ -2672,4 +2672,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="image_options_message">Image Type: %1$s%2$s\n\nWould you like to browse and explore the filesystem contents or open with an external app?</string>
     <string name="image_explorer_title">System Image Explorer</string>
     <string name="image_browse_files">Browse Files</string>
+    <string name="use_3d_icons_title">3D Icons</string>
+    <string name="use_3d_icons_summary">Use adaptive 3D artwork for file and folder icons</string>
 </resources>

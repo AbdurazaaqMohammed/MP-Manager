@@ -297,6 +297,27 @@ public final class UiPrefs {
         }
     }
 
+    public static final String USE_3D_ICONS_KEY = "use_3d_icons";
+
+    public static boolean use3dIcons(Context context) {
+        if (context == null) return false;
+        try {
+            return PreferenceManager.getDefaultSharedPreferences(context)
+                    .getBoolean(USE_3D_ICONS_KEY, false);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public static void setUse3dIcons(Context context, boolean value) {
+        if (context == null) return;
+        try {
+            PreferenceManager.getDefaultSharedPreferences(context)
+                    .edit().putBoolean(USE_3D_ICONS_KEY, value).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
     public static int folderSizeMode(Context context) {
         try {
             return PreferenceManager.getDefaultSharedPreferences(context)
