@@ -787,7 +787,11 @@ public class ArscEditorPlusActivity extends BaseActivity {
 
     void rebuildTree() {
         if (data == null) return;
-        explorerAdapter.setRoots(data.buildTree());
+        List<ArscData.Node> roots = data.buildTree();
+        for (ArscData.Node root : roots) {
+            if (root.dir) root.expanded = true;
+        }
+        explorerAdapter.setRoots(roots);
     }
 
     void markDirty() {
@@ -904,9 +908,20 @@ public class ArscEditorPlusActivity extends BaseActivity {
         });
     }
 
+    private static final long DOUBLE_PRESS_INTERVAL = 2000L;
+    private long lastBackPressTime = 0L;
+
     private void confirmExit() {
+        confirmExit(false);
+    }
+
+    private void confirmExit(boolean fromBack) {
         if (!dirty) {
-            finishWithApkResult();
+            if (fromBack) {
+                promptDoublePressExit();
+            } else {
+                finishWithApkResult();
+            }
             return;
         }
         new MaterialAlertDialogBuilder(this)
@@ -916,6 +931,16 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 .setNegativeButton(R.string.discard, (d, w) -> finish())
                 .setNeutralButton(R.string.minimize, (d, w) -> minimizeThis())
                 .show();
+    }
+
+    private void promptDoublePressExit() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
+            finishWithApkResult();
+        } else {
+            lastBackPressTime = currentTime;
+            Extensions.showMessage(this, R.string.press_back_again_to_exit);
+        }
     }
 
     @Override
@@ -966,7 +991,10 @@ public class ArscEditorPlusActivity extends BaseActivity {
             exitBatchMode();
             return;
         }
-        confirmExit();
+        if (explorerAdapter != null && explorerAdapter.collapseDeepestExpanded()) {
+            return;
+        }
+        confirmExit(true);
     }
 
     private void showEntryDialog(ResourceEntry re) {
