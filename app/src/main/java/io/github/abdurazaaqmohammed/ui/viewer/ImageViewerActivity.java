@@ -269,11 +269,18 @@ public class ImageViewerActivity extends BaseActivity {
         counterText.setText((pos + 1) + "/" + imagePaths.size());
 
         String resolution = "";
-        BitmapFactory.Options opts = new BitmapFactory.Options();
-        opts.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(path, opts);
-        if (opts.outWidth > 0 && opts.outHeight > 0) {
-            resolution = opts.outWidth + "x" + opts.outHeight;
+        if (SvgRenderer.isSvgName(path)) {
+            int[] svgSize = SvgRenderer.measureFile(path);
+            if (svgSize != null) {
+                resolution = svgSize[0] + "x" + svgSize[1];
+            }
+        } else {
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(path, opts);
+            if (opts.outWidth > 0 && opts.outHeight > 0) {
+                resolution = opts.outWidth + "x" + opts.outHeight;
+            }
         }
 
         String modDate = "";
@@ -305,44 +312,51 @@ public class ImageViewerActivity extends BaseActivity {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         sb.append("Modified: ").append(sdf.format(new Date(file.lastModified()))).append("\n");
 
-        BitmapFactory.Options opts = new BitmapFactory.Options();
-        opts.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(path, opts);
-        if (opts.outWidth > 0 && opts.outHeight > 0) {
-            sb.append("Resolution: ").append(opts.outWidth).append("x").append(opts.outHeight).append(" px\n");
-        }
+        if (SvgRenderer.isSvgName(path)) {
+            int[] svgSize = SvgRenderer.measureFile(path);
+            if (svgSize != null) {
+                sb.append("Resolution: ").append(svgSize[0]).append("x").append(svgSize[1]).append(" (vector)\n");
+            }
+        } else {
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(path, opts);
+            if (opts.outWidth > 0 && opts.outHeight > 0) {
+                sb.append("Resolution: ").append(opts.outWidth).append("x").append(opts.outHeight).append(" px\n");
+            }
 
-        try {
-            ExifInterface exif = new ExifInterface(path);
-            sb.append("\n--- EXIF Data ---\n");
-            String[] exifTags = {
-                ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL,
-                ExifInterface.TAG_DATETIME, ExifInterface.TAG_EXPOSURE_TIME,
-                ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_ISO_SPEED_RATINGS,
-                ExifInterface.TAG_FOCAL_LENGTH, ExifInterface.TAG_FLASH,
-                ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_APERTURE_VALUE,
-                ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LONGITUDE,
-                ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_DATESTAMP,
-                ExifInterface.TAG_IMAGE_WIDTH, ExifInterface.TAG_IMAGE_LENGTH,
-                ExifInterface.TAG_ORIENTATION, ExifInterface.TAG_SOFTWARE,
-                ExifInterface.TAG_ARTIST, ExifInterface.TAG_COPYRIGHT,
-                ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_DATETIME_ORIGINAL,
-                ExifInterface.TAG_EXIF_VERSION, ExifInterface.TAG_FLASH_ENERGY,
-                ExifInterface.TAG_IMAGE_DESCRIPTION, ExifInterface.TAG_USER_COMMENT
-            };
-            for (String tag : exifTags) {
-                String val = exif.getAttribute(tag);
-                if (val != null && !val.isEmpty()) {
-                    sb.append(tag).append(": ").append(val).append("\n");
+            try {
+                ExifInterface exif = new ExifInterface(path);
+                sb.append("\n--- EXIF Data ---\n");
+                String[] exifTags = {
+                    ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL,
+                    ExifInterface.TAG_DATETIME, ExifInterface.TAG_EXPOSURE_TIME,
+                    ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_ISO_SPEED_RATINGS,
+                    ExifInterface.TAG_FOCAL_LENGTH, ExifInterface.TAG_FLASH,
+                    ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_APERTURE_VALUE,
+                    ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LONGITUDE,
+                    ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_DATESTAMP,
+                    ExifInterface.TAG_IMAGE_WIDTH, ExifInterface.TAG_IMAGE_LENGTH,
+                    ExifInterface.TAG_ORIENTATION, ExifInterface.TAG_SOFTWARE,
+                    ExifInterface.TAG_ARTIST, ExifInterface.TAG_COPYRIGHT,
+                    ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_DATETIME_ORIGINAL,
+                    ExifInterface.TAG_EXIF_VERSION, ExifInterface.TAG_FLASH_ENERGY,
+                    ExifInterface.TAG_IMAGE_DESCRIPTION, ExifInterface.TAG_USER_COMMENT
+                };
+                for (String tag : exifTags) {
+                    String val = exif.getAttribute(tag);
+                    if (val != null && !val.isEmpty()) {
+                        sb.append(tag).append(": ").append(val).append("\n");
+                    }
                 }
-            }
 
-            float[] latLong = new float[2];
-            if (exif.getLatLong(latLong)) {
-                sb.append("GPS Coordinates: ").append(latLong[0]).append(", ").append(latLong[1]).append("\n");
+                float[] latLong = new float[2];
+                if (exif.getLatLong(latLong)) {
+                    sb.append("GPS Coordinates: ").append(latLong[0]).append(", ").append(latLong[1]).append("\n");
+                }
+            } catch (IOException e) {
+                sb.append("(No EXIF data available)\n");
             }
-        } catch (IOException e) {
-            sb.append("(No EXIF data available)\n");
         }
 
         new MaterialAlertDialogBuilder(this)
@@ -607,6 +621,9 @@ public class ImageViewerActivity extends BaseActivity {
         }
 
         private Bitmap decodeSampled(String path, int maxSize) {
+            if (SvgRenderer.isSvgName(path)) {
+                return SvgRenderer.decodeViewerBitmap(path, maxSize);
+            }
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeFile(path, bounds);
