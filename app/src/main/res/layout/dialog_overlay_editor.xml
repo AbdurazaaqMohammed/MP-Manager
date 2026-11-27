@@ -732,6 +732,31 @@
             android:visibility="gone">
 
             <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/overlayDlgCountdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/countdown_auto_dismiss" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/overlayDlgCountdownBox"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:hint="@string/countdown_seconds"
+                android:visibility="gone">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/overlayDlgCountdownSec"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="3"
+                    tools:ignore="HardcodedText" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/overlayDlgCancelable"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -860,6 +885,31 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textSize="15sp" />
+
+                <LinearLayout
+                    android:id="@+id/overlayDlgPreviewCountdownRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <ProgressBar
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:indeterminate="true" />
+
+                    <TextView
+                        android:id="@+id/overlayDlgPreviewCountdownText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="3"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        tools:ignore="HardcodedText" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
@@ -953,6 +1003,35 @@
                 android:orientation="vertical"
                 android:layout_marginTop="8dp" />
         </LinearLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/overlay_hook_method">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/overlayHookMethod"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/overlayProtectCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/protect_calling_code" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:alpha="0.7"
+            android:text="@string/protect_calling_code_summary"
+            android:textSize="12sp" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/overlayAutosign"

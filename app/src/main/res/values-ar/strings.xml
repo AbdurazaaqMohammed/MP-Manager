@@ -1342,6 +1342,11 @@
     <string name="show_once">إظهار مرة واحدة</string>
     <string name="don_t_show_again_button">إضافة زر \'عدم الإظهار مرة أخرى\'</string>
     <string name="movable_dialog">قابل للتحريك (السحب)</string>
+    <string name="countdown_auto_dismiss">عدّ تنازلي وإغلاق تلقائي (ترحيبي)</string>
+    <string name="countdown_seconds">مدة العد التنازلي (بالثواني)</string>
+    <string name="overlay_hook_method">دالة الحقن</string>
+    <string name="protect_calling_code">حماية كود الاستدعاء</string>
+    <string name="protect_calling_code_summary">تمويه الفئات المساعدة وإخفاء الاستدعاء عبر Reflection وتشفير النصوص</string>
     <string name="dialog_image">صورة الحوار</string>
     <string name="dialog_media">وسائط الحوار</string>
     <string name="media_none">بلا</string>
