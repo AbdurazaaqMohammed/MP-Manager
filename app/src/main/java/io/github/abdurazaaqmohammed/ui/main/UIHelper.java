@@ -119,7 +119,8 @@ public class UIHelper {
                 new AboutLibrary("Screen Color Picker", "codehasan", "https://github.com/codehasan/ScreenColorPicker", "MIT", "MIT.txt"),
                 new AboutLibrary("Layout Inspector", "Ratul Hasan", "https://github.com/AbdurazaaqMohammed/Layout-Inspector", "GPL-3.0", "GPL-3.0+.txt"),
                 new AboutLibrary("Viz.js", "Mike Daines", "https://github.com/mdaines/viz.js", "MIT", "MIT.txt"),
-                new AboutLibrary("svg-pan-zoom", "Andrea Leofreddi", "https://github.com/ariutta/svg-pan-zoom", "BSD-2-Clause", "")
+                new AboutLibrary("svg-pan-zoom", "Andrea Leofreddi", "https://github.com/ariutta/svg-pan-zoom", "BSD-2-Clause", ""),
+                new AboutLibrary("AndroidSVG", "Paul LeBeau", "https://github.com/BigBadaboom/androidsvg", "Apache-2.0", "Apache-2.0.txt")
         );
 
         LinearLayout libsContainer = aboutView.findViewById(R.id.aboutLibs);

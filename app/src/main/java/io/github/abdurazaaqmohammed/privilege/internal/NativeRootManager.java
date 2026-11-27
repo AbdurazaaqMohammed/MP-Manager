@@ -48,26 +48,48 @@ public final class NativeRootManager {
     private static final Object extractLock = new Object();
     private static final Object serveInitLock = new Object();
     private static volatile MpioServeClient serveClient;
+    private static volatile MpioServeClient sizeServeClient;
+    private static final Object sizeServeInitLock = new Object();
+
+    public static final long DIR_SIZE_TIMED_OUT = -2L;
+
+    public record BatchSizeResult(Map<String, Long> sizes, List<String> timedOut, List<String> failed) {
+    }
 
     public interface ProgressCallback {
         void onProgress(long filesDone, long bytesDone, String currentItem);
     }
 
+    private static MpioServeClient createServeClient(Context context) {
+        final Context app = context.getApplicationContext();
+        return new MpioServeClient(globalNs -> {
+            String cmd = "exec " + ShellQuote.escapeShellArg(getMpioPath(app)) + " serve";
+            return new ProcessBuilder(RootManager.suCommandForNs(app, cmd, globalNs))
+                    .redirectErrorStream(false)
+                    .start();
+        });
+    }
+
     private static MpioServeClient getServeClient(Context context) {
         if (serveClient == null && context != null) {
-            final Context app = context.getApplicationContext();
             synchronized (serveInitLock) {
                 if (serveClient == null) {
-                    serveClient = new MpioServeClient(globalNs -> {
-                        String cmd = "exec " + ShellQuote.escapeShellArg(getMpioPath(app)) + " serve";
-                        return new ProcessBuilder(RootManager.suCommandForNs(app, cmd, globalNs))
-                                .redirectErrorStream(false)
-                                .start();
-                    });
+                    serveClient = createServeClient(context);
                 }
             }
         }
         return serveClient;
+    }
+
+    private static MpioServeClient getSizeServeClient(Context context) {
+        if (sizeServeClient == null && context != null) {
+            synchronized (sizeServeInitLock) {
+                if (sizeServeClient == null) {
+                    sizeServeClient = createServeClient(context);
+                }
+            }
+        }
+        return sizeServeClient;
     }
 
     /**
@@ -78,7 +100,7 @@ public final class NativeRootManager {
     public static java.io.File[] listDir(Context context, String dirPath) {
         if (context == null) return null;
         RootManager rm = RootManager.getInstance(context);
-        if (!rm.isRootMode() || !rm.isRootAvailable()) return null;
+        if (!rm.isRootAvailable()) return null;
         MpioServeClient client = getServeClient(context);
         if (client == null || client.isUnsupported()) return null;
         return client.listDir(dirPath, rm.prefersGlobalNs());
@@ -91,16 +113,18 @@ public final class NativeRootManager {
     public static RootManager.RootEntry stat(Context context, String path) {
         if (context == null) return null;
         RootManager rm = RootManager.getInstance(context);
-        if (!rm.isRootMode() || !rm.isRootAvailable()) return null;
+        if (!rm.isRootAvailable()) return null;
         MpioServeClient client = getServeClient(context);
         if (client == null || client.isUnsupported()) return null;
         return client.stat(path, rm.prefersGlobalNs());
     }
 
-    /** Tears down the cached {@code mpio serve} process so the next call starts fresh. */
+    /** Tears down both persistent {@code mpio serve} processes so the next call starts fresh. */
     public static void resetServe() {
         MpioServeClient client = serveClient;
         if (client != null) client.reset();
+        MpioServeClient sizes = sizeServeClient;
+        if (sizes != null) sizes.reset();
     }
 
     /**
@@ -190,6 +214,19 @@ public final class NativeRootManager {
     }
 
     public static DirectoryStats stats(Context context, String path, TransferControl control, long timeoutMs) {
+        if (context != null && path != null && control == null && timeoutMs > 0 && timeoutMs <= 10_000L) {
+            RootManager rm = RootManager.getInstance(context);
+            if (rm.isRootAvailable()) {
+                MpioServeClient client = getSizeServeClient(context);
+                if (client != null && !client.isUnsupported()) {
+                    MpioServeClient.ServeDirStats fast = client.dirStats(path, rm.prefersGlobalNs(), timeoutMs);
+                    if (fast != null) {
+                        long errors = fast.timedOut() ? Math.max(1L, fast.errors()) : fast.errors();
+                        return new DirectoryStats(fast.files(), fast.dirs(), fast.bytes(), fast.hidden(), errors);
+                    }
+                }
+            }
+        }
         NativeScanResult result = scanStats(context, Collections.singletonList(path), control, timeoutMs);
         return result == null ? null : result.total;
     }
@@ -199,15 +236,99 @@ public final class NativeRootManager {
         return result == null ? null : result.items;
     }
 
-    /** One native traversal per sibling, in one process; keyed by the original pane paths. */
-    public static Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) {
-        NativeScanResult result = scanStats(context, paths, null, timeoutMs);
-        Map<String, Long> sizes = new HashMap<>();
-        if (result != null) for (int i = 0; i < paths.size(); i++) {
-            DirectoryStats item = result.items.get(i);
-            if (item.complete()) sizes.put(paths.get(i), item.bytes());
+    /**
+     * Measures a single folder size through the persistent {@code mpio serve} v2 pipe
+     * without spawning a shell. Returns bytes ({@code >= 0}), {@link #DIR_SIZE_TIMED_OUT},
+     * or {@code -1} on failure/unavailability.
+     */
+    public static long dirSize(Context context, String path, long timeoutMs) {
+        if (context == null || path == null || path.isEmpty()) return -1L;
+        RootManager rm = RootManager.getInstance(context);
+        if (!rm.isRootAvailable()) return -1L;
+        MpioServeClient client = getSizeServeClient(context);
+        if (client != null && !client.isUnsupported()) {
+            MpioServeClient.ServeDirStats fast = client.dirStats(path, rm.prefersGlobalNs(), timeoutMs);
+            if (fast != null) {
+                if (fast.timedOut()) return DIR_SIZE_TIMED_OUT;
+                return fast.isCompleteMeasure() ? fast.bytes() : -1L;
+            }
         }
-        return sizes;
+        DirectoryStats fallback = stats(context, path, null, timeoutMs);
+        if (fallback != null && (fallback.complete() || fallback.files() > 0 || fallback.folders() > 0)) {
+            return fallback.bytes();
+        }
+        return -1L;
+    }
+
+    /**
+     * Measures a batch of folder sizes in one persistent {@code mpio serve} v2 round-trip,
+     * falling back to a single {@code mpio scan --list} process only for legacy binaries.
+     */
+    public static BatchSizeResult measureSizesBatch(Context context, List<String> paths,
+                                                    long perItemMs, long totalTimeoutMs) {
+        return measureSizesBatch(context, paths, perItemMs, totalTimeoutMs, null);
+    }
+
+    public static BatchSizeResult measureSizesBatch(Context context, List<String> paths,
+                                                    long perItemMs, long totalTimeoutMs,
+                                                    java.util.function.BiConsumer<String, Long> onItemReady) {
+        Map<String, Long> sizes = new HashMap<>();
+        List<String> timedOut = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        if (context == null || paths == null || paths.isEmpty()) {
+            return new BatchSizeResult(sizes, timedOut, failed);
+        }
+        RootManager rm = RootManager.getInstance(context);
+        if (!rm.isRootAvailable()) {
+            failed.addAll(paths);
+            return new BatchSizeResult(sizes, timedOut, failed);
+        }
+        MpioServeClient client = getSizeServeClient(context);
+        if (client != null && !client.isUnsupported()) {
+            Map<String, MpioServeClient.ServeDirStats> fast =
+                    client.dirSizesBatch(paths, rm.prefersGlobalNs(), perItemMs, totalTimeoutMs,
+                            onItemReady == null ? null : (path, item) -> {
+                                if (item != null && !item.timedOut() && item.isCompleteMeasure()) {
+                                    onItemReady.accept(path, item.bytes());
+                                }
+                            });
+            if (fast != null) {
+                for (String p : paths) {
+                    MpioServeClient.ServeDirStats item = fast.get(p);
+                    if (item == null) {
+                        failed.add(p);
+                    } else if (item.timedOut()) {
+                        timedOut.add(p);
+                    } else if (item.isCompleteMeasure()) {
+                        sizes.put(p, item.bytes());
+                    } else {
+                        failed.add(p);
+                    }
+                }
+                return new BatchSizeResult(sizes, timedOut, failed);
+            }
+        }
+        NativeScanResult result = scanStats(context, paths, null, totalTimeoutMs);
+        if (result != null) {
+            for (int i = 0; i < paths.size() && i < result.items.size(); i++) {
+                DirectoryStats item = result.items.get(i);
+                if (item.complete()) {
+                    sizes.put(paths.get(i), item.bytes());
+                } else {
+                    failed.add(paths.get(i));
+                }
+            }
+        } else {
+            timedOut.addAll(paths);
+        }
+        return new BatchSizeResult(sizes, timedOut, failed);
+    }
+
+    /** One native traversal per sibling, in one persistent query; keyed by the original pane paths. */
+    public static Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) {
+        long perItemMs = paths == null || paths.isEmpty() ? timeoutMs
+                : Math.max(1200L, Math.min(timeoutMs, 3500L));
+        return measureSizesBatch(context, paths, perItemMs, timeoutMs).sizes();
     }
 
     private static File writePaths(Context context, List<String> paths) throws IOException {

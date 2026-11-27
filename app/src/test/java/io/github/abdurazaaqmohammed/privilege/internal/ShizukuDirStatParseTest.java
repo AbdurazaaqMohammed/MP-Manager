@@ -84,4 +84,20 @@ public class ShizukuDirStatParseTest {
         assertTrue(parsed[3].isFile());
         assertEquals(512L, parsed[3].length());
     }
+
+    @Test
+    public void isAndroidDataPathCoversBothDataAndObb() {
+        assertTrue(ShizukuFile.isAndroidDataPath("/storage/emulated/0/Android/data"));
+        assertTrue(ShizukuFile.isAndroidDataPath("/storage/emulated/0/Android/data/com.pkg/files"));
+        assertTrue(ShizukuFile.isAndroidDataPath("/storage/emulated/0/Android/obb"));
+        assertTrue(ShizukuFile.isAndroidDataPath("/storage/emulated/0/Android/obb/com.game/main.obb"));
+        assertTrue(ShizukuFile.isAndroidDataPath("/storage/emulated/10/Android/obb/com.game"));
+        assertTrue(ShizukuFile.isAndroidDataPath("/sdcard/Android/obb/"));
+        assertTrue(ShizukuFile.isAndroidDataPath("/sdcard/Android/data"));
+
+        assertFalse(ShizukuFile.isAndroidDataPath("/storage/emulated/0/Download"));
+        assertFalse(ShizukuFile.isAndroidDataPath("/storage/emulated/0/Android/media"));
+        assertFalse(ShizukuFile.isAndroidDataPath(""));
+        assertFalse(ShizukuFile.isAndroidDataPath((String) null));
+    }
 }

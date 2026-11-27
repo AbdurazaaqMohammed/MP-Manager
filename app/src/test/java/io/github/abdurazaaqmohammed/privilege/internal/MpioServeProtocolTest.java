@@ -154,6 +154,58 @@ public class MpioServeProtocolTest {
         assertEquals(2, launches.get());
     }
 
+    @Test
+    public void parseServeDirStatsAndBatchResponsesAndLegacyFallback() throws Exception {
+        ByteArrayOutputStream okRaw = new ByteArrayOutputStream();
+        writeNul(okRaw, "D 0 12345 10 3 1 0");
+        MpioServeClient.ServeDirStats stats = MpioServeClient.parseServeDirStats(
+                new ByteArrayInputStream(okRaw.toByteArray()), new ByteArrayOutputStream());
+        assertNotNull(stats);
+        assertFalse(stats.timedOut());
+        assertTrue(stats.isCompleteMeasure());
+        assertEquals(12345L, stats.bytes());
+        assertEquals(10L, stats.files());
+        assertEquals(3L, stats.dirs());
+
+        ByteArrayOutputStream batchRaw = new ByteArrayOutputStream();
+        writeNul(batchRaw, "I 0 0 4096 2 1 0 0");
+        writeNul(batchRaw, "I 1 1 512 1 1 0 0");
+        writeNul(batchRaw, "I 2 0 0 0 0 0 1");
+        writeNul(batchRaw, "OK");
+        java.util.List<String> paths = java.util.Arrays.asList("/data/a", "/data/big", "/missing");
+        java.util.Map<String, MpioServeClient.ServeDirStats> batch =
+                MpioServeClient.parseServeBatchDirStats(
+                        new ByteArrayInputStream(batchRaw.toByteArray()),
+                        paths,
+                        new ByteArrayOutputStream());
+        assertNotNull(batch);
+        assertEquals(3, batch.size());
+        assertTrue(batch.get("/data/a").isCompleteMeasure());
+        assertEquals(4096L, batch.get("/data/a").bytes());
+        assertTrue(batch.get("/data/big").timedOut());
+        assertFalse(batch.get("/data/big").isCompleteMeasure());
+        assertFalse(batch.get("/missing").isCompleteMeasure());
+
+        // Legacy v1 daemon must cleanly decline D/B without sending desynchronizing commands.
+        MpioServeClient v1Client = new MpioServeClient(globalNs -> new FakeServeProcess(99, 1));
+        assertNull(v1Client.dirStats("/data/a", false, 1000L));
+        assertFalse(v1Client.supportsDirSize());
+        assertNull(v1Client.dirSizesBatch(paths, false, 1000L, 2000L));
+
+        // v2 daemon handles both dirStats and dirSizesBatch over persistent stream.
+        MpioServeClient v2Client = new MpioServeClient(globalNs -> new FakeServeProcess(100, 2));
+        MpioServeClient.ServeDirStats dRes = v2Client.dirStats("/data/a", false, 1500L);
+        assertNotNull(dRes);
+        assertTrue(v2Client.supportsDirSize());
+        assertEquals(8192L, dRes.bytes());
+        java.util.Map<String, MpioServeClient.ServeDirStats> bRes =
+                v2Client.dirSizesBatch(paths, false, 1000L, 3000L);
+        assertNotNull(bRes);
+        assertEquals(3, bRes.size());
+        assertEquals(1000L, bRes.get("/data/a").bytes());
+        assertEquals(1001L, bRes.get("/data/big").bytes());
+    }
+
     private static void writeNul(ByteArrayOutputStream out, String text) throws IOException {
         out.write(text.getBytes(StandardCharsets.UTF_8));
         out.write(0);
@@ -167,11 +219,15 @@ public class MpioServeProtocolTest {
         private volatile boolean alive = true;
 
         FakeServeProcess(int id) throws IOException {
+            this(id, 1);
+        }
+
+        FakeServeProcess(int id, int version) throws IOException {
             this.serverOut = new PipedOutputStream(clientIn);
             this.clientOut = new PipedOutputStream(serverIn);
             Thread worker = new Thread(() -> {
                 try {
-                    serverOut.write(("MPIO_SERVE 1\n").getBytes(StandardCharsets.UTF_8));
+                    serverOut.write(("MPIO_SERVE " + version + "\n").getBytes(StandardCharsets.UTF_8));
                     serverOut.flush();
                     while (alive) {
                         String op = readToken(serverIn);
@@ -183,6 +239,22 @@ public class MpioServeProtocolTest {
                         }
                         if ("L".equals(op)) {
                             readToken(serverIn);
+                            serverOut.write("OK\0".getBytes(StandardCharsets.UTF_8));
+                            serverOut.flush();
+                        } else if ("D".equals(op)) {
+                            readToken(serverIn);
+                            readToken(serverIn);
+                            serverOut.write("D 0 8192 3 1 0 0\0".getBytes(StandardCharsets.UTF_8));
+                            serverOut.flush();
+                        } else if ("B".equals(op)) {
+                            readToken(serverIn);
+                            readToken(serverIn);
+                            int count = Integer.parseInt(readToken(serverIn));
+                            for (int i = 0; i < count; i++) {
+                                readToken(serverIn);
+                                serverOut.write(("I " + i + " 0 " + (1000 + i) + " 1 1 0 0\0")
+                                        .getBytes(StandardCharsets.UTF_8));
+                            }
                             serverOut.write("OK\0".getBytes(StandardCharsets.UTF_8));
                             serverOut.flush();
                         }

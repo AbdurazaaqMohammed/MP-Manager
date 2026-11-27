@@ -206,7 +206,8 @@ public class StorageDocumentsProvider extends DocumentsProvider {
 
     private static boolean rootReachable(Context context) {
         try {
-            return PrivilegeManager.Root.isRootFileOpsEnabled(context)
+            return PrivilegeManager.active(context) == PrivilegeManager.Backend.ROOT
+                    && PrivilegeManager.Files.fileOpsConfigured(context)
                     && PrivilegeManager.Root.isRootAvailableCached(context);
         } catch (Throwable e) {
             return false;
@@ -231,7 +232,7 @@ public class StorageDocumentsProvider extends DocumentsProvider {
         if (context != null && androidDataReachable(context)) {
             bases.add(new File(internal + "/Android/data"));
         }
-        if (context != null && PrivilegeManager.Root.isRootFileOpsEnabled(context)
+        if (context != null && PrivilegeManager.active(context) == PrivilegeManager.Backend.ROOT
                 && PrivilegeManager.Files.fileOpsOn(context)) {
             bases.add(new File("/"));
         }

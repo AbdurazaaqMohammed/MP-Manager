@@ -12,7 +12,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -28,6 +30,12 @@ final class MpioServeClient {
     @FunctionalInterface
     interface DaemonLauncher {
         Process launch(boolean globalNs) throws IOException;
+    }
+
+    record ServeDirStats(boolean timedOut, long bytes, long files, long dirs, long hidden, long errors) {
+        boolean isCompleteMeasure() {
+            return !timedOut && !(files == 0L && dirs == 0L && errors > 0L);
+        }
     }
 
     private static final long STARTUP_TIMEOUT_MS = 5_000L;
@@ -51,6 +59,7 @@ final class MpioServeClient {
     private OutputStream stdin;
     private BufferedInputStream stdout;
     private boolean sessionGlobalNs;
+    private volatile int protocolVersion = 1;
     private volatile boolean unsupported;
     private volatile String lastStderr = "";
 
@@ -60,6 +69,10 @@ final class MpioServeClient {
 
     boolean isUnsupported() {
         return unsupported;
+    }
+
+    boolean supportsDirSize() {
+        return !unsupported && protocolVersion >= 2;
     }
 
     File[] listDir(String dirPath, boolean globalNs) {
@@ -130,6 +143,99 @@ final class MpioServeClient {
         }
     }
 
+    ServeDirStats dirStats(String dirPath, boolean globalNs, long timeoutMs) {
+        if (unsupported || dirPath == null || dirPath.isEmpty() || dirPath.indexOf('\0') >= 0) {
+            return null;
+        }
+        long clampedTimeout = Math.max(0L, timeoutMs);
+        long watchdogMs = Math.max(QUERY_TIMEOUT_MS, clampedTimeout + 3_000L);
+        synchronized (lock) {
+            try {
+                ensureStartedLocked(globalNs);
+                if (protocolVersion < 2) {
+                    return null;
+                }
+                final Process running = this.process;
+                AtomicBoolean done = new AtomicBoolean(false);
+                ScheduledFuture<?> timeout = WATCHDOG.schedule(() -> {
+                    if (done.compareAndSet(false, true)) {
+                        NativeProcess.destroy(running);
+                    }
+                }, watchdogMs, TimeUnit.MILLISECONDS);
+                try {
+                    sendTokensLocked("D", Long.toString(clampedTimeout), dirPath);
+                    ServeDirStats stats = parseServeDirStats(stdout, tokenScratch);
+                    if (done.get()) {
+                        closeLocked();
+                        return null;
+                    }
+                    return stats;
+                } finally {
+                    done.set(true);
+                    timeout.cancel(false);
+                }
+            } catch (Exception e) {
+                closeLocked();
+                return null;
+            }
+        }
+    }
+
+    java.util.Map<String, ServeDirStats> dirSizesBatch(List<String> paths, boolean globalNs,
+                                                       long perItemMs, long totalTimeoutMs) {
+        return dirSizesBatch(paths, globalNs, perItemMs, totalTimeoutMs, null);
+    }
+
+    java.util.Map<String, ServeDirStats> dirSizesBatch(
+            List<String> paths, boolean globalNs, long perItemMs, long totalTimeoutMs,
+            java.util.function.BiConsumer<String, ServeDirStats> onItem) {
+        if (unsupported || paths == null || paths.isEmpty()) {
+            return null;
+        }
+        List<String> valid = new ArrayList<>(paths.size());
+        for (String p : paths) {
+            if (p != null && !p.isEmpty() && p.indexOf('\0') < 0) {
+                valid.add(p);
+            }
+        }
+        if (valid.isEmpty()) return null;
+
+        long clampedPer = Math.max(100L, perItemMs);
+        long clampedTotal = Math.max(clampedPer, totalTimeoutMs);
+        long watchdogMs = Math.max(QUERY_TIMEOUT_MS, clampedTotal + 4_000L);
+        synchronized (lock) {
+            try {
+                ensureStartedLocked(globalNs);
+                if (protocolVersion < 2) {
+                    return null;
+                }
+                final Process running = this.process;
+                AtomicBoolean done = new AtomicBoolean(false);
+                ScheduledFuture<?> timeout = WATCHDOG.schedule(() -> {
+                    if (done.compareAndSet(false, true)) {
+                        NativeProcess.destroy(running);
+                    }
+                }, watchdogMs, TimeUnit.MILLISECONDS);
+                try {
+                    sendBatchDirSizeLocked(valid, clampedPer, clampedTotal);
+                    java.util.Map<String, ServeDirStats> out =
+                            parseServeBatchDirStats(stdout, valid, tokenScratch, onItem);
+                    if (done.get()) {
+                        closeLocked();
+                        return null;
+                    }
+                    return out;
+                } finally {
+                    done.set(true);
+                    timeout.cancel(false);
+                }
+            } catch (Exception e) {
+                closeLocked();
+                return null;
+            }
+        }
+    }
+
     void reset() {
         synchronized (lock) {
             closeLocked();
@@ -168,6 +274,8 @@ final class MpioServeClient {
                 NativeProcess.destroy(started);
                 throw new IOException("mpio serve handshake failed: " + header);
             }
+            int ver = parseIntSafe(header.substring("MPIO_SERVE ".length()).trim(), 1);
+            this.protocolVersion = Math.max(1, ver);
             this.process = started;
             this.sessionGlobalNs = globalNs;
             this.stdout = in;
@@ -211,6 +319,31 @@ final class MpioServeClient {
         stdin.flush();
     }
 
+    private void sendTokensLocked(String... tokens) throws IOException {
+        for (String t : tokens) {
+            stdin.write(t.getBytes(StandardCharsets.UTF_8));
+            stdin.write(0);
+        }
+        stdin.flush();
+    }
+
+    private void sendBatchDirSizeLocked(List<String> paths, long perItemMs, long totalTimeoutMs)
+            throws IOException {
+        stdin.write('B');
+        stdin.write(0);
+        stdin.write(Long.toString(perItemMs).getBytes(StandardCharsets.UTF_8));
+        stdin.write(0);
+        stdin.write(Long.toString(totalTimeoutMs).getBytes(StandardCharsets.UTF_8));
+        stdin.write(0);
+        stdin.write(Integer.toString(paths.size()).getBytes(StandardCharsets.UTF_8));
+        stdin.write(0);
+        for (String p : paths) {
+            stdin.write(p.getBytes(StandardCharsets.UTF_8));
+            stdin.write(0);
+        }
+        stdin.flush();
+    }
+
     private void closeLocked() {
         if (stdin != null) {
             try {
@@ -235,6 +368,74 @@ final class MpioServeClient {
         if (process != null) {
             NativeProcess.destroy(process);
             process = null;
+        }
+    }
+
+    static ServeDirStats parseServeDirStats(InputStream in, ByteArrayOutputStream scratch)
+            throws IOException {
+        String tag = readNulToken(in, scratch);
+        if (tag == null) throw new EOFException("Unexpected EOF during mpio dirsize");
+        if ("ERR".equals(tag)) {
+            readNulToken(in, scratch);
+            return null;
+        }
+        if (!tag.startsWith("D ")) {
+            throw new IOException("Malformed mpio dirsize frame: " + tag);
+        }
+        // Format: "D <timedOut> <bytes> <files> <dirs> <hidden> <errors>"
+        String[] parts = splitFixedFields(tag, 7);
+        if (parts == null) throw new IOException("Invalid mpio dirsize header: " + tag);
+        boolean timedOut = "1".equals(parts[1]);
+        long bytes = Math.max(0L, parseLongSafe(parts[2], 0L));
+        long files = Math.max(0L, parseLongSafe(parts[3], 0L));
+        long dirs = Math.max(0L, parseLongSafe(parts[4], 0L));
+        long hidden = Math.max(0L, parseLongSafe(parts[5], 0L));
+        long errors = Math.max(0L, parseLongSafe(parts[6], 0L));
+        return new ServeDirStats(timedOut, bytes, files, dirs, hidden, errors);
+    }
+
+    static Map<String, ServeDirStats> parseServeBatchDirStats(InputStream in, List<String> paths,
+                                                              ByteArrayOutputStream scratch)
+            throws IOException {
+        return parseServeBatchDirStats(in, paths, scratch, null);
+    }
+
+    static Map<String, ServeDirStats> parseServeBatchDirStats(
+            InputStream in, List<String> paths, ByteArrayOutputStream scratch,
+            java.util.function.BiConsumer<String, ServeDirStats> onItem)
+            throws IOException {
+        Map<String, ServeDirStats> out = new HashMap<>(paths.size());
+        for (;;) {
+            String tag = readNulToken(in, scratch);
+            if (tag == null) throw new EOFException("Unexpected EOF during mpio batch dirsize");
+            if ("OK".equals(tag)) {
+                return out;
+            }
+            if ("ERR".equals(tag)) {
+                readNulToken(in, scratch);
+                return null;
+            }
+            if (!tag.startsWith("I ")) {
+                throw new IOException("Malformed mpio batch dirsize frame: " + tag);
+            }
+            // Format: "I <idx> <timedOut> <bytes> <files> <dirs> <hidden> <errors>"
+            String[] parts = splitFixedFields(tag, 8);
+            if (parts == null) throw new IOException("Invalid mpio batch item header: " + tag);
+            int idx = parseIntSafe(parts[1], -1);
+            boolean timedOut = "1".equals(parts[2]);
+            long bytes = Math.max(0L, parseLongSafe(parts[3], 0L));
+            long files = Math.max(0L, parseLongSafe(parts[4], 0L));
+            long dirs = Math.max(0L, parseLongSafe(parts[5], 0L));
+            long hidden = Math.max(0L, parseLongSafe(parts[6], 0L));
+            long errors = Math.max(0L, parseLongSafe(parts[7], 0L));
+            if (idx >= 0 && idx < paths.size()) {
+                String path = paths.get(idx);
+                ServeDirStats item = new ServeDirStats(timedOut, bytes, files, dirs, hidden, errors);
+                out.put(path, item);
+                if (onItem != null) {
+                    onItem.accept(path, item);
+                }
+            }
         }
     }
 

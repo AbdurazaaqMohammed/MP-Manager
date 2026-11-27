@@ -122,7 +122,7 @@ public class FileUtils {
 
     public static final String[] IMAGE_EXTS = {
             ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".heic", ".heif",
-            ".svg", ".ai", ".psd", ".dng", ".raw", ".eps", ".indd", ".blend", ".fbx", ".obj", ".dae",
+            ".svg", ".svgz", ".ai", ".psd", ".dng", ".raw", ".eps", ".indd", ".blend", ".fbx", ".obj", ".dae",
             ".gltf", ".glb", ".stl", ".stp", ".step", ".iges", ".dwg", ".dxf"
     };
     public static final String[] FONT_EXTS = {".ttf", ".otf", ".woff", ".woff2"};

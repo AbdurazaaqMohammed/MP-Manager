@@ -447,11 +447,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
             String currentZipPath) {
         pinnedFolders = FolderPins.load(context);
+        final File[] prefetchChildren;
         if (!isInZip) {
             File[] sorted = Arrays.copyOf(values, values.length, File[].class);
             FolderPins.sort(sorted, pinnedFolders);
             this.values = getNewValues(sorted, (File) parent);
-        } else this.values = values;
+            prefetchChildren = sorted;
+        } else {
+            this.values = values;
+            prefetchChildren = null;
+        }
         this.context = context;
         this.pane1 = pane1;
         this.isInZip = isInZip;
@@ -475,6 +480,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         dialogUtil = context.dialogUtil;
         uiHelper = context.uiHelper;
         iconLoader = new FileIconLoader(context, isInZip);
+        if (prefetchChildren != null) {
+            iconLoader.prefetchListingSizes(prefetchChildren);
+        }
         manifestEditor = new ApkManifestEditor(context, dialogUtil, uiHelper);
         listPrefs = new ListPrefs(context);
         checksumDialogs = new ChecksumDialogs(context, dialogUtil);
@@ -1803,5 +1811,11 @@ final View.OnClickListener originalClickListener;
         isMultiSelectMode = true;
         for (int i = (isInZip ? 0 : 1); i < values.length; i++) selectedPositions.add(i);
         notifyDataSetChanged();
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView);
+        iconLoader.cancel();
     }
 }

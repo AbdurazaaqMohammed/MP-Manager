@@ -119,6 +119,11 @@ public class RootManager {
         return getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT;
     }
 
+    /** True when configured for root or when root access has been verified on this device. */
+    public boolean isRootUsable() {
+        return isRootMode() || isRootAvailable();
+    }
+
     public boolean isShizukuMode() {
         return getWorkingMode() == WorkingModePrefs.WorkingMode.SHIZUKU;
     }
@@ -230,7 +235,7 @@ public class RootManager {
     }
 
     public ShellResult execute(String command, int timeoutSeconds) {
-        if (!isRootMode()) {
+        if (!isRootUsable()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
         return spawnSu(command, timeoutSeconds);
@@ -410,7 +415,7 @@ public class RootManager {
      */
     public ShellResult executeGlobalNs(String command, int timeoutSeconds, ShellProgress.Listener progress,
                                         TransferControl control) {
-        if (!isRootMode()) {
+        if (!isRootUsable()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
         if (progress == null && control == null) {
@@ -484,7 +489,7 @@ public class RootManager {
      */
     public ShellResult executeFs(String command, int timeoutSeconds, ShellProgress.Listener progress,
                                  TransferControl control) {
-        if (!isRootMode()) {
+        if (!isRootUsable()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
         boolean global = false;
@@ -500,7 +505,7 @@ public class RootManager {
     }
 
     public ShellResult executeWithInput(String command, String input) {
-        if (!isRootMode()) {
+        if (!isRootUsable()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
         synchronized (lock) {
@@ -1316,7 +1321,7 @@ public class RootManager {
     }
 
     public void writeFile(String path, String content) throws IOException {
-        if (!isRootMode()) {
+        if (!isRootUsable()) {
             throw new IOException("Root mode is disabled");
         }
         synchronized (lock) {
@@ -1358,7 +1363,7 @@ public class RootManager {
     }
 
     public void appendFile(String path, String content) throws IOException {
-        if (!isRootMode()) {
+        if (!isRootUsable()) {
             throw new IOException("Root mode is disabled");
         }
         synchronized (lock) {
@@ -1464,12 +1469,21 @@ public class RootManager {
             }
 
             ShellResult commitResult = execute("pm install-commit " + sessionId);
-            if (!commitResult.isSuccess() || (!commitResult.output().contains("Success") && !commitResult.output().contains("Session"))) {
-                throw new IOException("Install failed: " + commitResult.error() + " " + commitResult.output());
+            String out = commitResult.output() != null ? commitResult.output() : "";
+            boolean warnedSuccess = out.contains("Completed with warning") && !out.contains("Failure");
+            if (!warnedSuccess && (!commitResult.isSuccess() || (!out.contains("Success") && !out.contains("Session")))) {
+                throw new IOException("Install failed: " + commitResult.error() + " " + out);
             }
+            lastInstallWarning = (warnedSuccess || out.contains("Warning:")) ? out.trim() : "";
         } finally {
             cleanupInstallTag(tag, apkPaths.size());
         }
+    }
+
+    private volatile String lastInstallWarning = "";
+
+    public String getLastInstallWarning() {
+        return lastInstallWarning;
     }
 
     private void cleanupInstallTag(String tag, int count) {
@@ -1754,7 +1768,7 @@ public class RootManager {
     }
 
     public RootEntry statEntry(String path) {
-        if (path == null || path.isEmpty() || !isRootMode()) {
+        if (path == null || path.isEmpty() || !isRootUsable()) {
             return new RootEntry(path, false, false, false, 0L, 0L, null);
         }
         RootEntry nativeStat = NativeRootManager.stat(context, path);
@@ -1866,7 +1880,7 @@ public class RootManager {
     }
 
     private File[] listRootFilesFresh(String dirPath) {
-        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        if (dirPath == null || dirPath.isEmpty() || !isRootUsable()) return null;
         String actual = emulatedAlias(dirPath);
         File[] nativeFiles = NativeRootManager.listDir(context, dirPath);
         if (!isAppDataDir(actual)) {
@@ -1911,7 +1925,7 @@ public class RootManager {
     }
 
     private File[] listRootFilesLsLong(String dirPath) {
-        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        if (dirPath == null || dirPath.isEmpty() || !isRootUsable()) return null;
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         ShellResult result = executeFs(LsListingSupport.buildSingleCallLsCommand(cleanPath), 15);
@@ -2034,7 +2048,7 @@ public class RootManager {
     }
 
     public File[] listAppDataDirsExplicit(String dirPath) {
-        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        if (dirPath == null || dirPath.isEmpty() || !isRootUsable()) return null;
         String base = dirPath.endsWith("/") && dirPath.length() > 1
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         List<String> pkgs = new ArrayList<>();
@@ -2129,7 +2143,7 @@ public class RootManager {
     }
 
     public File[] listRootFilesPortable(String dirPath) {
-        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        if (dirPath == null || dirPath.isEmpty() || !isRootUsable()) return null;
         String cleanPath = (dirPath.endsWith("/") && dirPath.length() > 1)
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         String listTarget = cleanPath.endsWith("/") ? cleanPath : cleanPath + "/";
@@ -2180,7 +2194,7 @@ public class RootManager {
      * so a multi-gigabyte path behaves exactly like a small one.
      */
     public ParcelFileDescriptor openReadPipe(String srcPath) throws IOException {
-        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (!isRootUsable()) throw new IOException("Root mode is disabled");
         if (srcPath == null || !srcPath.startsWith("/")) {
             throw new IOException("Refusing to read non-absolute path");
         }
@@ -2224,7 +2238,7 @@ public class RootManager {
     }
 
     public long streamFromRoot(String srcPath, OutputStream out, long maxBytes) throws IOException {
-        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (!isRootUsable()) throw new IOException("Root mode is disabled");
         if (srcPath == null || !srcPath.startsWith("/")) {
             throw new IOException("Refusing to read non-absolute path");
         }
@@ -2285,7 +2299,7 @@ public class RootManager {
      * {@code cp} (which could orphan perms). Refuses blocked/critical paths.
      */
     public void streamToRoot(File localSrc, String dstPath) throws IOException {
-        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (!isRootUsable()) throw new IOException("Root mode is disabled");
         if (dstPath == null || !dstPath.startsWith("/")) {
             throw new IOException("Refusing to write non-absolute path");
         }
