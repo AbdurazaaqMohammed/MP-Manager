@@ -2606,6 +2606,8 @@
 <string name="image_options_message">نوع الصورة: %1$s%2$s\n\nهل ترغب في استعراض وتصفح محتويات النظام، أو فتحها بتطبيق خارجي؟</string>
 <string name="image_explorer_title">استعراض صورة النظام</string>
 <string name="image_browse_files">استعراض وتصفح</string>
-    <string name="use_3d_icons_title">أيقونات ثلاثية الأبعاد (3D)</string>
-    <string name="use_3d_icons_summary">استخدام أيقونات ثلاثية الأبعاد للملفات والمجلدات في جميع النوافذ</string>
+<string name="use_3d_icons_title">أيقونات ثلاثية الأبعاد (3D)</string>
+<string name="use_3d_icons_summary">استخدام أيقونات ثلاثية الأبعاد للملفات والمجلدات في جميع النوافذ</string>
+<string name="with_warning_suffix">\u0020مع تحذير</string>
+<string name="warning_word">تحذير</string>
 </resources>

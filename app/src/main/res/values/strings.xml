@@ -2674,4 +2674,6 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="image_browse_files">Browse Files</string>
     <string name="use_3d_icons_title">3D Icons</string>
     <string name="use_3d_icons_summary">Use adaptive 3D artwork for file and folder icons</string>
+    <string name="with_warning_suffix">\u0020with warning</string>
+    <string name="warning_word">warning</string>
 </resources>

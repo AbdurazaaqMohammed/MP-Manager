@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.feature.apk;
 
 import io.github.abdurazaaqmohammed.privilege.api.PrivilegeManager;
+import io.github.abdurazaaqmohammed.privilege.internal.PrivilegedInstaller;
 import io.github.abdurazaaqmohammed.ui.common.util.DialogUtil;
 import io.github.abdurazaaqmohammed.util.misc.ErrorUtil;
 import io.github.abdurazaaqmohammed.feature.apk.InstallUtil;
@@ -12,6 +13,8 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -19,6 +22,13 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
+import android.view.View;
+import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -360,10 +370,45 @@ public class ApkInstallDialogHelper {
 
     private void showInstallCompleteDialog(CharSequence appName, File apkFile) {
         String packageName = getPackageNameForApk(apkFile);
+        String warning = PrivilegedInstaller.lastWarning();
+        boolean hasWarning = warning != null && !warning.isEmpty();
+        String baseMsg = activity.getString(R.string.installed_successfully, appName);
+
+        CharSequence message;
+        final boolean[] longPressed = {false};
+        if (hasWarning) {
+            String suffix = activity.getString(R.string.with_warning_suffix);
+            String word = activity.getString(R.string.warning_word);
+            SpannableStringBuilder ssb = new SpannableStringBuilder(baseMsg).append(suffix);
+            int wordOffset = suffix.indexOf(word);
+            if (wordOffset >= 0) {
+                int start = baseMsg.length() + wordOffset;
+                int end = start + word.length();
+                ssb.setSpan(new ClickableSpan() {
+                    @Override
+                    public void onClick(View widget) {
+                        if (longPressed[0]) {
+                            longPressed[0] = false;
+                            return;
+                        }
+                        new ErrorUtil(activity).showError(warning);
+                    }
+
+                    @Override
+                    public void updateDrawState(TextPaint ds) {
+                        ds.setColor(0xFFE53935);
+                        ds.setUnderlineText(true);
+                    }
+                }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            message = ssb;
+        } else {
+            message = baseMsg;
+        }
 
         MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(activity)
             .setTitle(R.string.installation_complete)
-            .setMessage(activity.getString(R.string.installed_successfully, appName))
+            .setMessage(message)
             .setPositiveButton(R.string.launch, (d, w) -> {
                 if (packageName != null) {
                     Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(packageName);
@@ -375,7 +420,25 @@ public class ApkInstallDialogHelper {
                 }
             })
             .setNegativeButton(android.R.string.ok, null);
-        AppExecutors.runOnUiIfAlive(activity, b::show);
+        AppExecutors.runOnUiIfAlive(activity, () -> {
+            androidx.appcompat.app.AlertDialog dialog = b.show();
+            if (hasWarning) {
+                TextView msgView = dialog.findViewById(android.R.id.message);
+                if (msgView != null) {
+                    msgView.setMovementMethod(LinkMovementMethod.getInstance());
+                    msgView.setOnLongClickListener(v -> {
+                        longPressed[0] = true;
+                        ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (cm != null) {
+                            cm.setPrimaryClip(ClipData.newPlainText("install_warning", warning));
+                            Extensions.showMessage(activity, R.string.copied);
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+            }
+        });
     }
 
     private CharSequence getAppNameForApk(File apkFile) {

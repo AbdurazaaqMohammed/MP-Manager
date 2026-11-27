@@ -147,10 +147,16 @@ public final class PrivilegedInstaller {
     }
 
     private static volatile String lastTrace = "";
+    private static volatile String lastWarning = "";
 
     /** How the last install attributed its installer; shown when the spoof did not stick. */
     public static String lastTrace() {
         return lastTrace;
+    }
+
+    /** Warning message from the last privileged install, or empty if clean. */
+    public static String lastWarning() {
+        return lastWarning;
     }
 
     public static String installBlocking(Context context, List<File> apkFiles) throws Exception {
@@ -161,12 +167,14 @@ public final class PrivilegedInstaller {
         }
         String installer = InstallerConfig.resolveInstallerPackageName(context);
         lastTrace = "";
+        lastWarning = "";
 
         if (isRootSilentReady(context)) {
             List<String> paths = absPaths(apkFiles);
             RootManager rm = RootManager.getInstance(context);
             rm.installWithInstaller(paths, installer, collectFlags(context));
             lastTrace = "root";
+            lastWarning = rm.getLastInstallWarning();
             return installer;
         }
         if (isShizukuSilentReady(context)) {
@@ -420,8 +428,11 @@ public final class PrivilegedInstaller {
                     }
                 }
                 ShizukuShell.Result commit = ShizukuShell.exec("pm install-commit " + session, 120);
-                if (!commit.success || (!commit.stdout.contains("Success") && !commit.stdout.contains("Session")))
-                    throw new IllegalStateException("Shizuku install-commit failed: " + commit.stdout + " " + commit.stderr);
+                String out = commit.stdout != null ? commit.stdout : "";
+                boolean warnedSuccess = out.contains("Completed with warning") && !out.contains("Failure");
+                if (!warnedSuccess && (!commit.success || (!out.contains("Success") && !out.contains("Session"))))
+                    throw new IllegalStateException("Shizuku install-commit failed: " + out + " " + commit.stderr);
+                lastWarning = (warnedSuccess || out.contains("Warning:")) ? out.trim() : "";
             } finally {
                 // Always clear /data/local/tmp, even when a write or commit failed.
                 StringBuilder cleanup = new StringBuilder();
