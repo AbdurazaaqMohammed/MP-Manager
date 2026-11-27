@@ -89,16 +89,21 @@ public class ShizukuFile extends File {
     }
 
     public static boolean isAndroidDataPath(String path) {
-        if (path == null) return false;
-        return path.equals(ANDROID_DATA) || path.startsWith(ANDROID_DATA + "/")
-                || path.equals(ANDROID_DATA_SDCARD) || path.startsWith(ANDROID_DATA_SDCARD + "/");
+        if (path == null || path.isEmpty()) return false;
+        String norm = (path.endsWith("/") && path.length() > 1)
+                ? path.substring(0, path.length() - 1) : path;
+        if (norm.equals(ANDROID_DATA) || norm.startsWith(ANDROID_DATA + "/")
+                || norm.equals(ANDROID_DATA_SDCARD) || norm.startsWith(ANDROID_DATA_SDCARD + "/")) {
+            return true;
+        }
+        return norm.matches("^(?:/storage/emulated/\\d+|/sdcard)/Android/(?:data|obb)(?:/.*)?$");
     }
 
     public static boolean isAndroidDataPath(File f) {
         return f != null && isAndroidDataPath(f.getAbsolutePath());
     }
 
-    /** True when the file is backed by Shizuku (an Android/data path or any ShizukuFile). */
+    /** True when the file is backed by Shizuku (an Android/data|obb path or any ShizukuFile). */
     public static boolean isShizukuPath(File f) {
         return f instanceof ShizukuFile || isAndroidDataPath(f);
     }
@@ -192,9 +197,6 @@ public class ShizukuFile extends File {
 
     @Override
     public File getParentFile() {
-        String p = getParent();
-        if (p == null) return null;
-        if (isAndroidDataPath(p)) return new ShizukuFile(p);
         return super.getParentFile();
     }
 

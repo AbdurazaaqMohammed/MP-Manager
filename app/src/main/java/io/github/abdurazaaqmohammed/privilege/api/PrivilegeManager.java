@@ -439,6 +439,16 @@ public final class PrivilegeManager {
 
         public static void reboot(Context context, String mode) throws IOException { RootManager.getInstance(context).reboot(mode); }
 
+        public record StatInfo(boolean exists, boolean isDirectory, boolean isFile, long length, long lastModified, String mode) {
+        }
+
+        public static StatInfo statInfo(Context context, String path) {
+            RootManager.RootEntry entry = RootManager.getInstance(context).statEntry(path);
+            if (entry == null) return null;
+            return new StatInfo(entry.exists(), entry.isDirectory(), entry.isFile(),
+                    entry.length(), entry.lastModified(), entry.mode());
+        }
+
         public static File[] listRootFilesWithStat(Context context, String dirPath) { return RootManager.getInstance(context).listRootFilesWithStat(dirPath); }
 
         public static void invalidateListCache(Context context) { RootManager.getInstance(context).invalidateListCache(); }
@@ -534,6 +544,27 @@ public final class PrivilegeManager {
         public static DirectoryStats stats(Context context, String path, TransferControl control, long timeoutMs) { return NativeRootManager.stats(context, path, control, timeoutMs); }
 
         public static List<DirectoryStats> stats(Context context, List<String> paths, TransferControl control, long timeoutMs) { return NativeRootManager.stats(context, paths, control, timeoutMs); }
+
+        public static final long DIR_SIZE_TIMED_OUT = NativeRootManager.DIR_SIZE_TIMED_OUT;
+
+        public record BatchResult(Map<String, Long> sizes, List<String> timedOut, List<String> failed) {
+        }
+
+        public static long dirSize(Context context, String path, long timeoutMs) {
+            return NativeRootManager.dirSize(context, path, timeoutMs);
+        }
+
+        public static BatchResult measureSizesBatch(Context context, List<String> paths, long perItemMs, long totalTimeoutMs) {
+            return measureSizesBatch(context, paths, perItemMs, totalTimeoutMs, null);
+        }
+
+        public static BatchResult measureSizesBatch(Context context, List<String> paths,
+                                                    long perItemMs, long totalTimeoutMs,
+                                                    java.util.function.BiConsumer<String, Long> onItemReady) {
+            NativeRootManager.BatchSizeResult r =
+                    NativeRootManager.measureSizesBatch(context, paths, perItemMs, totalTimeoutMs, onItemReady);
+            return new BatchResult(r.sizes(), r.timedOut(), r.failed());
+        }
 
         public static Map<String, Long> sizes(Context context, List<String> paths, long timeoutMs) { return NativeRootManager.sizes(context, paths, timeoutMs); }
 

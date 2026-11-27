@@ -1933,7 +1933,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (path == null || path.isEmpty()) return false;
         if (PrivilegeManager.Shizuku.isAndroidDataPath(path)) return false;
         if (path.equals("/sdcard") || path.startsWith("/storage/emulated/") || path.startsWith("/sdcard/")) {
-            return !path.matches("^(?:/storage/emulated/\\d+|/sdcard)/Android/(?:data|obb|media)(?:/.*)?$");
+            return !path.matches("^(?:/storage/emulated/\\d+|/sdcard)/Android/(?:data|obb)(?:/.*)?$");
         }
         if (path.startsWith("/storage/")
                 && !path.equals("/storage")
@@ -2129,90 +2129,75 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      * @return the unsorted listing, or null when the folder cannot be listed
      *         (the user has already been notified in that case).
      */
+    private File[] filterNotHidden(File[] raw) {
+        if (raw == null) return null;
+        return Arrays.stream(raw).filter(this::isNotHidden).toArray(File[]::new);
+    }
+
     private File[] listPlainFolder(File folder, boolean pane1, long generation) {
-        boolean shizukuDir = PrivilegeManager.Shizuku.isAndroidDataPath(folder);
-        File[] files = null;
+        if (folder == null) return null;
         String folderPath = folder.getAbsolutePath();
+        boolean restrictedAppData = PrivilegeManager.Shizuku.isAndroidDataPath(folderPath);
         boolean nonLocalPath = !isDirectLocalPath(folder, folderPath);
-        boolean rootListingPath = "/".equals(folderPath) || PathGuards.isRootOnlyPath(folderPath) || nonLocalPath;
+        boolean rootListingPath = "/".equals(folderPath)
+                || PathGuards.isRootOnlyPath(folderPath)
+                || restrictedAppData
+                || nonLocalPath;
         PrivilegeManager.Backend activeBackend = PrivilegeManager.Files.active(this);
-        boolean rootActive = activeBackend == PrivilegeManager.Backend.ROOT;
-        boolean shizukuActive = activeBackend == PrivilegeManager.Backend.SHIZUKU;
-        if ((rootListingPath || (rootActive && !folder.canRead())) && rootActive && PrivilegeManager.Files.fileOpsOn(this)) {
-            files = PrivilegeManager.Files.listWithStat(this, folderPath);
-            if (files != null) return Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
-        }
-        if (files == null && (shizukuDir || nonLocalPath) && shizukuActive) {
-            // Scoped storage can return incomplete listings, and Shizuku Binder IPC
-            // resolves /system, /vendor, and symlinked dirs in one call with permissions/mtime.
-            File[] listed = PrivilegeManager.Shizuku.tryList(this, folder);
-            if (listed != null) return Arrays.stream(listed).filter(this::isNotHidden).toArray(File[]::new);
-            if (PathGuards.isRootOnlyPath(folderPath) && PrivilegeManager.Files.fileOpsOn(this)) {
-                File[] rootFallback = PrivilegeManager.Files.listWithStat(this, folderPath);
-                if (rootFallback != null) return Arrays.stream(rootFallback).filter(this::isNotHidden).toArray(File[]::new);
+        boolean rootAvailable = false;
+        if (rootListingPath || !folder.canRead() || activeBackend == PrivilegeManager.Backend.ROOT) {
+            try {
+                rootAvailable = PrivilegeManager.Root.isRootAvailable(this);
+            } catch (Exception ignored) {
             }
         }
-        if (files == null && folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile) {
-            // File.listFiles(FileFilter) recreates plain Files and discards the
-            // Shizuku listing's cached directory/type metadata.
-            File[] listed = folder.listFiles();
-            if (listed != null) files = Arrays.stream(listed).filter(this::isNotHidden).toArray(File[]::new);
+
+        // 1. Root (mpio serve) takes strict priority over Shizuku everywhere, including
+        // Android/data and Android/obb, whenever root access is available.
+        File[] files = null;
+        if (rootAvailable && (rootListingPath || !folder.canRead())) {
+            files = filterNotHidden(PrivilegeManager.Root.listRootFilesWithStat(this, folderPath));
+            if (files != null) return files;
         }
-        if (files == null) files = folder.listFiles(this::isNotHidden);
-        // A folder the app cannot read may still be listable (read-only) through the shell:
-        // Android/data on API 30+, plus browsable system paths like /storage/emulated and
-        // /system. Retry via Shizuku, then root, when the app got nothing or an empty
-        // listing from a folder it cannot write to (an empty listing there means the OS hid
-        // the contents rather than the folder really being empty).
+
+        // 2. When Root is unavailable, use Shizuku first for non-local/restricted paths
+        // it supports (Android/data, Android/obb, /system, /vendor) so we get full stat metadata.
+        boolean shizukuTried = false;
+        boolean shizukuEligible = !rootAvailable && (restrictedAppData || nonLocalPath)
+                && (activeBackend == PrivilegeManager.Backend.SHIZUKU || PrivilegeManager.Shizuku.ready());
+        if (shizukuEligible) {
+            shizukuTried = true;
+            File[] viaShizuku = (folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile)
+                    ? folder.listFiles()
+                    : PrivilegeManager.Shizuku.tryList(this, folder);
+            if (viaShizuku != null) return filterNotHidden(viaShizuku);
+        }
+
+        // 3. Direct app-uid filesystem listing (normal user storage, app-private, readable mounts).
+        if (!restrictedAppData && !(folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile)) {
+            files = folder.listFiles(this::isNotHidden);
+        }
+
+        // 4. Fallback to Shizuku if app-uid listing returned empty/null on an unreadable path.
         boolean appListingIncomplete = files == null || (files.length == 0 && !canWriteNormally(folder));
-        if (appListingIncomplete && !rootActive) {
-            File[] viaShizuku = PrivilegeManager.Shizuku.tryList(this, folder);
+        if (!rootAvailable && !shizukuTried && appListingIncomplete) {
+            File[] viaShizuku = (folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile)
+                    ? folder.listFiles()
+                    : PrivilegeManager.Shizuku.tryList(this, folder);
             if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) {
-                files = Arrays.stream(viaShizuku).filter(this::isNotHidden).toArray(File[]::new);
+                files = filterNotHidden(viaShizuku);
             }
         }
-        if (files == null || (files.length == 0 && appListingIncomplete)) {
-            boolean elevated = PrivilegeManager.Files.fileOpsOn(this);
-            if (!elevated) {
-                try {
-                    elevated = PrivilegeManager.Permissions.hasElevatedShell(this);
-                } catch (Exception ignored) {
-                }
-            }
-            if (elevated) {
-                File[] viaRoot = PrivilegeManager.Files.listWithStat(this, folderPath);
-                if (viaRoot != null) {
-                    viaRoot = Arrays.stream(viaRoot)
-                            .filter(this::isNotHidden)
-                            .toArray(File[]::new);
-                    if (viaRoot.length > 0 || files == null) files = viaRoot;
-                }
-                if ((files == null || files.length == 0) && (shizukuDir || rootListingPath || !folder.canRead())) {
-                    try {
-                        if (PrivilegeManager.Root.isRootAvailable(this)) {
-                            File[] directRoot = PrivilegeManager.Root.listRootFilesWithStat(this, folderPath);
-                            if (directRoot != null) {
-                                directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
-                                if (directRoot.length > 0 || files == null) files = directRoot;
-                            }
-                        }
-                    } catch (Exception ignored) {}
-                }
-            } else {
-                try {
-                    if (PrivilegeManager.Root.isRootAvailable(this)) {
-                        File[] directRoot = PrivilegeManager.Root.listRootFilesWithStat(this, folderPath);
-                        if (directRoot != null) {
-                            directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
-                            if (directRoot.length > 0 || files == null) files = directRoot;
-                        }
-                    }
-                } catch (Exception ignored) {}
-            }
-            if (files == null && shizukuDir && PrivilegeManager.Files.active(this) != PrivilegeManager.Backend.ROOT) {
-                boolean rootAvailable = false;
-                try { rootAvailable = PrivilegeManager.Root.isRootAvailable(this); } catch (Exception ignored) {}
-                if (!rootAvailable) AppExecutors.runOnUiIfAlive(MainActivity.this, () -> {
+
+        // Last-resort app listing on restricted path when neither Root nor Shizuku succeeded
+        // (e.g. own app package directory inside Android/data without elevated privileges).
+        if (files == null && restrictedAppData) {
+            files = folder.listFiles(this::isNotHidden);
+        }
+
+        if (files == null || (files.length == 0 && !canWriteNormally(folder))) {
+            if (!rootAvailable && restrictedAppData && !PrivilegeManager.Shizuku.ready()) {
+                AppExecutors.runOnUiIfAlive(MainActivity.this, () -> {
                     try {
                         if (isNetworkPaneLoadCurrent(pane1, generation)) showShizukuGuideOnce(folder, pane1);
                     } catch (Exception ignored) {
@@ -2220,8 +2205,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 });
             }
             if (files == null) {
-                boolean folderExists = folder != null && (folder.exists() || PrivilegeManager.Files.exists(this, folder.getAbsolutePath()));
-                if (folder != null && !folderExists) {
+                boolean folderExists = folder.exists() || PrivilegeManager.Files.exists(this, folderPath);
+                if (!folderExists) {
                     File fallback = folder.getParentFile();
                     while (fallback != null && !(fallback.exists() || PrivilegeManager.Files.exists(this, fallback.getAbsolutePath()))) {
                         fallback = fallback.getParentFile();

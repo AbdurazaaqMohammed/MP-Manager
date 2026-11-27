@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
 
     char hdr[128], tok[4096], name[4096];
     assert(read_line(from_child[0], hdr, sizeof(hdr)) == 1);
-    assert(strcmp(hdr, "MPIO_SERVE 1") == 0);
+    assert(strcmp(hdr, "MPIO_SERVE 2") == 0);
 
     // 1. Empty directory must reply OK immediately (never ERR).
     send_cmd(to_child[1], "L", empty);
@@ -168,6 +168,49 @@ int main(int argc, char *argv[]) {
     assert(read_token(from_child[0], tok, sizeof(tok)) == 1);
     assert(strncmp(tok, "S 1 0 1 1 11 ", 13) == 0);
 
+    // 4b. Single dir size ('D') on root (must sum 11 bytes from data.bin and never follow symlinks).
+    send_cmd(to_child[1], "D", "3000");
+    assert(write(to_child[1], root, strlen(root) + 1) == (ssize_t)(strlen(root) + 1));
+    assert(read_token(from_child[0], tok, sizeof(tok)) == 1);
+    {
+        int timed_out = -1;
+        unsigned long long bytes = 0, files = 0, dirs = 0, hidden = 0, errors = 0;
+        assert(sscanf(tok, "D %d %llu %llu %llu %llu %llu",
+                      &timed_out, &bytes, &files, &dirs, &hidden, &errors) == 6);
+        assert(timed_out == 0 && bytes == 11 && dirs == 3 && errors == 0);
+    }
+
+    // Missing dir on 'D' must reply ERR + errno cleanly.
+    send_cmd(to_child[1], "D", "1000");
+    assert(write(to_child[1], "/definitely-missing-mpio-d", strlen("/definitely-missing-mpio-d") + 1)
+           == (ssize_t)(strlen("/definitely-missing-mpio-d") + 1));
+    assert(read_token(from_child[0], tok, sizeof(tok)) == 1);
+    assert(strcmp(tok, "ERR") == 0);
+    assert(read_token(from_child[0], tok, sizeof(tok)) == 1);
+
+    // 4c. Batch dir sizes ('B') across valid, empty, symlink, and missing entries.
+    send_cmd(to_child[1], "B", "1500");
+    send_cmd(to_child[1], "5000", "4");
+    assert(write(to_child[1], root, strlen(root) + 1) == (ssize_t)(strlen(root) + 1));
+    assert(write(to_child[1], empty, strlen(empty) + 1) == (ssize_t)(strlen(empty) + 1));
+    assert(write(to_child[1], link_dir, strlen(link_dir) + 1) == (ssize_t)(strlen(link_dir) + 1));
+    assert(write(to_child[1], "/definitely-missing-mpio-b", strlen("/definitely-missing-mpio-b") + 1)
+           == (ssize_t)(strlen("/definitely-missing-mpio-b") + 1));
+    for (int expected_idx = 0; expected_idx < 4; expected_idx++) {
+        assert(read_token(from_child[0], tok, sizeof(tok)) == 1);
+        unsigned long long idx = 999, bytes = 0, files = 0, dirs = 0, hidden = 0, errors = 0;
+        int timed_out = -1;
+        assert(sscanf(tok, "I %llu %d %llu %llu %llu %llu %llu",
+                      &idx, &timed_out, &bytes, &files, &dirs, &hidden, &errors) == 7);
+        assert((int)idx == expected_idx);
+        if (expected_idx == 0) assert(timed_out == 0 && bytes == 11 && errors == 0);
+        if (expected_idx == 1) assert(timed_out == 0 && bytes == 0 && dirs == 1 && errors == 0);
+        if (expected_idx == 2) assert(timed_out == 0 && bytes == 0 && files == 1 && dirs == 0);
+        if (expected_idx == 3) assert(errors == 1);
+    }
+    assert(read_token(from_child[0], tok, sizeof(tok)) == 1);
+    assert(strcmp(tok, "OK") == 0);
+
     // 5. Unknown op + clean quit.
     send_cmd(to_child[1], "Z", NULL);
     assert(read_token(from_child[0], tok, sizeof(tok)) == 1);
@@ -188,6 +231,6 @@ int main(int argc, char *argv[]) {
     assert(unlink(weird) == 0 && unlink(reg) == 0);
     assert(rmdir(sub) == 0 && rmdir(empty) == 0 && rmdir(root) == 0);
 
-    puts("mpio serve/list regression passed: empty dir, error recovery, symlinks, ELOOP, weird filenames, stat, persistent daemon");
+    puts("mpio serve/list/dirsize/batch regression passed: empty dir, error recovery, symlinks, ELOOP, weird filenames, stat, dirsize, batch, persistent daemon");
     return 0;
 }

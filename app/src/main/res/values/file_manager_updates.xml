@@ -42,6 +42,13 @@
     <string name="shortcut_icon_sticker">Sticker</string>
     <string name="shortcut_icon_pdf">PDF</string>
     <string name="shortcut_icon_text">Text</string>
+    <string name="shortcut_icon_java" translatable="false">Java</string>
+    <string name="shortcut_icon_kotlin" translatable="false">Kotlin</string>
+    <string name="shortcut_icon_xml" translatable="false">XML</string>
+    <string name="shortcut_icon_json" translatable="false">JSON</string>
+    <string name="shortcut_icon_python" translatable="false">Python</string>
+    <string name="shortcut_icon_smali" translatable="false">Smali</string>
+    <string name="shortcut_icon_js" translatable="false">JavaScript</string>
     <string name="shortcut_icon_elf">Executable</string>
     <string name="shortcut_icon_disk">Disk image</string>
     <string name="shortcut_icon_database">Database</string>

@@ -28,6 +28,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.ui.main.FileIconSpec;
+import io.github.abdurazaaqmohammed.ui.viewer.SvgRenderer;
 import io.github.abdurazaaqmohammed.util.text.FileSize;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 
@@ -39,6 +40,7 @@ public class PickerIconLoader {
     private static Drawable cachedUpFolderIcon, cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon;
     private static boolean cachedNight;
+    private static boolean cached3d;
     private static int cachedEpoch = -1;
     private static int cachedBucket = -1;
 
@@ -96,11 +98,18 @@ public class PickerIconLoader {
             fileIconView.setImageDrawable(cachedArchiveIcon);
         } else if (".pdf".equals(ext)) {
             fileIconView.setImageDrawable(cachedPdfIcon);
-        } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
-            fileIconView.setImageDrawable(cachedTextIcon);
         } else {
-            FileIconSpec resolved = FileIconSpec.forPath(path, false);
-            fileIconView.setImageDrawable(resolved == FileIconSpec.FILE ? cachedFileIcon : resolved.drawable(context));
+            FileIconSpec codeSpec = FileIconSpec.codeSpecForExt(ext);
+            if (codeSpec != null) {
+                fileIconView.setImageDrawable(codeSpec.drawable(context));
+            } else {
+                FileIconSpec resolved = FileIconSpec.forPath(path, false);
+                if (resolved == FileIconSpec.TEXT) {
+                    fileIconView.setImageDrawable(cachedTextIcon);
+                } else {
+                    fileIconView.setImageDrawable(resolved == FileIconSpec.FILE ? cachedFileIcon : resolved.drawable(context));
+                }
+            }
         }
     }
 
@@ -138,15 +147,18 @@ public class PickerIconLoader {
     private static void ensureCachedIcons(Context context) {
         Resources res = context.getResources();
         boolean night = ThemeRegistry.isDarkTheme(context);
+        boolean use3d = io.github.abdurazaaqmohammed.data.prefs.UiPrefs.use3dIcons(context);
         int epoch = ThemeRegistry.currentEpoch();
         int bucket = (int) (res.getDisplayMetrics().density * 4);
-        if (cachedNight == night && cachedEpoch == epoch
+        if (cachedNight == night && cached3d == use3d && cachedEpoch == epoch
                 && cachedBucket == bucket && cachedFolderIcon != null) {
             return;
         }
         cachedNight = night;
+        cached3d = use3d;
         cachedEpoch = epoch;
         cachedBucket = bucket;
+        iconCache.evictAll();
         cachedUpFolderIcon = FileIconSpec.parentDrawable(context);
         cachedFolderIcon = FileIconSpec.FOLDER.drawable(context);
         cachedApkIcon = FileIconSpec.APK.drawable(context);
@@ -182,6 +194,9 @@ public class PickerIconLoader {
         try {
             File f = new File(filePath);
             if (!f.canRead()) return null;
+            if (SvgRenderer.isSvgName(filePath)) {
+                return SvgRenderer.decodeThumbnail(filePath, 160);
+            }
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             BitmapFactory.decodeFile(filePath, options);

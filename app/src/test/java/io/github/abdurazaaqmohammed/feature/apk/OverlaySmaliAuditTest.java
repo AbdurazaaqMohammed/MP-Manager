@@ -391,6 +391,230 @@ public class OverlaySmaliAuditTest {
         assertTrue(smali, smali.contains(DISMISS));
     }
 
+    @Test
+    public void countdownSplashDialogPlainAndStyled() {
+        String cdType = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpCountdown;";
+        String cdSmali = OverlayInjectorUtil.countdownSmali(cdType);
+        auditMethod(cdSmali, "countdownRunnable");
+        assertTrue(cdSmali, cdSmali.contains("isShowing()Z"));
+        assertTrue(cdSmali, cdSmali.contains("dismiss()V"));
+        assertTrue(cdSmali, cdSmali.contains("postDelayed(Ljava/lang/Runnable;J)Z"));
+
+        OverlayInjectorUtil.DialogOptions plain = new OverlayInjectorUtil.DialogOptions();
+        plain.title = "Welcome";
+        plain.message = "App ready";
+        plain.positive = "";
+        plain.negative = "";
+        plain.neutral = "";
+        plain.cancelable = false;
+        plain.countdown = true;
+        plain.countdownSeconds = 3;
+        String plainSmali = OverlayInjectorUtil.dialogHelperSmali(
+                CLS, plain, null, null, null, null, null, new HashMap<>(), null, null, null, cdType);
+        auditMethod(plainSmali, "countdownDialogPlain");
+        assertTrue(plainSmali, plainSmali.contains("Landroid/widget/ProgressBar;"));
+        assertTrue(plainSmali, plainSmali.contains(cdType));
+        assertTrue(plainSmali, plainSmali.contains("\"3\""));
+        assertFalse(plainSmali, plainSmali.contains("setPositiveButton"));
+
+        OverlayInjectorUtil.DialogOptions styled = new OverlayInjectorUtil.DialogOptions();
+        styled.title = "Welcome";
+        styled.message = "Starting";
+        styled.positive = "";
+        styled.cancelable = false;
+        styled.countdown = true;
+        styled.countdownSeconds = 5;
+        styled.msgColor = 0xFF00FFAA;
+        styled.imageBase64 = "aGk=";
+        styled.bgEnabled = true;
+        styled.bgColor1 = 0xFF101010;
+        styled.cornerRadiusDp = 16f;
+        styled.animBorder = true;
+        styled.rainbowAnim = true;
+        styled.dlgFont = "serif";
+        styled.draggable = true;
+        String styledSmali = OverlayInjectorUtil.dialogHelperSmali(
+                CLS, styled, null, null, null, null, null, new HashMap<>(), RGB, DRAG, null, cdType);
+        auditMethod(styledSmali, "countdownDialogStyled");
+        assertTrue(styledSmali, styledSmali.contains(cdType));
+        assertTrue(styledSmali, styledSmali.contains(RGB));
+        assertTrue(styledSmali, styledSmali.contains(DRAG));
+        assertTrue(styledSmali, styledSmali.contains("\"5\""));
+    }
+
+    @Test
+    public void protectCodeReflectionAndEncryptionAudit() {
+        OverlayInjectorUtil.ProtectSpec ps = OverlayInjectorUtil.ProtectSpec.createStandalone();
+        assertFalse(ps.helperClassDesc, ps.helperClassDesc.contains("mp"));
+        assertFalse(ps.entryMethod, ps.entryMethod.contains("mp"));
+
+        String decSmali = OverlayInjectorUtil.decodeHelperMethodSmali(ps);
+        auditMethod(decSmali, "protectDecodeHelper");
+
+        OverlayInjectorUtil.ToastOptions t = new OverlayInjectorUtil.ToastOptions();
+        t.message = "HiddenToastNotice";
+        t.protectCode = true;
+        String toastSmali = OverlayInjectorUtil.toastHelperSmali(t, ps, ps.toastMethod);
+        auditMethod(toastSmali, "protectToast");
+        assertFalse(toastSmali, toastSmali.contains("HiddenToastNotice"));
+        assertFalse(toastSmali, toastSmali.contains(OverlayInjectorUtil.TOAST_HELPER));
+        assertTrue(toastSmali, toastSmali.contains(ps.decodeMethod));
+
+        OverlayInjectorUtil.DialogOptions d = new OverlayInjectorUtil.DialogOptions();
+        d.title = "HiddenTitle";
+        d.message = "HiddenBody";
+        d.positive = "VisitNow";
+        d.positiveUrl = "https://hidden.example/go";
+        d.dontShowAgain = true;
+        d.showOnce = true;
+        d.protectCode = true;
+        d.countdown = true;
+        d.countdownSeconds = 4;
+        String dlgSmali = OverlayInjectorUtil.dialogHelperSmali(
+                ps.helperClassDesc, d, ps.nextType(), null, ps.nextType(),
+                null, null, new HashMap<>(), null, null, null, ps.nextType(), ps, ps.dialogMethod);
+        auditMethod(dlgSmali, "protectDialog");
+        assertFalse(dlgSmali, dlgSmali.contains("HiddenTitle"));
+        assertFalse(dlgSmali, dlgSmali.contains("HiddenBody"));
+        assertFalse(dlgSmali, dlgSmali.contains("VisitNow"));
+        assertFalse(dlgSmali, dlgSmali.contains("https://hidden.example"));
+        assertFalse(dlgSmali, dlgSmali.contains("Don't show again"));
+        assertFalse(dlgSmali, dlgSmali.contains(OverlayInjectorUtil.DONTSHOW_KEY));
+        assertFalse(dlgSmali, dlgSmali.contains(OverlayInjectorUtil.SHOWONCE_KEY));
+        assertFalse(dlgSmali, dlgSmali.contains(ps.dontShowKey));
+        assertFalse(dlgSmali, dlgSmali.contains(ps.showOnceKey));
+
+        String wrapCreate = OverlayInjectorUtil.wrapperSmali(CLS, "protected", true, true, ps);
+        auditMethod(wrapCreate, "protectWrapperOnCreate");
+        assertTrue(wrapCreate, wrapCreate.contains("Ljava/lang/Class;->forName("));
+        assertTrue(wrapCreate, wrapCreate.contains("getDeclaredMethod("));
+        assertTrue(wrapCreate, wrapCreate.contains("Ljava/lang/reflect/Method;->invoke("));
+        assertTrue(wrapCreate, wrapCreate.contains("Ljava/lang/Throwable;"));
+        assertFalse(wrapCreate, wrapCreate.contains(ps.helperClassDesc));
+        assertFalse(wrapCreate, wrapCreate.contains(ps.entryMethod));
+        assertFalse(wrapCreate, wrapCreate.contains("mpmanager"));
+        assertFalse(wrapCreate, wrapCreate.contains("showMPManager"));
+        assertFalse(wrapCreate, wrapCreate.contains("android.content.Context"));
+    }
+
+    @Test
+    public void onResumeAndProtectedPatchOneSmaliAudit() throws Exception {
+        String sampleMissingResume = ".class public Lcom/example/app/MainActivity;\n"
+                + ".super Landroidx/appcompat/app/AppCompatActivity;\n"
+                + ".source \"MainActivity.java\"\n\n"
+                + ".method protected onCreate(Landroid/os/Bundle;)V\n"
+                + "    .locals 0\n"
+                + "    invoke-super {p0, p1}, Landroidx/appcompat/app/AppCompatActivity;->onCreate(Landroid/os/Bundle;)V\n"
+                + "    return-void\n"
+                + ".end method\n";
+        String sampleExistingResume = ".class public Lcom/example/app/SecondActivity;\n"
+                + ".super Landroid/app/Activity;\n"
+                + ".source \"SecondActivity.java\"\n\n"
+                + ".method protected onResume()V\n"
+                + "    .locals 0\n"
+                + "    invoke-super {p0}, Landroid/app/Activity;->onResume()V\n"
+                + "    return-void\n"
+                + ".end method\n";
+
+        java.nio.file.Path tmpRoot = java.nio.file.Files.createTempDirectory("mp_hook_test");
+        try {
+            // Case 1: unprotected onResume on missing and existing onResume()V
+            File patch1 = new File(tmpRoot.toFile(), "unprotected_resume");
+            File f1 = new File(patch1, "com/example/app/MainActivity.smali");
+            File f2 = new File(patch1, "com/example/app/SecondActivity.smali");
+            f1.getParentFile().mkdirs();
+            java.nio.file.Files.write(f1.toPath(), sampleMissingResume.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.nio.file.Files.write(f2.toPath(), sampleExistingResume.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            OverlayInjectorUtil.DialogOptions d1 = new OverlayInjectorUtil.DialogOptions();
+            d1.title = "Hi";
+            d1.message = "Body";
+            d1.hookMethod = "onResume";
+            d1.protectCode = false;
+            List<File> out1 = new ArrayList<>();
+            assertTrue(OverlayInjectorUtil.patchOneSmali(null, f1, patch1, "com.example.app.MainActivity",
+                    null, d1, new HashMap<>(), null, new boolean[1], null, out1));
+            assertTrue(OverlayInjectorUtil.patchOneSmali(null, f2, patch1, "com.example.app.SecondActivity",
+                    null, d1, new HashMap<>(), null, new boolean[1], null, out1));
+
+            String p1Main = new String(java.nio.file.Files.readAllBytes(f1.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            String p1Sec = new String(java.nio.file.Files.readAllBytes(f2.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            auditMethod(p1Main, "unprotectedResumeGenerated");
+            auditMethod(p1Sec, "unprotectedResumeOverridden");
+            assertTrue(p1Main, p1Main.contains(".field private static mpResumeOnce:Z"));
+            assertTrue(p1Main, p1Main.indexOf(".field private static mpResumeOnce:Z") < p1Main.indexOf(".method "));
+            assertTrue(p1Main, p1Main.contains("invoke-super {p0}, Landroidx/appcompat/app/AppCompatActivity;->onResume()V"));
+            assertTrue(p1Sec, p1Sec.contains("onResume$mpmanager()V"));
+
+            // Case 2: protected onResume across two activities sharing one helper bundle
+            File patch2 = new File(tmpRoot.toFile(), "protected_resume");
+            File g1 = new File(patch2, "com/example/app/MainActivity.smali");
+            File g2 = new File(patch2, "com/example/app/SecondActivity.smali");
+            g1.getParentFile().mkdirs();
+            java.nio.file.Files.write(g1.toPath(), sampleMissingResume.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.nio.file.Files.write(g2.toPath(), sampleExistingResume.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            OverlayInjectorUtil.DialogOptions d2 = new OverlayInjectorUtil.DialogOptions();
+            d2.title = "SplashSecret";
+            d2.message = "BodySecret";
+            d2.positiveUrl = "https://secret.example/link";
+            d2.dontShowAgain = true;
+            d2.showOnce = true;
+            d2.countdown = true;
+            d2.countdownSeconds = 3;
+            d2.hookMethod = "onResume";
+            d2.protectCode = true;
+            OverlayInjectorUtil.ProtectSpec ps = OverlayInjectorUtil.ProtectSpec.createStandalone();
+            boolean[] emitted = new boolean[1];
+            List<File> out2 = new ArrayList<>();
+            assertTrue(OverlayInjectorUtil.patchOneSmali(null, g1, patch2, "com.example.app.MainActivity",
+                    null, d2, new HashMap<>(), ps, emitted, null, out2));
+            assertTrue(emitted[0]);
+            assertTrue(OverlayInjectorUtil.patchOneSmali(null, g2, patch2, "com.example.app.SecondActivity",
+                    null, d2, new HashMap<>(), ps, emitted, null, out2));
+
+            String p2Main = new String(java.nio.file.Files.readAllBytes(g1.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            String p2Sec = new String(java.nio.file.Files.readAllBytes(g2.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            auditMethod(p2Main, "protectedResumeGenerated");
+            auditMethod(p2Sec, "protectedResumeOverridden");
+            for (String act : Arrays.asList(p2Main, p2Sec)) {
+                assertFalse(act, act.contains("mpmanager"));
+                assertFalse(act, act.contains("showMPManager"));
+                assertFalse(act, act.contains("mpResumeOnce"));
+                assertFalse(act, act.contains("AlertDialog"));
+                assertFalse(act, act.contains("SplashSecret"));
+                assertFalse(act, act.contains(ps.helperClassDesc));
+                assertTrue(act, act.contains("Ljava/lang/Class;->forName("));
+                assertTrue(act, act.contains("getDeclaredMethod("));
+            }
+
+            File helperFile = new File(patch2, ps.helperClassDesc.substring(1, ps.helperClassDesc.length() - 1) + ".smali");
+            assertTrue("Expected standalone helper smali file", helperFile.isFile());
+            String helperText = new String(java.nio.file.Files.readAllBytes(helperFile.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            auditMethod(helperText, "standaloneProtectedHelper");
+            assertFalse(helperText, helperText.contains("SplashSecret"));
+            assertFalse(helperText, helperText.contains("BodySecret"));
+            assertFalse(helperText, helperText.contains("https://secret.example"));
+            assertFalse(helperText, helperText.contains(".source \"mp"));
+            for (File f : out2) {
+                if (f.equals(g1) || f.equals(g2)) continue;
+                String smali = new String(java.nio.file.Files.readAllBytes(f.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+                assertFalse(f.getName(), smali.contains(".source \"mp"));
+                assertFalse(f.getName(), smali.contains("mpmanager_overlay"));
+                auditMethod(smali, f.getName());
+            }
+        } finally {
+            deleteRec(tmpRoot.toFile());
+        }
+    }
+
+    private static void deleteRec(File f) {
+        if (f == null || !f.exists()) return;
+        File[] kids = f.listFiles();
+        if (kids != null) for (File k : kids) deleteRec(k);
+        f.delete();
+    }
+
     // ---------- audit engine ----------
 
     private static final Pattern METHOD_LINE =
@@ -826,7 +1050,8 @@ public class OverlaySmaliAuditTest {
             }
             return;
         }
-        if (line.startsWith("aget ")) {
+        if (line.startsWith("aget ") || line.startsWith("aget-byte ")
+                || line.startsWith("aget-boolean ") || line.startsWith("aget-char ") || line.startsWith("aget-short ")) {
             String[] parts = line.split("[,\\s]+");
             List<String> regs = new ArrayList<>();
             for (String p : parts) {
@@ -835,7 +1060,7 @@ public class OverlaySmaliAuditTest {
             if (regs.size() >= 3) {
                 checkNeed(name, lineNo, line, regs.get(1), regType(types, regs.get(1)), T_REF);
                 checkNeed(name, lineNo, line, regs.get(2), regType(types, regs.get(2)), T_INT);
-                types.put(regs.get(0), T_NUM);
+                types.put(regs.get(0), line.startsWith("aget ") ? T_NUM : T_INT);
             }
             return;
         }
@@ -852,7 +1077,8 @@ public class OverlaySmaliAuditTest {
             }
             return;
         }
-        if (line.startsWith("aput ")) {
+        if (line.startsWith("aput ") || line.startsWith("aput-byte ")
+                || line.startsWith("aput-boolean ") || line.startsWith("aput-char ") || line.startsWith("aput-short ")) {
             String[] parts = line.split("[,\\s]+");
             List<String> regs = new ArrayList<>();
             for (String p : parts) {

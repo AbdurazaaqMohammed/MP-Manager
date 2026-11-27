@@ -63,7 +63,7 @@ import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 public class SharedEntryActivity extends BaseActivity {
 
     private static final Set<String> IMAGE_EXTS = new HashSet<>(Arrays.asList(
-            "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "heic", "heif",
+            "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "svgz", "heic", "heif",
             "avif", "ico", "tif", "tiff", "dng", "psd"));
 
     private static final Set<String> TEXT_EXTS = new HashSet<>(Arrays.asList(

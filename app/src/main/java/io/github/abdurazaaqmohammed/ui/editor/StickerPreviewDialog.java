@@ -2,19 +2,22 @@ package io.github.abdurazaaqmohammed.ui.editor;
 
 import io.github.abdurazaaqmohammed.util.misc.StickerUtil;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.LottieComposition;
+import com.airbnb.lottie.LottieCompositionFactory;
+import com.airbnb.lottie.LottieDrawable;
+import com.airbnb.lottie.LottieResult;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
@@ -23,39 +26,44 @@ import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.util.misc.AppExecutors;
 
+/** Previews animated WhatsApp Lottie sticker archives using native {@link LottieAnimationView}. */
 public class StickerPreviewDialog {
 
     private StickerPreviewDialog() {}
 
-    @SuppressLint("SetJavaScriptEnabled")
     public static void show(Activity activity, File stickerFile) {
-        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (activity == null || activity.isFinishing() || activity.isDestroyed() || stickerFile == null) return;
+
+        float density = activity.getResources().getDisplayMetrics().density;
+        int sizePx = (int) (280 * density);
+        int pad = (int) (16 * density);
 
         FrameLayout rootLayout = new FrameLayout(activity);
         rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        rootLayout.setPadding(pad, pad, pad, 0);
 
         ProgressBar progressBar = new ProgressBar(activity);
         FrameLayout.LayoutParams pbLp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pbLp.gravity = Gravity.CENTER;
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
         progressBar.setLayoutParams(pbLp);
         rootLayout.addView(progressBar);
 
-        WebView webView = new WebView(activity);
-        float density = activity.getResources().getDisplayMetrics().density;
-        int sizePx = (int) (280 * density);
-        FrameLayout.LayoutParams wvLp = new FrameLayout.LayoutParams(sizePx, sizePx);
-        wvLp.gravity = Gravity.CENTER;
-        webView.setLayoutParams(wvLp);
-        webView.setBackgroundColor(Color.TRANSPARENT);
+        LottieAnimationView lottieView = new LottieAnimationView(activity);
+        FrameLayout.LayoutParams lvLp = new FrameLayout.LayoutParams(sizePx, sizePx, Gravity.CENTER);
+        lottieView.setLayoutParams(lvLp);
+        lottieView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        lottieView.setRepeatCount(LottieDrawable.INFINITE);
+        lottieView.setVisibility(View.INVISIBLE);
+        rootLayout.addView(lottieView);
 
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setDomStorageEnabled(true);
-
-        rootLayout.addView(webView);
+        TextView errorView = new TextView(activity);
+        errorView.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        errorView.setText(R.string.shortcut_image_failed);
+        errorView.setGravity(Gravity.CENTER);
+        errorView.setVisibility(View.GONE);
+        rootLayout.addView(errorView);
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.sticker_preview))
@@ -69,42 +77,32 @@ public class StickerPreviewDialog {
                 .create();
 
         dialog.setOnDismissListener(d -> {
-            try {
-                webView.loadUrl("about:blank");
-                webView.destroy();
-            } catch (Throwable ignored) {}
+            lottieView.cancelAnimation();
+            lottieView.clearAnimation();
         });
 
         dialog.show();
 
         AppExecutors.io().execute(() -> {
             String json = StickerUtil.extractLottieJson(stickerFile);
+            LottieComposition composition = null;
+            if (json != null) {
+                LottieResult<LottieComposition> result =
+                        LottieCompositionFactory.fromJsonStringSync(json, stickerFile.getAbsolutePath());
+                composition = result != null ? result.getValue() : null;
+            }
+            LottieComposition ready = composition;
             AppExecutors.runOnUiIfAlive(activity, () -> {
-                if (json == null || dialog.isShowing() == false) return;
+                if (!dialog.isShowing()) return;
                 progressBar.setVisibility(View.GONE);
-
-                String html = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                        + "<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>"
-                        + "<script src='file:///android_asset/lottie.min.js'></script>"
-                        + "<style>"
-                        + "body { margin:0; padding:0; display:flex; justify-content:center; align-items:center; height:100vh; background:transparent; overflow:hidden; }"
-                        + "#lottie { width:100%; height:100%; }"
-                        + "</style></head><body>"
-                        + "<div id='lottie'></div>"
-                        + "<script>"
-                        + "try {"
-                        + "  var animData = " + json + ";"
-                        + "  lottie.loadAnimation({"
-                        + "    container: document.getElementById('lottie'),"
-                        + "    renderer: 'svg',"
-                        + "    loop: true,"
-                        + "    autoplay: true,"
-                        + "    animationData: animData"
-                        + "  });"
-                        + "} catch(e) { document.body.innerHTML = '<p style=\"color:red;\">'+e.message+'</p>'; }"
-                        + "</script></body></html>";
-
-                webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null);
+                if (ready == null) {
+                    lottieView.setVisibility(View.GONE);
+                    errorView.setVisibility(View.VISIBLE);
+                    return;
+                }
+                lottieView.setComposition(ready);
+                lottieView.setVisibility(View.VISIBLE);
+                lottieView.playAnimation();
             });
         });
     }

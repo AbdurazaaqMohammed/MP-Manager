@@ -62,6 +62,8 @@ public class OverlayInjectorUtil {
         public int yOffset;
         public boolean html;
         public boolean base64;
+        public String hookMethod = "onCreate";
+        public boolean protectCode;
     }
 
     public static class AdvWidget {
@@ -127,6 +129,10 @@ public class OverlayInjectorUtil {
         public String dlgFont = "";
         public String dlgFontPath = "";
         public List<AdvWidget> widgets;
+        public boolean countdown;
+        public int countdownSeconds = 3;
+        public String hookMethod = "onCreate";
+        public boolean protectCode;
     }
 
     public static AdvWidget copyWidget(AdvWidget w) {
@@ -171,10 +177,15 @@ public class OverlayInjectorUtil {
                 throw new IOException("Could not locate the selected activities in any dex file");
             }
             debug("dexEntries=" + targetEntries);
+            boolean protectCode = isProtectCode(toast, dialog);
+            ProtectShared shared = protectCode ? ProtectShared.create() : null;
+            String videoAsset = shared != null ? shared.videoAssetName : VIDEO_ASSET_NAME;
             Map<String, byte[]> fontBytes = collectFontAssets(dialog);
             Map<String, String> fontAssets = new LinkedHashMap<>();
             int fi = 0;
-            for (String path : fontBytes.keySet()) fontAssets.put(path, "mpfont_" + (fi++) + ".ttf");
+            for (String path : fontBytes.keySet()) {
+                fontAssets.put(path, shared != null ? shared.nextFontAssetName() : ("mpfont_" + (fi++) + ".ttf"));
+            }
             if (!fontAssets.isEmpty() && logger != null) {
                 logger.logMessage(context.getString(R.string.logger_embedding_fonts, fontAssets.size()));
             }
@@ -205,7 +216,7 @@ public class OverlayInjectorUtil {
                     if (vid.length() > MAX_VIDEO_BYTES) {
                         throw new IOException("Selected video exceeds 25 MB limit");
                     }
-                    additions.put("assets/" + VIDEO_ASSET_NAME, vid);
+                    additions.put("assets/" + videoAsset, vid);
                     if (logger != null) {
                         logger.logMessage(context.getString(R.string.logger_embedding_video, vid.getName()));
                     }
@@ -222,12 +233,14 @@ public class OverlayInjectorUtil {
                     Map<String, File> smaliFiles =
                             FastDexPatch.disassembleClasses(context, dex, descriptors, patchDir, baksmaliOptions, logger);
                     if (smaliFiles.isEmpty()) continue;
+                    ProtectSpec ps = shared != null ? ProtectSpec.create(shared) : null;
+                    boolean[] helperEmitted = new boolean[1];
                     List<File> touched = new ArrayList<>();
                     boolean changed = false;
                     for (Map.Entry<String, File> se : smaliFiles.entrySet()) {
                         String className = FastDexPatch.descriptorToClassName(se.getKey());
                         try {
-                            if (patchOneSmali(context, se.getValue(), className, toast, dialog, fontAssets, logger, touched)) {
+                            if (patchOneSmali(context, se.getValue(), patchDir, className, toast, dialog, fontAssets, ps, helperEmitted, logger, touched)) {
                                 changed = true;
                             } else {
                                 se.getValue().delete();
@@ -327,15 +340,195 @@ public class OverlayInjectorUtil {
         return sb.toString();
     }
 
+    private static final char[] B64_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".toCharArray();
+
+    static boolean isProtectCode(ToastOptions toast, DialogOptions dialog) {
+        return (dialog != null && dialog.protectCode) || (toast != null && toast.protectCode);
+    }
+
+    static String resolveHookMethod(ToastOptions toast, DialogOptions dialog) {
+        if (dialog != null && "onResume".equals(dialog.hookMethod)) return "onResume";
+        if (toast != null && "onResume".equals(toast.hookMethod)) return "onResume";
+        return "onCreate";
+    }
+
+    static final class ProtectShared {
+        final String dontShowKey;
+        final String showOnceKey;
+        final String videoAssetName;
+        final java.security.SecureRandom rng = new java.security.SecureRandom();
+        private final Set<String> used = new LinkedHashSet<>();
+        private int seq;
+
+        private ProtectShared(String dontShowKey, String showOnceKey, String videoAssetName) {
+            this.dontShowKey = dontShowKey;
+            this.showOnceKey = showOnceKey;
+            this.videoAssetName = videoAssetName;
+        }
+
+        static ProtectShared create() {
+            java.security.SecureRandom r = new java.security.SecureRandom();
+            return new ProtectShared("k_" + randIdent(r, 8), "s_" + randIdent(r, 8), randIdent(r, 7) + ".dat");
+        }
+
+        String nextFontAssetName() {
+            return nextIdent(7) + ".dat";
+        }
+
+        String nextIdent(int len) {
+            for (;;) {
+                String s = randIdent(rng, len) + Integer.toString(seq++, 36);
+                if (used.add(s)) return s;
+            }
+        }
+
+        private static String randIdent(java.security.SecureRandom r, int len) {
+            final String alpha = "abcdefghijklmnopqrstuvwxyz";
+            final String alnum = "abcdefghijklmnopqrstuvwxyz0123456789";
+            StringBuilder sb = new StringBuilder(len);
+            sb.append(alpha.charAt(r.nextInt(alpha.length())));
+            // Ensure at least one digit so identifier never collides with Java/Dalvik keywords.
+            sb.append((char) ('0' + r.nextInt(10)));
+            for (int i = 2; i < len; i++) {
+                sb.append(alnum.charAt(r.nextInt(alnum.length())));
+            }
+            return sb.toString();
+        }
+    }
+
+    static final class ProtectSpec {
+        final ProtectShared shared;
+        final String packageInternal;
+        final String helperClassDesc;
+        final String helperClassDot;
+        final String entryMethod;
+        final String toastMethod;
+        final String dialogMethod;
+        final String decodeMethod;
+        final String origRename;
+        final String guardField;
+        final String dontShowKey;
+        final String showOnceKey;
+        final String videoAssetName;
+        final String fontWalkDesc;
+        final int wrapperXorKey;
+
+        private ProtectSpec(ProtectShared shared, String pkgInternal, String helperClsName) {
+            this.shared = shared;
+            this.packageInternal = pkgInternal;
+            this.helperClassDesc = "L" + pkgInternal + "/" + helperClsName + ";";
+            this.helperClassDot = (pkgInternal + "/" + helperClsName).replace('/', '.');
+            this.entryMethod = shared.nextIdent(6);
+            this.toastMethod = shared.nextIdent(6);
+            this.dialogMethod = shared.nextIdent(6);
+            this.decodeMethod = shared.nextIdent(6);
+            this.origRename = shared.nextIdent(6);
+            this.guardField = shared.nextIdent(6);
+            this.dontShowKey = shared.dontShowKey;
+            this.showOnceKey = shared.showOnceKey;
+            this.videoAssetName = shared.videoAssetName;
+            this.fontWalkDesc = nextType();
+            this.wrapperXorKey = 0x11 + shared.rng.nextInt(0x6d);
+        }
+
+        static ProtectSpec create(ProtectShared shared) {
+            return new ProtectSpec(shared, shared.nextIdent(4) + "/" + shared.nextIdent(5), shared.nextIdent(6));
+        }
+
+        static ProtectSpec createStandalone() {
+            return create(ProtectShared.create());
+        }
+
+        String nextType() {
+            return "L" + packageInternal + "/" + shared.nextIdent(6) + ";";
+        }
+
+        int nextKey() {
+            return 0x11 + shared.rng.nextInt(0x6d);
+        }
+    }
+
+    private static String encodeBase64NoWrap(byte[] data) {
+        if (data == null || data.length == 0) return "";
+        StringBuilder out = new StringBuilder(((data.length + 2) / 3) * 4);
+        for (int i = 0; i < data.length; i += 3) {
+            int b0 = data[i] & 0xFF;
+            int b1 = (i + 1 < data.length) ? (data[i + 1] & 0xFF) : -1;
+            int b2 = (i + 2 < data.length) ? (data[i + 2] & 0xFF) : -1;
+            out.append(B64_ALPHABET[b0 >>> 2]);
+            out.append(B64_ALPHABET[((b0 & 0x03) << 4) | (b1 >= 0 ? (b1 >>> 4) : 0)]);
+            out.append(b1 >= 0 ? B64_ALPHABET[((b1 & 0x0F) << 2) | (b2 >= 0 ? (b2 >>> 6) : 0)] : '=');
+            out.append(b2 >= 0 ? B64_ALPHABET[b2 & 0x3F] : '=');
+        }
+        return out.toString();
+    }
+
     static String b64(String text) {
         if (text == null) text = "";
-        return Base64.encodeToString(text.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
+        return encodeBase64NoWrap(text.getBytes(StandardCharsets.UTF_8));
+    }
+
+    static String xorB64(String raw, int key) {
+        if (raw == null) raw = "";
+        byte[] bytes = raw.getBytes(StandardCharsets.UTF_8);
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) (bytes[i] ^ key);
+        }
+        return encodeBase64NoWrap(bytes);
+    }
+
+    static String stripMpSource(String smali) {
+        if (smali == null) return null;
+        return smali.replaceFirst("(?m)^\\.source\\s+\"mp[^\"]*\"\\r?\\n", "");
+    }
+
+    static String decodeHelperMethodSmali(ProtectSpec ps) {
+        return ".method public static " + ps.decodeMethod + "(Ljava/lang/String;I)Ljava/lang/String;\n"
+                + "    .locals 4\n"
+                + "    const/4 v0, 0x0\n"
+                + "    invoke-static {p0, v0}, Landroid/util/Base64;->decode(Ljava/lang/String;I)[B\n"
+                + "    move-result-object v0\n"
+                + "    array-length v1, v0\n"
+                + "    const/4 v2, 0x0\n"
+                + "    :mp_dec_loop\n"
+                + "    if-ge v2, v1, :mp_dec_done\n"
+                + "    aget-byte v3, v0, v2\n"
+                + "    xor-int/2addr v3, p1\n"
+                + "    int-to-byte v3, v3\n"
+                + "    aput-byte v3, v0, v2\n"
+                + "    add-int/lit8 v2, v2, 0x1\n"
+                + "    goto :mp_dec_loop\n"
+                + "    :mp_dec_done\n"
+                + "    new-instance v1, Ljava/lang/String;\n"
+                + "    invoke-direct {v1, v0}, Ljava/lang/String;-><init>([B)V\n"
+                + "    return-object v1\n"
+                + ".end method\n";
+    }
+
+    static String loadStringSmali(ProtectSpec ps, String raw, int reg, int tmpReg) {
+        if (ps == null) {
+            return "    const-string v" + reg + ", \"" + escapeSmali(raw) + "\"\n";
+        }
+        int key = ps.nextKey();
+        String enc = xorB64(raw, key);
+        return "    const-string v" + reg + ", \"" + enc + "\"\n"
+                + "    const/16 v" + tmpReg + ", 0x" + Integer.toHexString(key) + "\n"
+                + "    invoke-static {v" + reg + ", v" + tmpReg + "}, " + ps.helperClassDesc + "->"
+                + ps.decodeMethod + "(Ljava/lang/String;I)Ljava/lang/String;\n"
+                + "    move-result-object v" + reg + "\n";
     }
 
     static String loadTextSmali(String raw, boolean base64, boolean html, int textReg, int tmpReg) {
-        String content = base64 ? b64(raw) : escapeSmali(raw);
+        return loadTextSmali(raw, base64, html, textReg, tmpReg, null);
+    }
+
+    static String loadTextSmali(String raw, boolean base64, boolean html, int textReg, int tmpReg, ProtectSpec ps) {
         StringBuilder sb = new StringBuilder();
-        if (base64) {
+        if (ps != null) {
+            sb.append(loadStringSmali(ps, raw == null ? "" : raw, textReg, tmpReg));
+        } else if (base64) {
+            String content = b64(raw);
             sb.append("    const-string v").append(textReg).append(", \"").append(content).append("\"\n");
             sb.append("    const/4 v").append(tmpReg).append(", 0x0\n");
             sb.append("    invoke-static {v").append(textReg).append(", v").append(tmpReg)
@@ -346,7 +539,7 @@ public class OverlayInjectorUtil {
                     .append("}, Ljava/lang/String;-><init>([B)V\n");
             sb.append("    move-object v").append(textReg).append(", v").append(tmpReg).append("\n");
         } else {
-            sb.append("    const-string v").append(textReg).append(", \"").append(content).append("\"\n");
+            sb.append("    const-string v").append(textReg).append(", \"").append(escapeSmali(raw)).append("\"\n");
         }
         if (html) {
             sb.append("    invoke-static {v").append(textReg)
@@ -373,9 +566,16 @@ public class OverlayInjectorUtil {
     }
 
     static String toastHelperSmali(ToastOptions opts) {
-        return ".method private " + TOAST_HELPER + "()V\n" +
+        return toastHelperSmali(opts, null, TOAST_HELPER);
+    }
+
+    static String toastHelperSmali(ToastOptions opts, ProtectSpec ps, String methodName) {
+        String header = ps != null
+                ? ".method public static " + methodName + "(Landroid/content/Context;)V\n"
+                : ".method private " + methodName + "()V\n";
+        return header +
                 "    .locals 5\n" +
-                loadTextSmali(opts.message == null ? "" : opts.message, opts.base64, opts.html, 1, 2) +
+                loadTextSmali(opts.message == null ? "" : opts.message, opts.base64, opts.html, 1, 2, ps) +
                 buildToastSmali(opts.longDuration, opts.gravity, opts.xOffset, opts.yOffset) +
                 ".end method\n";
     }
@@ -439,6 +639,30 @@ public class OverlayInjectorUtil {
                                     String noshowListener, String blinkListener,
                                     String dismissListener, Map<String, String> fontAssets,
                                     String waveRgb, String dragListener, String videoHelper) {
+        String base = classDescriptor.substring(0, classDescriptor.length() - 1);
+        String countdownHelper = opts != null && opts.countdown ? base + "$mpCountdown;" : null;
+        return dialogHelperSmali(classDescriptor, opts, urlListener, urlViewListener,
+                noshowListener, blinkListener, dismissListener, fontAssets, waveRgb,
+                dragListener, videoHelper, countdownHelper);
+    }
+
+    static String dialogHelperSmali(String classDescriptor, DialogOptions opts,
+                                    String urlListener, String urlViewListener,
+                                    String noshowListener, String blinkListener,
+                                    String dismissListener, Map<String, String> fontAssets,
+                                    String waveRgb, String dragListener, String videoHelper,
+                                    String countdownHelper) {
+        return dialogHelperSmali(classDescriptor, opts, urlListener, urlViewListener,
+                noshowListener, blinkListener, dismissListener, fontAssets, waveRgb,
+                dragListener, videoHelper, countdownHelper, null, DIALOG_HELPER);
+    }
+
+    static String dialogHelperSmali(String classDescriptor, DialogOptions opts,
+                                    String urlListener, String urlViewListener,
+                                    String noshowListener, String blinkListener,
+                                    String dismissListener, Map<String, String> fontAssets,
+                                    String waveRgb, String dragListener, String videoHelper,
+                                    String countdownHelper, ProtectSpec ps, String helperMethodName) {
         boolean titleColored = opts.titleColor != 0;
         boolean msgColored = opts.msgColor != 0;
         boolean btnColored = opts.btnColor != 0;
@@ -454,15 +678,20 @@ public class OverlayInjectorUtil {
         boolean useVideo = hasVideo(opts) && videoHelper != null;
         boolean useImage = !useVideo && opts.imageBase64 != null && !opts.imageBase64.isEmpty();
         boolean useAdvanced = opts.advanced && opts.widgets != null && !opts.widgets.isEmpty();
+        boolean useCountdown = !useAdvanced && opts.countdown && opts.countdownSeconds > 0 && countdownHelper != null;
         boolean useDlgFont = needsFontWalk(opts);
         boolean useDrag = opts.draggable && dragListener != null;
         StringBuilder sb = new StringBuilder();
-        sb.append(".method private ").append(DIALOG_HELPER).append("()V\n");
-        sb.append("    .locals ").append(useAdvanced ? 8 : (useAnim || useDlgFont || useWave) ? 6 : 5).append("\n");
+        if (ps != null) {
+            sb.append(".method public static ").append(helperMethodName).append("(Landroid/content/Context;)V\n");
+        } else {
+            sb.append(".method private ").append(helperMethodName).append("()V\n");
+        }
+        sb.append("    .locals ").append((useAdvanced || useCountdown) ? 8 : (useAnim || useDlgFont || useWave) ? 6 : 5).append("\n");
         if (opts.dontShowAgain) {
             sb.append("    invoke-static {p0}, Landroid/preference/PreferenceManager;->getDefaultSharedPreferences(Landroid/content/Context;)Landroid/content/SharedPreferences;\n");
             sb.append("    move-result-object v0\n");
-            sb.append("    const-string v1, \"").append(DONTSHOW_KEY).append("\"\n");
+            sb.append(loadStringSmali(ps, ps != null ? ps.dontShowKey : DONTSHOW_KEY, 1, 2));
             sb.append("    const/4 v2, 0x0\n");
             sb.append("    invoke-interface {v0, v1, v2}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z\n");
             sb.append("    move-result v2\n");
@@ -473,7 +702,7 @@ public class OverlayInjectorUtil {
         if (opts.showOnce) {
             sb.append("    invoke-static {p0}, Landroid/preference/PreferenceManager;->getDefaultSharedPreferences(Landroid/content/Context;)Landroid/content/SharedPreferences;\n");
             sb.append("    move-result-object v0\n");
-            sb.append("    const-string v1, \"").append(SHOWONCE_KEY).append("\"\n");
+            sb.append(loadStringSmali(ps, ps != null ? ps.showOnceKey : SHOWONCE_KEY, 1, 2));
             sb.append("    const/4 v2, 0x0\n");
             sb.append("    invoke-interface {v0, v1, v2}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z\n");
             sb.append("    move-result v2\n");
@@ -490,31 +719,31 @@ public class OverlayInjectorUtil {
         sb.append("    new-instance v0, Landroid/app/AlertDialog$Builder;\n");
         sb.append("    invoke-direct {v0, p0}, Landroid/app/AlertDialog$Builder;-><init>(Landroid/content/Context;)V\n");
         if (useAdvanced) {
-            sb.append(advancedViewSmali(opts, urlViewListener, dismissListener, blinkListener, fontAssets, waveRgb, videoHelper));
+            sb.append(advancedViewSmali(opts, urlViewListener, dismissListener, blinkListener, fontAssets, waveRgb, videoHelper, ps));
         } else {
             if (title != null && !title.isEmpty()) {
-            sb.append(loadTextSmali(title, opts.base64, titleHtml, 1, 2));
+            sb.append(loadTextSmali(title, opts.base64, titleHtml, 1, 2, ps));
             sb.append("    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;\n");
             sb.append("    move-result-object v0\n");
         }
         if (message != null && !message.isEmpty()) {
-            sb.append(loadTextSmali(message, opts.base64, msgHtml, 1, 2));
+            sb.append(loadTextSmali(message, opts.base64, msgHtml, 1, 2, ps));
             sb.append("    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setMessage(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;\n");
             sb.append("    move-result-object v0\n");
         }
         appendButtonSmali(sb, btnColored ? fontWrap(opts.positive, opts.btnColor) : opts.positive,
-                opts.positiveUrl, "setPositiveButton", opts, urlListener, btnColored);
+                opts.positiveUrl, "setPositiveButton", opts, urlListener, btnColored, ps);
         appendButtonSmali(sb, btnColored ? fontWrap(opts.negative, opts.btnColor) : opts.negative,
-                opts.negativeUrl, "setNegativeButton", opts, urlListener, btnColored);
+                opts.negativeUrl, "setNegativeButton", opts, urlListener, btnColored, ps);
         if (opts.dontShowAgain && noshowListener != null) {
-            sb.append("    const-string v1, \"Don't show again\"\n");
+            sb.append(loadStringSmali(ps, "Don't show again", 1, 2));
             sb.append("    new-instance v2, ").append(noshowListener).append("\n");
             sb.append("    invoke-direct {v2, p0}, ").append(noshowListener).append("-><init>(Landroid/content/Context;)V\n");
             sb.append("    invoke-virtual {v0, v1, v2}, Landroid/app/AlertDialog$Builder;->setNeutralButton(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;\n");
             sb.append("    move-result-object v0\n");
         } else {
             appendButtonSmali(sb, btnColored ? fontWrap(opts.neutral, opts.btnColor) : opts.neutral,
-                    opts.neutralUrl, "setNeutralButton", opts, urlListener, btnColored);
+                    opts.neutralUrl, "setNeutralButton", opts, urlListener, btnColored, ps);
         }
         if (!opts.cancelable) {
             sb.append("    const/4 v1, 0x0\n");
@@ -562,8 +791,10 @@ public class OverlayInjectorUtil {
             }
             }
         }
-        if (useVideo && !useAdvanced) {
-            sb.append("    const-string v1, \"").append(VIDEO_ASSET_NAME).append("\"\n");
+        if (useCountdown) {
+            sb.append(buildCountdownContainerSmali(opts, useVideo ? videoHelper : null, useImage, ps));
+        } else if (useVideo && !useAdvanced) {
+            sb.append(loadStringSmali(ps, ps != null ? ps.videoAssetName : VIDEO_ASSET_NAME, 1, 2));
             sb.append("    invoke-static {p0, v1}, ").append(videoHelper).append("->create(Landroid/content/Context;Ljava/lang/String;)Landroid/view/View;\n");
             sb.append("    move-result-object v2\n");
             sb.append("    invoke-virtual {v0, v2}, Landroid/app/AlertDialog$Builder;->setView(Landroid/view/View;)Landroid/app/AlertDialog$Builder;\n");
@@ -593,22 +824,35 @@ public class OverlayInjectorUtil {
             sb.append("    sput-object v5, ").append(dismissListener).append("->dlg:Landroid/content/DialogInterface;\n");
             resultTaken = true;
         }
-        if ((useDlgFont || useBg || useDrag) && !resultTaken) {
+        if ((useDlgFont || useBg || useDrag || useCountdown) && !resultTaken) {
             sb.append("    move-result-object v0\n");
+        }
+        if (useCountdown) {
+            sb.append("    invoke-static {}, Landroid/os/Looper;->getMainLooper()Landroid/os/Looper;\n");
+            sb.append("    move-result-object v1\n");
+            sb.append("    new-instance v2, Landroid/os/Handler;\n");
+            sb.append("    invoke-direct {v2, v1}, Landroid/os/Handler;-><init>(Landroid/os/Looper;)V\n");
+            sb.append("    new-instance v3, ").append(countdownHelper).append("\n");
+            appendConstInt(sb, 1, Math.max(1, opts.countdownSeconds));
+            sb.append("    invoke-direct {v3, v0, v7, v2, v1}, ").append(countdownHelper)
+                    .append("-><init>(Landroid/app/AlertDialog;Landroid/widget/TextView;Landroid/os/Handler;I)V\n");
+            sb.append("    const-wide v5, 0x3e8L\n");
+            sb.append("    invoke-virtual {v2, v3, v5, v6}, Landroid/os/Handler;->postDelayed(Ljava/lang/Runnable;J)Z\n");
+            sb.append("    move-result v1\n");
         }
         if (useDlgFont) {
             String dlgAsset = fontAssetName(opts.dlgFontPath, fontAssets);
             if (dlgAsset != null) {
+                sb.append(loadStringSmali(ps, dlgAsset, 3, 1));
                 sb.append("    invoke-virtual {p0}, Landroid/content/Context;->getAssets()Landroid/content/res/AssetManager;\n");
                 sb.append("    move-result-object v2\n");
-                sb.append("    const-string v3, \"").append(dlgAsset).append("\"\n");
                 sb.append("    invoke-static {v2, v3}, Landroid/graphics/Typeface;->createFromAsset(Landroid/content/res/AssetManager;Ljava/lang/String;)Landroid/graphics/Typeface;\n");
                 sb.append("    move-result-object v1\n");
                 sb.append("    if-nez v1, :dlg_tf_ok\n");
                 sb.append("    sget-object v1, Landroid/graphics/Typeface;->DEFAULT:Landroid/graphics/Typeface;\n");
                 sb.append("    :dlg_tf_ok\n");
             } else if (opts.dlgFont != null && !opts.dlgFont.isEmpty()) {
-                sb.append("    const-string v2, \"").append(escapeSmali(opts.dlgFont)).append("\"\n");
+                sb.append(loadStringSmali(ps, opts.dlgFont, 2, 3));
                 sb.append("    const/4 v3, 0x0\n");
                 sb.append("    invoke-static {v2, v3}, Landroid/graphics/Typeface;->create(Ljava/lang/String;I)Landroid/graphics/Typeface;\n");
                 sb.append("    move-result-object v1\n");
@@ -619,7 +863,8 @@ public class OverlayInjectorUtil {
             sb.append("    move-result-object v2\n");
             sb.append("    invoke-virtual {v2}, Landroid/view/Window;->getDecorView()Landroid/view/View;\n");
             sb.append("    move-result-object v2\n");
-            sb.append("    invoke-static {v2, v1}, ").append(fontWalkType(classDescriptor)).append("->applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
+            String fwType = ps != null ? ps.fontWalkDesc : fontWalkType(classDescriptor);
+            sb.append("    invoke-static {v2, v1}, ").append(fwType).append("->applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
         }
         if (useDrag) {
             sb.append("    invoke-virtual {v0}, Landroid/app/AlertDialog;->getWindow()Landroid/view/Window;\n");
@@ -781,12 +1026,12 @@ public class OverlayInjectorUtil {
     }
 
     private static void appendButtonSmali(StringBuilder sb, String text, String url, String setter,
-                                          DialogOptions opts, String urlListener, boolean forceHtml) {
+                                          DialogOptions opts, String urlListener, boolean forceHtml, ProtectSpec ps) {
         if (text == null || text.isEmpty()) return;
-        sb.append(loadTextSmali(text, opts.base64, forceHtml || opts.html, 1, 2));
+        sb.append(loadTextSmali(text, opts.base64, forceHtml || opts.html, 1, 2, ps));
         if (url != null && !url.trim().isEmpty() && urlListener != null) {
+            sb.append(loadStringSmali(ps, url.trim(), 3, 2));
             sb.append("    new-instance v2, ").append(urlListener).append("\n");
-            sb.append("    const-string v3, \"").append(escapeSmali(url.trim())).append("\"\n");
             sb.append("    invoke-direct {v2, p0, v3}, ").append(urlListener).append("-><init>(Landroid/content/Context;Ljava/lang/String;)V\n");
         } else {
             sb.append("    const/4 v2, 0x0\n");
@@ -797,9 +1042,13 @@ public class OverlayInjectorUtil {
     }
 
     static String urlListenerSmali(String listenerType) {
+        return urlListenerSmali(listenerType, null);
+    }
+
+    static String urlListenerSmali(String listenerType, ProtectSpec ps) {
         return ".class public " + listenerType + "\n"
                 + ".super Ljava/lang/Object;\n"
-                + ".source \"mpUrl.java\"\n"
+                + (ps == null ? ".source \"mpUrl.java\"\n" : "")
                 + ".implements Landroid/content/DialogInterface$OnClickListener;\n"
                 + "\n"
                 + ".field private ctx:Landroid/content/Context;\n"
@@ -819,8 +1068,8 @@ public class OverlayInjectorUtil {
                 + "    iget-object v1, p0, " + listenerType + "->url:Ljava/lang/String;\n"
                 + "    invoke-static {v1}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;\n"
                 + "    move-result-object v1\n"
+                + loadStringSmali(ps, "android.intent.action.VIEW", 3, 2)
                 + "    new-instance v2, Landroid/content/Intent;\n"
-                + "    const-string v3, \"android.intent.action.VIEW\"\n"
                 + "    invoke-direct {v2, v3, v1}, Landroid/content/Intent;-><init>(Ljava/lang/String;Landroid/net/Uri;)V\n"
                 + "    invoke-virtual {v0, v2}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V\n"
                 + "    return-void\n"
@@ -828,9 +1077,13 @@ public class OverlayInjectorUtil {
     }
 
     static String urlViewListenerSmali(String listenerType) {
+        return urlViewListenerSmali(listenerType, null);
+    }
+
+    static String urlViewListenerSmali(String listenerType, ProtectSpec ps) {
         return ".class public " + listenerType + "\n"
                 + ".super Ljava/lang/Object;\n"
-                + ".source \"mpUrlView.java\"\n"
+                + (ps == null ? ".source \"mpUrlView.java\"\n" : "")
                 + ".implements Landroid/view/View$OnClickListener;\n"
                 + "\n"
                 + ".field private ctx:Landroid/content/Context;\n"
@@ -850,17 +1103,22 @@ public class OverlayInjectorUtil {
                 + "    iget-object v1, p0, " + listenerType + "->url:Ljava/lang/String;\n"
                 + "    invoke-static {v1}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;\n"
                 + "    move-result-object v1\n"
+                + loadStringSmali(ps, "android.intent.action.VIEW", 3, 2)
                 + "    new-instance v2, Landroid/content/Intent;\n"
-                + "    const-string v3, \"android.intent.action.VIEW\"\n"
                 + "    invoke-direct {v2, v3, v1}, Landroid/content/Intent;-><init>(Ljava/lang/String;Landroid/net/Uri;)V\n"
                 + "    invoke-virtual {v0, v2}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V\n"
                 + "    return-void\n"
                 + ".end method\n";
     }
 
-    static String noshowListenerSmali(String listenerType) {        return ".class public " + listenerType + "\n"
+    static String noshowListenerSmali(String listenerType) {
+        return noshowListenerSmali(listenerType, null);
+    }
+
+    static String noshowListenerSmali(String listenerType, ProtectSpec ps) {
+        return ".class public " + listenerType + "\n"
                 + ".super Ljava/lang/Object;\n"
-                + ".source \"mpNoShow.java\"\n"
+                + (ps == null ? ".source \"mpNoShow.java\"\n" : "")
                 + ".implements Landroid/content/DialogInterface$OnClickListener;\n"
                 + "\n"
                 + ".field private ctx:Landroid/content/Context;\n"
@@ -879,7 +1137,7 @@ public class OverlayInjectorUtil {
                 + "    move-result-object v0\n"
                 + "    invoke-interface {v0}, Landroid/content/SharedPreferences;->edit()Landroid/content/SharedPreferences$Editor;\n"
                 + "    move-result-object v0\n"
-                + "    const-string v1, \"" + DONTSHOW_KEY + "\"\n"
+                + loadStringSmali(ps, ps != null ? ps.dontShowKey : DONTSHOW_KEY, 1, 2)
                 + "    const/4 v2, 0x1\n"
                 + "    invoke-interface {v0, v1, v2}, Landroid/content/SharedPreferences$Editor;->putBoolean(Ljava/lang/String;Z)Landroid/content/SharedPreferences$Editor;\n"
                 + "    move-result-object v0\n"
@@ -920,6 +1178,12 @@ public class OverlayInjectorUtil {
     static String advancedViewSmali(DialogOptions opts, String urlViewListener, String dismissListener,
                                       String blinkListener, Map<String, String> fontAssets,
                                       String waveRgb, String videoHelper) {
+        return advancedViewSmali(opts, urlViewListener, dismissListener, blinkListener, fontAssets, waveRgb, videoHelper, null);
+    }
+
+    static String advancedViewSmali(DialogOptions opts, String urlViewListener, String dismissListener,
+                                      String blinkListener, Map<String, String> fontAssets,
+                                      String waveRgb, String videoHelper, ProtectSpec ps) {
         StringBuilder sb = new StringBuilder();
         sb.append("    new-instance v6, Landroid/widget/FrameLayout;\n");
         sb.append("    invoke-direct {v6, p0}, Landroid/widget/FrameLayout;-><init>(Landroid/content/Context;)V\n");
@@ -928,7 +1192,7 @@ public class OverlayInjectorUtil {
         sb.append("    invoke-virtual {v5}, Landroid/content/res/Resources;->getDisplayMetrics()Landroid/util/DisplayMetrics;\n");
         sb.append("    move-result-object v5\n");
         if (hasVideo(opts) && videoHelper != null) {
-            sb.append("    const-string v1, \"").append(VIDEO_ASSET_NAME).append("\"\n");
+            sb.append(loadStringSmali(ps, ps != null ? ps.videoAssetName : VIDEO_ASSET_NAME, 1, 2));
             sb.append("    invoke-static {p0, v1}, ").append(videoHelper).append("->create(Landroid/content/Context;Ljava/lang/String;)Landroid/view/View;\n");
             sb.append("    move-result-object v2\n");
             sb.append("    new-instance v3, Landroid/widget/FrameLayout$LayoutParams;\n");
@@ -959,7 +1223,7 @@ public class OverlayInjectorUtil {
                     appendChildSmali(sb, w, 2);
                 } else if (w.kind.equals("button")) {
                     String text = w.text == null ? "" : w.text;
-                    sb.append(loadTextSmali(text, opts.base64, opts.html, 1, 2));
+                    sb.append(loadTextSmali(text, opts.base64, opts.html, 1, 2, ps));
                     sb.append("    move-object v3, v1\n");
                     sb.append("    new-instance v2, Landroid/widget/Button;\n");
                     sb.append("    invoke-direct {v2, p0}, Landroid/widget/Button;-><init>(Landroid/content/Context;)V\n");
@@ -973,11 +1237,11 @@ public class OverlayInjectorUtil {
                         sb.append("    const v3, 0x").append(Integer.toHexString(Float.floatToRawIntBits(w.textSizeSp))).append("\n");
                         sb.append("    invoke-virtual {v2, v1, v3}, Landroid/widget/Button;->setTextSize(IF)V\n");
                     }
-                    sb.append(widgetTypefaceSmali(w, opts, label++, fontAssets));
+                    sb.append(widgetTypefaceSmali(w, opts, label++, fontAssets, ps));
                     sb.append(buttonDecorSmali(w, opts, blinkListener, waveRgb, label++));
                     if (w.url != null && !w.url.trim().isEmpty() && urlViewListener != null) {
+                        sb.append(loadStringSmali(ps, w.url.trim(), 1, 3));
                         sb.append("    new-instance v3, ").append(urlViewListener).append("\n");
-                        sb.append("    const-string v1, \"").append(escapeSmali(w.url.trim())).append("\"\n");
                         sb.append("    invoke-direct {v3, p0, v1}, ").append(urlViewListener).append("-><init>(Landroid/content/Context;Ljava/lang/String;)V\n");
                     } else if (dismissListener != null) {
                         sb.append("    new-instance v3, ").append(dismissListener).append("\n");
@@ -989,7 +1253,7 @@ public class OverlayInjectorUtil {
                     appendChildSmali(sb, w, 2);
                 } else {
                     String text = w.text == null ? "" : w.text;
-                    sb.append(loadTextSmali(text, opts.base64, opts.html, 3, 1));
+                    sb.append(loadTextSmali(text, opts.base64, opts.html, 3, 1, ps));
                     sb.append("    new-instance v2, Landroid/widget/TextView;\n");
                     sb.append("    invoke-direct {v2, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V\n");
                     sb.append("    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V\n");
@@ -1002,7 +1266,7 @@ public class OverlayInjectorUtil {
                         sb.append("    const v3, 0x").append(Integer.toHexString(Float.floatToRawIntBits(w.textSizeSp))).append("\n");
                         sb.append("    invoke-virtual {v2, v1, v3}, Landroid/widget/TextView;->setTextSize(IF)V\n");
                     }
-                    sb.append(widgetTypefaceSmali(w, opts, label++, fontAssets));
+                    sb.append(widgetTypefaceSmali(w, opts, label++, fontAssets, ps));
                     appendChildSmali(sb, w, 2);
                 }
             }
@@ -1030,22 +1294,22 @@ public class OverlayInjectorUtil {
     }
 
     private static String widgetTypefaceSmali(AdvWidget w, DialogOptions opts, int labelIdx,
-                                              Map<String, String> fontAssets) {
+                                              Map<String, String> fontAssets, ProtectSpec ps) {
         String font = effectiveFont(w, opts);
         String asset = fontAssetName(effectiveFontPath(w, opts), fontAssets);
         if (asset == null && font.isEmpty() && w.fontStyle == 0) return "";
         StringBuilder sb = new StringBuilder();
         if (asset != null) {
+            sb.append(loadStringSmali(ps, asset, 3, 1));
             sb.append("    invoke-virtual {p0}, Landroid/content/Context;->getAssets()Landroid/content/res/AssetManager;\n");
             sb.append("    move-result-object v1\n");
-            sb.append("    const-string v3, \"").append(asset).append("\"\n");
             sb.append("    invoke-static {v1, v3}, Landroid/graphics/Typeface;->createFromAsset(Landroid/content/res/AssetManager;Ljava/lang/String;)Landroid/graphics/Typeface;\n");
             sb.append("    move-result-object v1\n");
             sb.append("    if-nez v1, :mptf_ok_").append(labelIdx).append("\n");
             sb.append("    sget-object v1, Landroid/graphics/Typeface;->DEFAULT:Landroid/graphics/Typeface;\n");
             sb.append("    :mptf_ok_").append(labelIdx).append("\n");
         } else if (!font.isEmpty()) {
-            sb.append("    const-string v1, \"").append(escapeSmali(font)).append("\"\n");
+            sb.append(loadStringSmali(ps, font, 1, 3));
             sb.append("    const/4 v3, 0x0\n");
             sb.append("    invoke-static {v1, v3}, Landroid/graphics/Typeface;->create(Ljava/lang/String;I)Landroid/graphics/Typeface;\n");
             sb.append("    move-result-object v1\n");
@@ -1221,19 +1485,129 @@ public class OverlayInjectorUtil {
     }
 
     static String wrapperSmali(String classDescriptor, String flags, boolean callToast, boolean callDialog) {
+        return wrapperSmali(classDescriptor, flags, callToast, callDialog, null);
+    }
+
+    static String wrapperSmali(String classDescriptor, String flags, boolean callToast, boolean callDialog, ProtectSpec ps) {
+        String origName = ps != null ? ps.origRename : "onCreate$mpmanager";
         StringBuilder sb = new StringBuilder();
         sb.append(".method ").append(flags).append(" onCreate(Landroid/os/Bundle;)V\n");
-        sb.append("    .locals 1\n");
-        if (callToast) {
-            sb.append("    invoke-direct {p0}, ").append(classDescriptor).append("->").append(TOAST_HELPER).append("()V\n");
+        sb.append("    .locals ").append(ps != null ? 6 : 1).append("\n");
+        if (ps != null) {
+            appendReflectCallSmali(sb, ps);
+        } else {
+            if (callToast) {
+                sb.append("    invoke-direct {p0}, ").append(classDescriptor).append("->").append(TOAST_HELPER).append("()V\n");
+            }
+            if (callDialog) {
+                sb.append("    invoke-direct {p0}, ").append(classDescriptor).append("->").append(DIALOG_HELPER).append("()V\n");
+            }
         }
-        if (callDialog) {
-            sb.append("    invoke-direct {p0}, ").append(classDescriptor).append("->").append(DIALOG_HELPER).append("()V\n");
-        }
-        sb.append("    invoke-direct {p0, p1}, ").append(classDescriptor).append("->onCreate$mpmanager(Landroid/os/Bundle;)V\n");
+        sb.append("    invoke-direct {p0, p1}, ").append(classDescriptor).append("->").append(origName).append("(Landroid/os/Bundle;)V\n");
         sb.append("    return-void\n");
         sb.append(".end method\n");
         return sb.toString();
+    }
+
+    static String resumeWrapperSmali(String classDescriptor, String flags,
+                                     boolean hasOrigResume, String superDescriptor,
+                                     boolean callToast, boolean callDialog, ProtectSpec ps) {
+        String guardField = ps != null ? ps.guardField : "mpResumeOnce";
+        String origName = ps != null ? ps.origRename : "onResume$mpmanager";
+        StringBuilder sb = new StringBuilder();
+        sb.append(".method ").append(flags).append(" onResume()V\n");
+        sb.append("    .locals ").append(ps != null ? 6 : 1).append("\n");
+        if (hasOrigResume) {
+            sb.append("    invoke-direct {p0}, ").append(classDescriptor).append("->").append(origName).append("()V\n");
+        } else {
+            sb.append("    invoke-super {p0}, ").append(superDescriptor).append("->onResume()V\n");
+        }
+        sb.append("    sget-boolean v0, ").append(classDescriptor).append("->").append(guardField).append(":Z\n");
+        sb.append("    if-nez v0, :mp_resume_done\n");
+        sb.append("    const/4 v0, 0x1\n");
+        sb.append("    sput-boolean v0, ").append(classDescriptor).append("->").append(guardField).append(":Z\n");
+        if (ps != null) {
+            appendReflectCallSmali(sb, ps);
+        } else {
+            if (callToast) {
+                sb.append("    invoke-direct {p0}, ").append(classDescriptor).append("->").append(TOAST_HELPER).append("()V\n");
+            }
+            if (callDialog) {
+                sb.append("    invoke-direct {p0}, ").append(classDescriptor).append("->").append(DIALOG_HELPER).append("()V\n");
+            }
+        }
+        sb.append("    :mp_resume_done\n");
+        sb.append("    return-void\n");
+        sb.append(".end method\n");
+        return sb.toString();
+    }
+
+    private static void appendReflectCallSmali(StringBuilder sb, ProtectSpec ps) {
+        int key = ps.nextKey();
+        String payload = ps.helperClassDot + ":android.content.Context:" + ps.entryMethod;
+        String enc = xorB64(payload, key);
+        sb.append("    :mp_try_start\n");
+        sb.append("    const-string v0, \"").append(enc).append("\"\n");
+        sb.append("    const/4 v1, 0x0\n");
+        sb.append("    invoke-static {v0, v1}, Landroid/util/Base64;->decode(Ljava/lang/String;I)[B\n");
+        sb.append("    move-result-object v0\n");
+        sb.append("    array-length v1, v0\n");
+        sb.append("    const/4 v2, 0x0\n");
+        sb.append("    const/16 v3, 0x").append(Integer.toHexString(key)).append("\n");
+        sb.append("    :mp_ref_loop\n");
+        sb.append("    if-ge v2, v1, :mp_ref_done\n");
+        sb.append("    aget-byte v4, v0, v2\n");
+        sb.append("    xor-int v4, v4, v3\n");
+        sb.append("    int-to-byte v4, v4\n");
+        sb.append("    aput-byte v4, v0, v2\n");
+        sb.append("    add-int/lit8 v2, v2, 0x1\n");
+        sb.append("    goto :mp_ref_loop\n");
+        sb.append("    :mp_ref_done\n");
+        sb.append("    new-instance v1, Ljava/lang/String;\n");
+        sb.append("    invoke-direct {v1, v0}, Ljava/lang/String;-><init>([B)V\n");
+        sb.append("    const-string v0, \":\"\n");
+        sb.append("    invoke-virtual {v1, v0}, Ljava/lang/String;->split(Ljava/lang/String;)[Ljava/lang/String;\n");
+        sb.append("    move-result-object v0\n");
+        sb.append("    const/4 v1, 0x0\n");
+        sb.append("    aget-object v1, v0, v1\n");
+        sb.append("    invoke-static {v1}, Ljava/lang/Class;->forName(Ljava/lang/String;)Ljava/lang/Class;\n");
+        sb.append("    move-result-object v1\n");
+        sb.append("    const/4 v2, 0x1\n");
+        sb.append("    aget-object v3, v0, v2\n");
+        sb.append("    invoke-static {v3}, Ljava/lang/Class;->forName(Ljava/lang/String;)Ljava/lang/Class;\n");
+        sb.append("    move-result-object v3\n");
+        sb.append("    new-array v4, v2, [Ljava/lang/Class;\n");
+        sb.append("    const/4 v5, 0x0\n");
+        sb.append("    aput-object v3, v4, v5\n");
+        sb.append("    const/4 v3, 0x2\n");
+        sb.append("    aget-object v0, v0, v3\n");
+        sb.append("    invoke-virtual {v1, v0, v4}, Ljava/lang/Class;->getDeclaredMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;\n");
+        sb.append("    move-result-object v0\n");
+        sb.append("    invoke-virtual {v0, v2}, Ljava/lang/reflect/Method;->setAccessible(Z)V\n");
+        sb.append("    new-array v1, v2, [Ljava/lang/Object;\n");
+        sb.append("    aput-object p0, v1, v5\n");
+        sb.append("    const/4 v2, 0x0\n");
+        sb.append("    invoke-virtual {v0, v2, v1}, Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;\n");
+        sb.append("    :mp_try_end\n");
+        sb.append("    .catch Ljava/lang/Throwable; {:mp_try_start .. :mp_try_end} :mp_try_catch\n");
+        sb.append("    :mp_try_catch\n");
+    }
+
+    static String insertGuardFieldSmali(String content, String fieldName) {
+        int pos = 0;
+        int len = content.length();
+        while (pos < len) {
+            int nl = content.indexOf('\n', pos);
+            int end = nl >= 0 ? nl : len;
+            String trimmed = content.substring(pos, end).trim();
+            if (trimmed.isEmpty() || trimmed.startsWith(".class ") || trimmed.startsWith(".super ")
+                    || trimmed.startsWith(".source ") || trimmed.startsWith(".implements ")) {
+                pos = nl >= 0 ? nl + 1 : len;
+            } else {
+                break;
+            }
+        }
+        return content.substring(0, pos) + ".field private static " + fieldName + ":Z\n\n" + content.substring(pos);
     }
 
     static String waveRgbSmali(String rgbType, String tickType) {
@@ -1483,6 +1857,142 @@ public class OverlayInjectorUtil {
                 ".end method\n";
     }
 
+    private static String buildCountdownContainerSmali(DialogOptions opts, String videoHelper, boolean useImage) {
+        return buildCountdownContainerSmali(opts, videoHelper, useImage, null);
+    }
+
+    private static String buildCountdownContainerSmali(DialogOptions opts, String videoHelper, boolean useImage, ProtectSpec ps) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("    new-instance v6, Landroid/widget/LinearLayout;\n");
+        sb.append("    invoke-direct {v6, p0}, Landroid/widget/LinearLayout;-><init>(Landroid/content/Context;)V\n");
+        sb.append("    const/4 v1, 0x1\n");
+        sb.append("    invoke-virtual {v6, v1}, Landroid/widget/LinearLayout;->setOrientation(I)V\n");
+        appendDpToPx(sb, Float.floatToRawIntBits(16f), 2, 3, 1);
+        sb.append("    float-to-int v7, v2\n");
+        appendDpToPx(sb, Float.floatToRawIntBits(10f), 2, 3, 1);
+        sb.append("    float-to-int v2, v2\n");
+        sb.append("    invoke-virtual {v6, v7, v2, v7, v2}, Landroid/widget/LinearLayout;->setPadding(IIII)V\n");
+        if (videoHelper != null) {
+            sb.append(loadStringSmali(ps, ps != null ? ps.videoAssetName : VIDEO_ASSET_NAME, 1, 2));
+            sb.append("    invoke-static {p0, v1}, ").append(videoHelper).append("->create(Landroid/content/Context;Ljava/lang/String;)Landroid/view/View;\n");
+            sb.append("    move-result-object v2\n");
+            sb.append("    invoke-virtual {v6, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V\n");
+        } else if (useImage) {
+            sb.append("    const-string v1, \"").append(opts.imageBase64).append("\"\n");
+            sb.append("    const/4 v2, 0x0\n");
+            sb.append("    invoke-static {v1, v2}, Landroid/util/Base64;->decode(Ljava/lang/String;I)[B\n");
+            sb.append("    move-result-object v1\n");
+            sb.append("    const/4 v2, 0x0\n");
+            sb.append("    array-length v3, v1\n");
+            sb.append("    invoke-static {v1, v2, v3}, Landroid/graphics/BitmapFactory;->decodeByteArray([BII)Landroid/graphics/Bitmap;\n");
+            sb.append("    move-result-object v1\n");
+            sb.append("    new-instance v2, Landroid/widget/ImageView;\n");
+            sb.append("    invoke-direct {v2, p0}, Landroid/widget/ImageView;-><init>(Landroid/content/Context;)V\n");
+            sb.append("    const/4 v3, 0x1\n");
+            sb.append("    invoke-virtual {v2, v3}, Landroid/widget/ImageView;->setAdjustViewBounds(Z)V\n");
+            sb.append("    invoke-virtual {v2, v1}, Landroid/widget/ImageView;->setImageBitmap(Landroid/graphics/Bitmap;)V\n");
+            sb.append("    invoke-virtual {v6, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V\n");
+        }
+        sb.append("    new-instance v1, Landroid/widget/LinearLayout;\n");
+        sb.append("    invoke-direct {v1, p0}, Landroid/widget/LinearLayout;-><init>(Landroid/content/Context;)V\n");
+        sb.append("    const/4 v2, 0x0\n");
+        sb.append("    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->setOrientation(I)V\n");
+        sb.append("    const/16 v2, 0x11\n");
+        sb.append("    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->setGravity(I)V\n");
+        float topPad = (videoHelper != null || useImage) ? 12f : 4f;
+        appendDpToPx(sb, Float.floatToRawIntBits(topPad), 2, 3, 5);
+        sb.append("    float-to-int v2, v2\n");
+        sb.append("    const/4 v3, 0x0\n");
+        sb.append("    invoke-virtual {v1, v3, v2, v3, v3}, Landroid/widget/LinearLayout;->setPadding(IIII)V\n");
+        sb.append("    new-instance v2, Landroid/widget/ProgressBar;\n");
+        sb.append("    invoke-direct {v2, p0}, Landroid/widget/ProgressBar;-><init>(Landroid/content/Context;)V\n");
+        appendDpToPx(sb, Float.floatToRawIntBits(28f), 3, 5, 7);
+        sb.append("    float-to-int v3, v3\n");
+        sb.append("    new-instance v5, Landroid/widget/LinearLayout$LayoutParams;\n");
+        sb.append("    invoke-direct {v5, v3, v3}, Landroid/widget/LinearLayout$LayoutParams;-><init>(II)V\n");
+        sb.append("    invoke-virtual {v1, v2, v5}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V\n");
+        appendDpToPx(sb, Float.floatToRawIntBits(12f), 3, 5, 2);
+        sb.append("    float-to-int v3, v3\n");
+        sb.append("    new-instance v2, Landroid/widget/LinearLayout$LayoutParams;\n");
+        sb.append("    const/4 v5, -0x2\n");
+        sb.append("    invoke-direct {v2, v5, v5}, Landroid/widget/LinearLayout$LayoutParams;-><init>(II)V\n");
+        sb.append("    iput v3, v2, Landroid/view/ViewGroup$MarginLayoutParams;->leftMargin:I\n");
+        sb.append("    new-instance v7, Landroid/widget/TextView;\n");
+        sb.append("    invoke-direct {v7, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V\n");
+        sb.append(loadStringSmali(ps, String.valueOf(Math.max(1, opts.countdownSeconds)), 3, 5));
+        sb.append("    invoke-virtual {v7, v3}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V\n");
+        sb.append("    const/4 v3, 0x2\n");
+        sb.append("    const v5, 0x").append(Integer.toHexString(Float.floatToRawIntBits(16f))).append("\n");
+        sb.append("    invoke-virtual {v7, v3, v5}, Landroid/widget/TextView;->setTextSize(IF)V\n");
+        sb.append("    sget-object v3, Landroid/graphics/Typeface;->DEFAULT_BOLD:Landroid/graphics/Typeface;\n");
+        sb.append("    invoke-virtual {v7, v3}, Landroid/widget/TextView;->setTypeface(Landroid/graphics/Typeface;)V\n");
+        if (opts.msgColor != 0) {
+            sb.append("    const v3, 0x").append(Integer.toHexString(opts.msgColor)).append("\n");
+            sb.append("    invoke-virtual {v7, v3}, Landroid/widget/TextView;->setTextColor(I)V\n");
+        }
+        sb.append("    invoke-virtual {v1, v7, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V\n");
+        sb.append("    invoke-virtual {v6, v1}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V\n");
+        sb.append("    invoke-virtual {v0, v6}, Landroid/app/AlertDialog$Builder;->setView(Landroid/view/View;)Landroid/app/AlertDialog$Builder;\n");
+        sb.append("    move-result-object v0\n");
+        return sb.toString();
+    }
+
+    static String countdownSmali(String countdownType) {
+        return ".class public " + countdownType + "\n"
+                + ".super Ljava/lang/Object;\n"
+                + ".source \"mpCountdown.java\"\n"
+                + ".implements Ljava/lang/Runnable;\n\n"
+                + ".field private d:Landroid/app/AlertDialog;\n"
+                + ".field private t:Landroid/widget/TextView;\n"
+                + ".field private h:Landroid/os/Handler;\n"
+                + ".field private n:I\n\n"
+                + ".method public constructor <init>(Landroid/app/AlertDialog;Landroid/widget/TextView;Landroid/os/Handler;I)V\n"
+                + "    .locals 0\n"
+                + "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n"
+                + "    iput-object p1, p0, " + countdownType + "->d:Landroid/app/AlertDialog;\n"
+                + "    iput-object p2, p0, " + countdownType + "->t:Landroid/widget/TextView;\n"
+                + "    iput-object p3, p0, " + countdownType + "->h:Landroid/os/Handler;\n"
+                + "    iput p4, p0, " + countdownType + "->n:I\n"
+                + "    return-void\n"
+                + ".end method\n\n"
+                + ".method public run()V\n"
+                + "    .locals 4\n"
+                + "    iget-object v0, p0, " + countdownType + "->d:Landroid/app/AlertDialog;\n"
+                + "    if-eqz v0, :mp_cd_end\n"
+                + "    invoke-virtual {v0}, Landroid/app/AlertDialog;->isShowing()Z\n"
+                + "    move-result v1\n"
+                + "    if-eqz v1, :mp_cd_end\n"
+                + "    iget v1, p0, " + countdownType + "->n:I\n"
+                + "    if-gtz v1, :mp_cd_step\n"
+                + "    :mp_cd_try_s\n"
+                + "    invoke-virtual {v0}, Landroid/app/AlertDialog;->dismiss()V\n"
+                + "    :mp_cd_try_e\n"
+                + "    return-void\n"
+                + "    :mp_cd_try_c\n"
+                + "    move-exception v0\n"
+                + "    return-void\n"
+                + "    .catch Ljava/lang/Throwable; {:mp_cd_try_s .. :mp_cd_try_e} :mp_cd_try_c\n"
+                + "    :mp_cd_step\n"
+                + "    add-int/lit8 v1, v1, -0x1\n"
+                + "    iput v1, p0, " + countdownType + "->n:I\n"
+                + "    iget-object v2, p0, " + countdownType + "->t:Landroid/widget/TextView;\n"
+                + "    invoke-static {v1}, Ljava/lang/String;->valueOf(I)Ljava/lang/String;\n"
+                + "    move-result-object v3\n"
+                + "    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V\n"
+                + "    iget-object v0, p0, " + countdownType + "->h:Landroid/os/Handler;\n"
+                + "    if-gtz v1, :mp_cd_sec\n"
+                + "    const-wide v1, 0x12cL\n"
+                + "    goto :mp_cd_post\n"
+                + "    :mp_cd_sec\n"
+                + "    const-wide v1, 0x3e8L\n"
+                + "    :mp_cd_post\n"
+                + "    invoke-virtual {v0, p0, v1, v2}, Landroid/os/Handler;->postDelayed(Ljava/lang/Runnable;J)Z\n"
+                + "    move-result v0\n"
+                + "    :mp_cd_end\n"
+                + "    return-void\n"
+                + ".end method\n";
+    }
+
     static String dragListenerSmali(String dragType) {
         return ".class public " + dragType + "\n" +
                 ".super Ljava/lang/Object;\n" +
@@ -1704,144 +2214,231 @@ public class OverlayInjectorUtil {
         }
     }
 
+    private static File inferPatchRoot(File smaliFile, String className) {
+        File dir = smaliFile.getParentFile();
+        if (dir == null || className == null || !className.contains(".")) return dir;
+        String[] parts = className.split("\\.");
+        for (int i = parts.length - 2; i >= 0; i--) {
+            if (dir != null && parts[i].equals(dir.getName())) {
+                dir = dir.getParentFile();
+            } else {
+                break;
+            }
+        }
+        return dir != null ? dir : smaliFile.getParentFile();
+    }
+
     private static boolean patchOneSmali(Context context, File smaliFile, String className,
                                          ToastOptions toast, DialogOptions dialog,
                                          Map<String, String> fontAssets,
                                          APKLogger logger, List<File> patchedFiles) throws IOException {
+        ProtectSpec ps = isProtectCode(toast, dialog) ? ProtectSpec.createStandalone() : null;
+        return patchOneSmali(context, smaliFile, inferPatchRoot(smaliFile, className), className,
+                toast, dialog, fontAssets, ps, new boolean[1], logger, patchedFiles);
+    }
+
+    static boolean patchOneSmali(Context context, File smaliFile, File patchDir, String className,
+                                 ToastOptions toast, DialogOptions dialog,
+                                 Map<String, String> fontAssets, ProtectSpec ps,
+                                 boolean[] helperEmitted, APKLogger logger,
+                                 List<File> patchedFiles) throws IOException {
         String content = readFile(smaliFile);
         debug("patching " + smaliFile.getAbsolutePath() + " (" + content.length() + " chars)");
         if (content.isEmpty()) throw new IOException("Empty smali file: " + smaliFile.getName());
-        if (content.contains("onCreate$mpmanager")) {
+        boolean protectCode = ps != null;
+        if (!protectCode && (content.contains("onCreate$mpmanager")
+                || content.contains("onResume$mpmanager")
+                || content.contains("mpResumeOnce"))) {
             if (logger != null && context != null) logger.logMessage(context.getString(R.string.logger_skipped_patched, className));
             return false;
         }
+        Matcher clsHeaderMatcher = Pattern.compile("(?m)^\\s*\\.class\\s+([^\\r\\n]+)").matcher(content);
+        if (clsHeaderMatcher.find()) {
+            String header = " " + clsHeaderMatcher.group(1) + " ";
+            if (header.contains(" interface ") || header.contains(" abstract ")) {
+                if (logger != null && context != null) logger.logMessage(context.getString(R.string.logger_skipped_abstract, className));
+                return false;
+            }
+        }
+
+        boolean resumeMode = "onResume".equals(resolveHookMethod(toast, dialog));
+        String superDescriptor = "Landroid/app/Activity;";
+        Matcher matcher;
+        boolean hasOrigMethod;
+        String flags;
+        if (resumeMode) {
+            Matcher superMatcher = Pattern.compile("(?m)^\\s*\\.super\\s+(L[^;\\s]+;)").matcher(content);
+            if (superMatcher.find()) superDescriptor = superMatcher.group(1);
+            Pattern resumePattern = Pattern.compile("(?m)^(\\s*\\.method\\s+)(.*)\\bonResume\\(\\)V\\s*$");
+            matcher = resumePattern.matcher(content);
+            hasOrigMethod = matcher.find();
+            flags = hasOrigMethod ? matcher.group(2).trim() : "public";
+        } else {
             Pattern methodPattern = Pattern.compile("(?m)^(\\s*\\.method\\s+)(.*)\\bonCreate\\(Landroid/os/Bundle;\\)V\\s*$");
-            Matcher matcher = methodPattern.matcher(content);
+            matcher = methodPattern.matcher(content);
             if (!matcher.find()) {
                 if (logger != null && context != null) logger.logMessage(context.getString(R.string.logger_no_oncreate, className));
                 debug("no onCreate(Bundle) in " + smaliFile.getName());
                 return false;
             }
-            String flags = matcher.group(2).trim();
-            if (flags.contains("abstract")) {
-                if (logger != null && context != null) logger.logMessage(context.getString(R.string.logger_skipped_abstract, className));
-                return false;
+            hasOrigMethod = true;
+            flags = matcher.group(2).trim();
+        }
+        if (hasOrigMethod && flags.contains("abstract")) {
+            if (logger != null && context != null) logger.logMessage(context.getString(R.string.logger_skipped_abstract, className));
+            return false;
+        }
+
+        String classDescriptor = "L" + className.replace('.', '/') + ";";
+        String targetClassDesc = protectCode ? ps.helperClassDesc : classDescriptor;
+        String urlListener = null;
+        String urlViewListener = null;
+        String noshowListener = null;
+        String blinkListener = null;
+        String dismissListener = null;
+        String waveRgb = null;
+        String dragListener = null;
+        String videoHelper = null;
+        String countdownHelper = null;
+
+        boolean emitHelpersNow = !protectCode || (helperEmitted == null || !helperEmitted[0]);
+        if (dialog != null && emitHelpersNow) {
+            if (hasUrl(dialog)) {
+                urlListener = targetTypeDesc(classDescriptor, "$mpUrl", ps);
+                emitSmaliClass(context, patchDir, smaliFile, urlListener, urlListenerSmali(urlListener, ps), protectCode, logger, patchedFiles);
             }
-            String classDescriptor = "L" + className.replace('.', '/') + ";";
-            StringBuilder insert = new StringBuilder();
+            if (hasAdvButtonUrl(dialog)) {
+                urlViewListener = targetTypeDesc(classDescriptor, "$mpUrlView", ps);
+                emitSmaliClass(context, patchDir, smaliFile, urlViewListener, urlViewListenerSmali(urlViewListener, ps), protectCode, logger, patchedFiles);
+            }
+            if (needsFontWalk(dialog)) {
+                String fontWalk = protectCode ? ps.fontWalkDesc : fontWalkType(classDescriptor);
+                emitSmaliClass(context, patchDir, smaliFile, fontWalk, fontWalkSmali(fontWalk), protectCode, logger, patchedFiles);
+            }
+            if (dialog.dontShowAgain) {
+                noshowListener = targetTypeDesc(classDescriptor, "$mpNoShow", ps);
+                emitSmaliClass(context, patchDir, smaliFile, noshowListener, noshowListenerSmali(noshowListener, ps), protectCode, logger, patchedFiles);
+            }
+            float animBorderDp = dialog.borderWidthDp;
+            if (dialog.animBorder && animBorderDp <= 0) animBorderDp = 2f;
+            if ((dialog.animBorder && !dialog.rainbowAnim && animBorderDp > 0) || needsBlink(dialog)) {
+                blinkListener = targetTypeDesc(classDescriptor, "$mpBlink", ps);
+                emitSmaliClass(context, patchDir, smaliFile, blinkListener, blinkSmali(blinkListener), protectCode, logger, patchedFiles);
+            }
+            if (needsWave(dialog, animBorderDp)) {
+                waveRgb = targetTypeDesc(classDescriptor, "$mpRgb", ps);
+                String waveTick = targetTypeDesc(classDescriptor, "$mpRgbTick", ps);
+                emitSmaliClass(context, patchDir, smaliFile, waveRgb, waveRgbSmali(waveRgb, waveTick), protectCode, logger, patchedFiles);
+                emitSmaliClass(context, patchDir, smaliFile, waveTick, waveTickSmali(waveTick, waveRgb), protectCode, logger, patchedFiles);
+            }
+            if (needsDismiss(dialog)) {
+                dismissListener = targetTypeDesc(classDescriptor, "$mpDismiss", ps);
+                emitSmaliClass(context, patchDir, smaliFile, dismissListener, dismissSmali(dismissListener), protectCode, logger, patchedFiles);
+            }
+            if (dialog.draggable) {
+                dragListener = targetTypeDesc(classDescriptor, "$mpDrag", ps);
+                emitSmaliClass(context, patchDir, smaliFile, dragListener, dragListenerSmali(dragListener), protectCode, logger, patchedFiles);
+            }
+            if (hasVideo(dialog)) {
+                videoHelper = targetTypeDesc(classDescriptor, "$mpVideo", ps);
+                emitSmaliClass(context, patchDir, smaliFile, videoHelper, videoViewSmali(videoHelper), protectCode, logger, patchedFiles);
+            }
+            if (dialog.countdown && !dialog.advanced && dialog.countdownSeconds > 0) {
+                countdownHelper = targetTypeDesc(classDescriptor, "$mpCountdown", ps);
+                emitSmaliClass(context, patchDir, smaliFile, countdownHelper, countdownSmali(countdownHelper), protectCode, logger, patchedFiles);
+            }
+        }
+
+        if (protectCode && emitHelpersNow) {
+            StringBuilder helperClass = new StringBuilder();
+            helperClass.append(".class public ").append(ps.helperClassDesc).append("\n");
+            helperClass.append(".super Ljava/lang/Object;\n\n");
+            helperClass.append(decodeHelperMethodSmali(ps)).append("\n");
+            boolean hasToast = toast != null;
+            boolean hasDialog = dialog != null;
+            if (hasToast && hasDialog) {
+                helperClass.append(toastHelperSmali(toast, ps, ps.toastMethod)).append("\n");
+                helperClass.append(dialogHelperSmali(ps.helperClassDesc, dialog, urlListener, urlViewListener,
+                        noshowListener, blinkListener, dismissListener, fontAssets, waveRgb, dragListener,
+                        videoHelper, countdownHelper, ps, ps.dialogMethod)).append("\n");
+                helperClass.append(".method public static ").append(ps.entryMethod).append("(Landroid/content/Context;)V\n");
+                helperClass.append("    .locals 0\n");
+                helperClass.append("    invoke-static {p0}, ").append(ps.helperClassDesc).append("->").append(ps.toastMethod).append("(Landroid/content/Context;)V\n");
+                helperClass.append("    invoke-static {p0}, ").append(ps.helperClassDesc).append("->").append(ps.dialogMethod).append("(Landroid/content/Context;)V\n");
+                helperClass.append("    return-void\n");
+                helperClass.append(".end method\n");
+            } else if (hasToast) {
+                helperClass.append(toastHelperSmali(toast, ps, ps.entryMethod));
+            } else if (hasDialog) {
+                helperClass.append(dialogHelperSmali(ps.helperClassDesc, dialog, urlListener, urlViewListener,
+                        noshowListener, blinkListener, dismissListener, fontAssets, waveRgb, dragListener,
+                        videoHelper, countdownHelper, ps, ps.entryMethod));
+            }
+            emitSmaliClass(context, patchDir, smaliFile, ps.helperClassDesc, helperClass.toString(), true, logger, patchedFiles);
+            if (helperEmitted != null && helperEmitted.length > 0) helperEmitted[0] = true;
+        }
+
+        StringBuilder insert = new StringBuilder();
+        if (!protectCode) {
             if (toast != null) insert.append(toastHelperSmali(toast)).append("\n");
-            String urlListener = null;
-            String urlViewListener = null;
-            String noshowListener = null;
-            String blinkListener = null;
-            String dismissListener = null;
-            String waveRgb = null;
-            String dragListener = null;
-            String videoHelper = null;
             if (dialog != null) {
-                if (hasUrl(dialog)) {
-                    urlListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpUrl;";
-                    File listenerFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpUrl.smali"));
-                    writeFile(listenerFile, urlListenerSmali(urlListener));
-                    patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, urlListener));
-                }
-                if (hasAdvButtonUrl(dialog)) {
-                    urlViewListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpUrlView;";
-                    File listenerFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpUrlView.smali"));
-                    writeFile(listenerFile, urlViewListenerSmali(urlViewListener));
-                    patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, urlViewListener));
-                }
-                if (needsFontWalk(dialog)) {
-                    String fontWalk = fontWalkType(classDescriptor);
-                    File walkFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpFontWalk.smali"));
-                    writeFile(walkFile, fontWalkSmali(fontWalk));
-                    patchedFiles.add(walkFile);
-                    if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, fontWalk));
-                }
-                if (dialog.dontShowAgain) {
-                    noshowListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpNoShow;";
-                    File listenerFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpNoShow.smali"));
-                    writeFile(listenerFile, noshowListenerSmali(noshowListener));
-                    patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, noshowListener));
-                }
-                float animBorderDp = dialog.borderWidthDp;
-                if (dialog.animBorder && animBorderDp <= 0) animBorderDp = 2f;
-                if ((dialog.animBorder && !dialog.rainbowAnim && animBorderDp > 0) || needsBlink(dialog)) {
-                    blinkListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpBlink;";
-                    File listenerFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpBlink.smali"));
-                    writeFile(listenerFile, blinkSmali(blinkListener));
-                    patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, blinkListener));
-                }
-                if (needsWave(dialog, animBorderDp)) {
-                    String base = classDescriptor.substring(0, classDescriptor.length() - 1);
-                    waveRgb = base + "$mpRgb;";
-                    String waveTick = base + "$mpRgbTick;";
-                    File rgbFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpRgb.smali"));
-                    writeFile(rgbFile, waveRgbSmali(waveRgb, waveTick));
-                    patchedFiles.add(rgbFile);
-                    File tickFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpRgbTick.smali"));
-                    writeFile(tickFile, waveTickSmali(waveTick, waveRgb));
-                    patchedFiles.add(tickFile);
-                    if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, waveRgb));
-                }
-                if (needsDismiss(dialog)) {
-                    dismissListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpDismiss;";
-                    File listenerFile = new File(smaliFile.getParentFile(),
-                            smaliFile.getName().replace(".smali", "$mpDismiss.smali"));
-                    writeFile(listenerFile, dismissSmali(dismissListener));
-                    patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage(context.getString(R.string.logger_generated, dismissListener));
-                }
-                if (dialog.draggable) {
-                    dragListener = emitHelperSmali(context, smaliFile, classDescriptor, "$mpDrag",
-                            dragListenerSmali(classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpDrag;"),
-                            logger, patchedFiles);
-                }
-                if (hasVideo(dialog)) {
-                    videoHelper = emitHelperSmali(context, smaliFile, classDescriptor, "$mpVideo",
-                            videoViewSmali(classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpVideo;"),
-                            logger, patchedFiles);
-                }
-                insert.append(dialogHelperSmali(classDescriptor, dialog, urlListener, urlViewListener, noshowListener, blinkListener, dismissListener, fontAssets, waveRgb, dragListener, videoHelper)).append("\n");
+                insert.append(dialogHelperSmali(targetClassDesc, dialog, urlListener, urlViewListener,
+                        noshowListener, blinkListener, dismissListener, fontAssets, waveRgb, dragListener,
+                        videoHelper, countdownHelper)).append("\n");
             }
-            insert.append(wrapperSmali(classDescriptor, flags.isEmpty() ? "protected" : flags,
-                    toast != null, dialog != null));
-            String renamed = matcher.group(1) + "private onCreate$mpmanager(Landroid/os/Bundle;)V";
-            String patched = matcher.replaceFirst(Matcher.quoteReplacement( renamed));
-            if (!patched.endsWith("\n")) patched += "\n";
-            patched = patched + insert;
-            writeFile(smaliFile, patched);
-            patchedFiles.add(smaliFile);
-            debug("patched " + smaliFile.getName() + ", generated smali:\n" + shorten(insert.toString()));
-            if (logger != null && context != null) {
-                logger.logMessage(context.getString(R.string.logger_injected_overlay, className));
-            }
-            return true;
+        }
+        String effectiveFlags = flags.isEmpty() ? "protected" : flags;
+        if (resumeMode) {
+            insert.append(resumeWrapperSmali(classDescriptor, effectiveFlags, hasOrigMethod, superDescriptor,
+                    toast != null, dialog != null, ps));
+        } else {
+            insert.append(wrapperSmali(classDescriptor, effectiveFlags, toast != null, dialog != null, ps));
+        }
+
+        String patched = content;
+        if (hasOrigMethod) {
+            String origName = resumeMode
+                    ? (protectCode ? ps.origRename : "onResume$mpmanager")
+                    : (protectCode ? ps.origRename : "onCreate$mpmanager");
+            String sig = resumeMode ? "()V" : "(Landroid/os/Bundle;)V";
+            patched = matcher.replaceFirst(Matcher.quoteReplacement(matcher.group(1) + "private " + origName + sig));
+        }
+        if (resumeMode) {
+            patched = insertGuardFieldSmali(patched, protectCode ? ps.guardField : "mpResumeOnce");
+        }
+        if (!patched.endsWith("\n")) patched += "\n";
+        patched = patched + insert;
+        writeFile(smaliFile, patched);
+        patchedFiles.add(smaliFile);
+        debug("patched " + smaliFile.getName() + ", generated smali:\n" + shorten(insert.toString()));
+        if (logger != null && context != null) {
+            logger.logMessage(context.getString(R.string.logger_injected_overlay, className));
+        }
+        return true;
     }
 
-    private static String emitHelperSmali(Context context, File smaliFile, String classDescriptor,
-                                          String suffix, String content, APKLogger logger,
-                                          List<File> patchedFiles) throws IOException {
-        String type = classDescriptor.substring(0, classDescriptor.length() - 1) + suffix + ";";
-        File out = new File(smaliFile.getParentFile(),
-                smaliFile.getName().replace(".smali", suffix + ".smali"));
+    private static String targetTypeDesc(String classDescriptor, String suffix, ProtectSpec ps) {
+        if (ps != null) return ps.nextType();
+        return classDescriptor.substring(0, classDescriptor.length() - 1) + suffix + ";";
+    }
+
+    private static void emitSmaliClass(Context context, File patchDir, File activitySmaliFile,
+                                       String descriptor, String rawContent, boolean stripSource,
+                                       APKLogger logger, List<File> patchedFiles) throws IOException {
+        String content = stripSource ? stripMpSource(rawContent) : rawContent;
+        File out;
+        if (patchDir != null && descriptor.startsWith("L") && descriptor.endsWith(";")) {
+            String rel = descriptor.substring(1, descriptor.length() - 1) + ".smali";
+            out = new File(patchDir, rel);
+        } else {
+            String simple = descriptor.substring(descriptor.lastIndexOf('/') + 1, descriptor.length() - 1);
+            out = new File(activitySmaliFile.getParentFile(), simple + ".smali");
+        }
         writeFile(out, content);
         patchedFiles.add(out);
         if (logger != null && context != null) {
-            logger.logMessage(context.getString(R.string.logger_generated, type));
+            logger.logMessage(context.getString(R.string.logger_generated, descriptor));
         }
-        return type;
     }
 
     private static boolean hasVideo(DialogOptions opts) {
