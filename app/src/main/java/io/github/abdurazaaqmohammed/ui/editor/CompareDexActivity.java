@@ -60,6 +60,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiPredicate;
 import java.util.zip.ZipEntry;
@@ -1356,14 +1358,16 @@ public class CompareDexActivity extends BaseActivity {
         if (!downloadDir.exists()) downloadDir.mkdirs();
         File outFile = new File(downloadDir, outFileName);
 
-        final ProgressManager progress =
-                new ProgressManager(this, true);
-        progress.setText(getString(R.string.exporting));
+        final String exportingLabel = getString(R.string.exporting);
+        final ProgressManager progress = new ProgressManager(this, true);
+        progress.setText(exportingLabel);
         progress.show();
 
         AppExecutors.io().execute(() -> {
+            int threads = Math.min(6, Math.max(2, Runtime.getRuntime().availableProcessors()));
+            ExecutorService pool = Executors.newFixedThreadPool(threads);
             try {
-                try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outFile), 65536))) {
+                try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outFile), 131072))) {
                     zos.setLevel(1);
                     JSONObject info = new JSONObject();
                     List<String> paths1 = getIntent().getStringArrayListExtra(EXTRA_FILES1);
@@ -1381,29 +1385,63 @@ public class CompareDexActivity extends BaseActivity {
                     zos.write(info.toString().getBytes(StandardCharsets.UTF_8));
                     zos.closeEntry();
 
-                    for (DexCompareEngine.ComparedClass cc : allClasses) {
-                        String inner = cc.type.startsWith("L") && cc.type.endsWith(";")
-                                ? cc.type.substring(1, cc.type.length() - 1)
-                                : cc.type;
-                        if (cc.status == DexCompareEngine.Status.CHANGED || cc.status == DexCompareEngine.Status.REMOVED) {
-                            String smaliL = mtcrZipFile != null
-                                    ? readZipEntryText(mtcrZipFile, "a/" + inner)
-                                    : engine.smaliLeft(cc.type);
-                            if (!TextUtils.isEmpty(smaliL)) {
+                    final int total = allClasses.size();
+                    final int batchSize = 64;
+                    List<Future<byte[][]>> futures = new ArrayList<>(batchSize);
+                    for (int start = 0; start < total; start += batchSize) {
+                        int end = Math.min(total, start + batchSize);
+                        futures.clear();
+                        for (int i = start; i < end; i++) {
+                            final DexCompareEngine.ComparedClass cc = allClasses.get(i);
+                            futures.add(pool.submit(() -> {
+                                byte[] leftBytes = null;
+                                byte[] rightBytes = null;
+                                if (cc.status == DexCompareEngine.Status.CHANGED || cc.status == DexCompareEngine.Status.REMOVED) {
+                                    String inner = cc.type.startsWith("L") && cc.type.endsWith(";")
+                                            ? cc.type.substring(1, cc.type.length() - 1)
+                                            : cc.type;
+                                    String smaliL = mtcrZipFile != null
+                                            ? readZipEntryText(mtcrZipFile, "a/" + inner)
+                                            : engine.smaliLeft(cc.type);
+                                    if (smaliL != null && !smaliL.isEmpty()) {
+                                        leftBytes = smaliL.getBytes(StandardCharsets.UTF_8);
+                                    }
+                                }
+                                if (cc.status == DexCompareEngine.Status.CHANGED || cc.status == DexCompareEngine.Status.ADDED) {
+                                    String inner = cc.type.startsWith("L") && cc.type.endsWith(";")
+                                            ? cc.type.substring(1, cc.type.length() - 1)
+                                            : cc.type;
+                                    String smaliR = mtcrZipFile != null
+                                            ? readZipEntryText(mtcrZipFile, "b/" + inner)
+                                            : engine.smaliRight(cc.type);
+                                    if (smaliR != null && !smaliR.isEmpty()) {
+                                        rightBytes = smaliR.getBytes(StandardCharsets.UTF_8);
+                                    }
+                                }
+                                return new byte[][]{leftBytes, rightBytes};
+                            }));
+                        }
+                        for (int i = start; i < end; i++) {
+                            DexCompareEngine.ComparedClass cc = allClasses.get(i);
+                            byte[][] pair = futures.get(i - start).get();
+                            String inner = cc.type.startsWith("L") && cc.type.endsWith(";")
+                                    ? cc.type.substring(1, cc.type.length() - 1)
+                                    : cc.type;
+                            if (pair[0] != null) {
                                 zos.putNextEntry(new ZipEntry("a/" + inner));
-                                zos.write(smaliL.getBytes(StandardCharsets.UTF_8));
+                                zos.write(pair[0]);
+                                zos.closeEntry();
+                            }
+                            if (pair[1] != null) {
+                                zos.putNextEntry(new ZipEntry("b/" + inner));
+                                zos.write(pair[1]);
                                 zos.closeEntry();
                             }
                         }
-                        if (cc.status == DexCompareEngine.Status.CHANGED || cc.status == DexCompareEngine.Status.ADDED) {
-                            String smaliR = mtcrZipFile != null
-                                    ? readZipEntryText(mtcrZipFile, "b/" + inner)
-                                    : engine.smaliRight(cc.type);
-                            if (!TextUtils.isEmpty(smaliR)) {
-                                zos.putNextEntry(new ZipEntry("b/" + inner));
-                                zos.write(smaliR.getBytes(StandardCharsets.UTF_8));
-                                zos.closeEntry();
-                            }
+                        if (end == total || (end % 256) == 0) {
+                            final int doneCount = end;
+                            AppExecutors.runOnUiIfAlive(CompareDexActivity.this,
+                                    () -> progress.setText(exportingLabel + " (" + doneCount + "/" + total + ")"));
                         }
                     }
                 }
@@ -1416,6 +1454,8 @@ public class CompareDexActivity extends BaseActivity {
                     progress.dismiss();
                     new ErrorUtil(CompareDexActivity.this).showError(e);
                 });
+            } finally {
+                pool.shutdownNow();
             }
         });
     }
