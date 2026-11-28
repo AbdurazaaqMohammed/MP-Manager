@@ -78,6 +78,7 @@ public final class ToolLauncher {
             case "app_ops" -> AppOpsActivity.class;
             case "set_edit" -> SetEditActivity.class;
             case "free_style" -> FreeStylePickerActivity.class;
+            case "file_crypto" -> io.github.abdurazaaqmohammed.feature.crypto.FileCryptoActivity.class;
             case "tools", "partition_dumper", "jiagu_dumper" -> ToolsHubActivity.class;
             case "recycle_bin", "ftp_server", "network_client", "layout", "color_picker" -> MainActivity.class;
             // No standalone DB browser activity exists: open the file browser at

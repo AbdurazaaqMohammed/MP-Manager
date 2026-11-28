@@ -2145,26 +2145,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 || nonLocalPath;
         PrivilegeManager.Backend activeBackend = PrivilegeManager.Files.active(this);
         boolean rootAvailable = false;
-        if (rootListingPath || !folder.canRead() || activeBackend == PrivilegeManager.Backend.ROOT) {
+        if (activeBackend == PrivilegeManager.Backend.ROOT && (rootListingPath || !folder.canRead())) {
             try {
                 rootAvailable = PrivilegeManager.Root.isRootAvailable(this);
             } catch (Exception ignored) {
             }
         }
 
-        // 1. Root (mpio serve) takes strict priority over Shizuku everywhere, including
-        // Android/data and Android/obb, whenever root access is available.
+        // 1. Root (mpio serve) is used only when active backend is ROOT and root is available.
         File[] files = null;
         if (rootAvailable && (rootListingPath || !folder.canRead())) {
             files = filterNotHidden(PrivilegeManager.Root.listRootFilesWithStat(this, folderPath));
             if (files != null) return files;
         }
 
-        // 2. When Root is unavailable, use Shizuku first for non-local/restricted paths
-        // it supports (Android/data, Android/obb, /system, /vendor) so we get full stat metadata.
+        // 2. Use Shizuku only when active backend is SHIZUKU.
         boolean shizukuTried = false;
-        boolean shizukuEligible = !rootAvailable && (restrictedAppData || nonLocalPath)
-                && (activeBackend == PrivilegeManager.Backend.SHIZUKU || PrivilegeManager.Shizuku.ready());
+        boolean shizukuEligible = activeBackend == PrivilegeManager.Backend.SHIZUKU
+                && (restrictedAppData || nonLocalPath || !folder.canRead());
         if (shizukuEligible) {
             shizukuTried = true;
             File[] viaShizuku = (folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile)
@@ -2178,9 +2176,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             files = folder.listFiles(this::isNotHidden);
         }
 
-        // 4. Fallback to Shizuku if app-uid listing returned empty/null on an unreadable path.
+        // 4. Fallback to Shizuku if app-uid listing returned empty/null on an unreadable path and active backend is SHIZUKU.
         boolean appListingIncomplete = files == null || (files.length == 0 && !canWriteNormally(folder));
-        if (!rootAvailable && !shizukuTried && appListingIncomplete) {
+        if (activeBackend == PrivilegeManager.Backend.SHIZUKU && !shizukuTried && appListingIncomplete) {
             File[] viaShizuku = (folder instanceof io.github.abdurazaaqmohammed.privilege.internal.ShizukuFile)
                     ? folder.listFiles()
                     : PrivilegeManager.Shizuku.tryList(this, folder);
@@ -2196,7 +2194,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
 
         if (files == null || (files.length == 0 && !canWriteNormally(folder))) {
-            if (!rootAvailable && restrictedAppData && !PrivilegeManager.Shizuku.ready()) {
+            if (activeBackend == PrivilegeManager.Backend.SHIZUKU && restrictedAppData && !PrivilegeManager.Shizuku.ready()) {
                 AppExecutors.runOnUiIfAlive(MainActivity.this, () -> {
                     try {
                         if (isNetworkPaneLoadCurrent(pane1, generation)) showShizukuGuideOnce(folder, pane1);

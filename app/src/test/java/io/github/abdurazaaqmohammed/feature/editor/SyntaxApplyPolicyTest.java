@@ -204,4 +204,27 @@ public class SyntaxApplyPolicyTest {
         // Recreated view triggers the same scope: must reload, not skip.
         assertEquals(SyntaxApplyPolicy.Decision.LOAD_ASYNC, policy.onRequest(XML, false));
     }
+
+    @Test
+    public void externalAppliedRecordsScopeAndAllowsSwitchingToPlainAndCustom() {
+        SyntaxApplyPolicy policy = new SyntaxApplyPolicy();
+        Object smaliWrapper = new Object();
+        policy.recordExternalApplied("source.smali", smaliWrapper);
+        assertEquals("source.smali", policy.requestedScope());
+        assertTrue(policy.isAppliedToEditor(smaliWrapper));
+
+        // Choosing Plain Text updates requestedScope to null and applies cleanly.
+        assertEquals(SyntaxApplyPolicy.Decision.APPLY_PLAIN, policy.onRequest(null, true));
+        Object plain = new Object();
+        policy.onLanguageApplied(plain, policy.currentGeneration());
+        assertNull(policy.requestedScope());
+        assertTrue(policy.isAppliedToEditor(plain));
+
+        // Choosing custom Smali loads async, then switching back to Smali works.
+        assertEquals(SyntaxApplyPolicy.Decision.LOAD_ASYNC, policy.onRequest("source.custom.smali_vibrant", true));
+        Object vibrant = new Object();
+        policy.onLanguageApplied(vibrant, policy.currentGeneration());
+        assertEquals("source.custom.smali_vibrant", policy.requestedScope());
+        assertEquals(SyntaxApplyPolicy.Decision.LOAD_ASYNC, policy.onRequest("source.smali", true));
+    }
 }

@@ -21,6 +21,10 @@ import io.github.rosemoe.sora.lang.styling.SpanFactory;
 import io.github.rosemoe.sora.lang.styling.Spans;
 import io.github.rosemoe.sora.lang.styling.Styles;
 import io.github.rosemoe.sora.lang.styling.TextStyle;
+import io.github.rosemoe.sora.lang.styling.color.ConstColor;
+import io.github.rosemoe.sora.lang.styling.line.LineAnchorStyle;
+import io.github.rosemoe.sora.lang.styling.line.LineBackground;
+import io.github.rosemoe.sora.lang.styling.line.LineStyles;
 import io.github.rosemoe.sora.text.CharPosition;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.ContentReference;
@@ -35,13 +39,21 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
  */
 public class ColorPreviewAnalyzeManager implements AnalyzeManager {
 
+    private static final int SMALI_METHOD_BG_AMOLED = 0xFF2C181C;
+    private static final int SMALI_METHOD_BG_LIGHT = 0xFFFFEDED;
+
     private final AnalyzeManager delegate;
     private final CodeEditor editor;
     private volatile ContentReference textReference;
+    private volatile boolean highlightSmaliMethods;
 
     public ColorPreviewAnalyzeManager(@NonNull AnalyzeManager delegate, @Nullable CodeEditor editor) {
         this.delegate = delegate;
         this.editor = editor;
+    }
+
+    public void setHighlightSmaliMethods(boolean highlightSmaliMethods) {
+        this.highlightSmaliMethods = highlightSmaliMethods;
     }
 
     @Override
@@ -115,6 +127,10 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
         EditorColorScheme scheme = editor != null ? editor.getColorScheme() : null;
         if (scheme != null) {
             ColorPreviewHelper.initPredefinedColors(scheme);
+        }
+
+        if (highlightSmaliMethods) {
+            applySmaliMethodHighlights(styles, content, scheme);
         }
 
         Spans spans = styles.spans;
@@ -225,5 +241,59 @@ public class ColorPreviewAnalyzeManager implements AnalyzeManager {
 
         Collections.sort(result, Comparator.comparingInt(Span::getColumn));
         return result;
+    }
+
+    private static void applySmaliMethodHighlights(@NonNull Styles styles, @NonNull Content content, @Nullable EditorColorScheme scheme) {
+        if (styles.lineStyles != null && !styles.lineStyles.isEmpty()) {
+            for (LineStyles ls : styles.lineStyles) {
+                ls.eraseStyle(LineBackground.class);
+            }
+            styles.lineStyles.removeIf(ls -> ls.getElementCount() == 0);
+        }
+        ConstColor bgColor = new ConstColor(computeSmaliMethodBgColor(scheme));
+        int lineCount = content.getLineCount();
+        for (int line = 0; line < lineCount; line++) {
+            if (startsWithMethodDirective(content.getLine(line))) {
+                styles.addLineStyle(new LineBackground(line, bgColor));
+            }
+        }
+    }
+
+    private static boolean startsWithMethodDirective(@Nullable CharSequence line) {
+        if (line == null) return false;
+        int len = line.length();
+        int i = 0;
+        while (i < len && Character.isWhitespace(line.charAt(i))) {
+            i++;
+        }
+        final String prefix = ".method ";
+        if (i + prefix.length() > len) return false;
+        for (int j = 0; j < prefix.length(); j++) {
+            if (line.charAt(i + j) != prefix.charAt(j)) return false;
+        }
+        return true;
+    }
+
+    private static int computeSmaliMethodBgColor(@Nullable EditorColorScheme scheme) {
+        if (scheme == null) return SMALI_METHOD_BG_AMOLED;
+        int bg;
+        try {
+            bg = scheme.getColor(EditorColorScheme.WHOLE_BACKGROUND);
+        } catch (Exception ignored) {
+            return scheme.isDark() ? SMALI_METHOD_BG_AMOLED : SMALI_METHOD_BG_LIGHT;
+        }
+        int r = (bg >> 16) & 0xFF;
+        int g = (bg >> 8) & 0xFF;
+        int b = bg & 0xFF;
+        double luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (luminance >= 128.0) {
+            return SMALI_METHOD_BG_LIGHT;
+        }
+        // Shift neutral dark backgrounds toward MT Manager's burgundy tint
+        // (#2B2B2B -> #443034) while keeping AMOLED (#000000 -> #2C181C) subtle.
+        int outR = Math.min(255, (int) Math.round(r * 0.56 + 44));
+        int outG = Math.min(255, (int) Math.round(g * 0.56 + 24));
+        int outB = Math.min(255, (int) Math.round(b * 0.56 + 28));
+        return 0xFF000000 | (outR << 16) | (outG << 8) | outB;
     }
 }

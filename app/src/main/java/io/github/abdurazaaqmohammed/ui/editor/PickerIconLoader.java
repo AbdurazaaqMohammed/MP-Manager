@@ -19,8 +19,11 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -43,6 +46,8 @@ public class PickerIconLoader {
     private static boolean cached3d;
     private static int cachedEpoch = -1;
     private static int cachedBucket = -1;
+    private static volatile int iconThemeVersion;
+    private static volatile Set<String> packArtKeys = Collections.emptySet();
 
     private final Context context;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -53,12 +58,14 @@ public class PickerIconLoader {
     }
 
     public void setupUpView(ImageView fileIconView, TextView fileDateView) {
+        ensureCachedIcons(context);
         fileIconView.setTag(null);
         fileIconView.setImageDrawable(cachedUpFolderIcon);
         if (fileDateView != null) fileDateView.setVisibility(View.INVISIBLE);
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
+        ensureCachedIcons(context);
         fileIconView.setTag(file.getPath());
         if (!file.isDirectory()) {
             fileDateView.setVisibility(View.VISIBLE);
@@ -85,13 +92,19 @@ public class PickerIconLoader {
 
         if (ApkIconHelper.isApkLikeExt(ext)) {
             fileIconView.setImageDrawable(cachedApkIcon);
-            loadApkIconAsync(path, fileIconView);
+            if (!packArtKeys.contains(FileIconSpec.APK.iconKey())) {
+                loadApkIconAsync(path, fileIconView);
+            }
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
             fileIconView.setImageDrawable(cachedImageIcon);
-            loadThumbnailAsync(path, fileIconView, false);
+            if (!packArtKeys.contains(FileIconSpec.IMAGE.iconKey())) {
+                loadThumbnailAsync(path, fileIconView, false);
+            }
         } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             fileIconView.setImageDrawable(cachedVideoIcon);
-            loadThumbnailAsync(path, fileIconView, true);
+            if (!packArtKeys.contains(FileIconSpec.VIDEO.iconKey())) {
+                loadThumbnailAsync(path, fileIconView, true);
+            }
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) {
             fileIconView.setImageDrawable(cachedMusicIcon);
         } else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) {
@@ -115,13 +128,15 @@ public class PickerIconLoader {
 
     private void loadApkIconAsync(String path, ImageView fileIconView) {
         fileIconView.setTag(path);
+        int themeAtStart = iconThemeVersion;
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             try {
                 Drawable icon = ApkIconHelper.getApkIcon(context, path);
-                if (icon != null) {
+                if (icon != null && iconThemeVersion == themeAtStart) {
                     iconCache.put(path, icon);
                     handler.post(() -> {
+                        if (iconThemeVersion != themeAtStart) return;
                         if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                     });
                 }
@@ -132,13 +147,15 @@ public class PickerIconLoader {
 
     private void loadThumbnailAsync(String path, ImageView fileIconView, boolean isVideo) {
         fileIconView.setTag(path);
+        int themeAtStart = iconThemeVersion;
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             Bitmap bitmap = isVideo ? loadVideoThumbnail(path) : loadImageThumbnail(path);
-            if (bitmap == null || !path.equals(fileIconView.getTag())) return;
+            if (bitmap == null || !path.equals(fileIconView.getTag()) || iconThemeVersion != themeAtStart) return;
             Drawable icon = new BitmapDrawable(context.getResources(), bitmap);
             iconCache.put(path, icon);
             handler.post(() -> {
+                if (iconThemeVersion != themeAtStart) return;
                 if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
             });
         });
@@ -169,6 +186,12 @@ public class PickerIconLoader {
         cachedPdfIcon = FileIconSpec.PDF.drawable(context);
         cachedTextIcon = FileIconSpec.TEXT.drawable(context);
         cachedFileIcon = FileIconSpec.FILE.drawable(context);
+        Set<String> art = new HashSet<>(3);
+        for (FileIconSpec spec : new FileIconSpec[]{FileIconSpec.APK, FileIconSpec.IMAGE, FileIconSpec.VIDEO}) {
+            if (FileIconSpec.packIconFile(context, spec.iconKey()) != null) art.add(spec.iconKey());
+        }
+        packArtKeys = Collections.unmodifiableSet(art);
+        iconThemeVersion++;
     }
 
     private static String resolveAccessiblePath(String path) {

@@ -90,6 +90,11 @@ public class RootManager {
 
     public void setWorkingMode(WorkingModePrefs.WorkingMode mode) {
         WorkingModePrefs.set(context, mode);
+        if (mode != WorkingModePrefs.WorkingMode.ROOT) {
+            NativeRootManager.resetServe();
+            rootAvailable = null;
+        }
+        notifyDocumentRootsChanged();
     }
 
     public boolean autoEnableRootIfAvailable() {
@@ -119,9 +124,9 @@ public class RootManager {
         return getWorkingMode() == WorkingModePrefs.WorkingMode.ROOT;
     }
 
-    /** True when configured for root or when root access has been verified on this device. */
+    /** True when configured for root and root access has been verified on this device. */
     public boolean isRootUsable() {
-        return isRootMode() || isRootAvailable();
+        return isRootMode() && isRootAvailable();
     }
 
     public boolean isShizukuMode() {

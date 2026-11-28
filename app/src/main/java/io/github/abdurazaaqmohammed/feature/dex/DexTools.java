@@ -170,7 +170,8 @@ public class DexTools {
                 context.rss.getString(R.string.dex_replace_strings),
                 context.rss.getString(R.string.dex_decrypt_strings),
                 "Anti Confuse (remove array-payload junk)",
-                context.rss.getString(R.string.dex_merge)};
+                context.rss.getString(R.string.dex_merge),
+                context.rss.getString(R.string.dex_browser)};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(displayName)
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
@@ -191,6 +192,11 @@ public class DexTools {
                         showDexAntiConfuseDialog(dexFile, zipFile);
                     } else if (which == 9) {
                         mergeDexOption(dexFile, zipFile);
+                    } else if (which == 10) {
+                        Intent browser = new Intent(context, DexBrowserActivity.class);
+                        File target = zipFile != null ? zipFile : dexFile;
+                        browser.putExtra(DexBrowserActivity.EXTRA_APK, target.getAbsolutePath());
+                        context.startActivity(browser);
                     } else if (which == 5) {
                         // MT-style standalone translation mode (multidex dialog
                         // first when the dex comes from an archive).

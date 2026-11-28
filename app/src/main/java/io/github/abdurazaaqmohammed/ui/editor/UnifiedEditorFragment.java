@@ -18,19 +18,26 @@ import android.os.Looper;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
+import android.widget.RadioButton;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewHelper;
 import io.github.abdurazaaqmohammed.feature.editor.ColorPreviewLanguageWrapper;
+import io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager;
 import io.github.abdurazaaqmohammed.feature.editor.SyntaxApplyPolicy;
 import io.github.abdurazaaqmohammed.feature.apk.ArscTextActivity;
 import io.github.abdurazaaqmohammed.ui.common.theme.ThemePackEditorColors;
@@ -39,9 +46,11 @@ import io.github.abdurazaaqmohammed.ui.editor.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.util.io.CopyUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import android.view.inputmethod.InputMethodManager;
@@ -155,6 +164,42 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 } catch (Exception ignored) {
                 }
             });
+    private String pendingExportSyntaxScope;
+    private String pendingExportSyntaxLabel;
+    private boolean pendingExportSyntaxCustom;
+    private boolean pendingExportAsMtsx;
+    private final ActivityResultLauncher<Intent> syntaxExportLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result == null || result.getResultCode() != Activity.RESULT_OK
+                        || result.getData() == null || result.getData().getData() == null) {
+                    return;
+                }
+                Context ctx = getContext();
+                if (ctx == null || pendingExportSyntaxScope == null) return;
+                final Context appContext = ctx.getApplicationContext();
+                final String scope = pendingExportSyntaxScope;
+                final String label = pendingExportSyntaxLabel != null ? pendingExportSyntaxLabel : scope;
+                final boolean isCustom = pendingExportSyntaxCustom;
+                final boolean asMtsx = pendingExportAsMtsx;
+                final android.net.Uri destUri = result.getData().getData();
+                AppExecutors.io().execute(() -> {
+                    boolean ok = false;
+                    try {
+                        io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager.exportSyntaxToUri(
+                                appContext, scope, label, isCustom, asMtsx, destUri);
+                        ok = true;
+                    } catch (Exception e) {
+                        Log.e("UnifiedEditor", "Syntax export failed", e);
+                    }
+                    final boolean success = ok;
+                    Activity act = getActivity();
+                    if (act != null && !act.isFinishing() && !act.isDestroyed()) {
+                        AppExecutors.runOnUiIfAlive(act, () -> Extensions.showMessage(act,
+                                success ? getString(R.string.syntax_exported, label)
+                                        : getString(R.string.syntax_export_failed)));
+                    }
+                });
+            });
     private LinearLayout searchPanel, replacePanel, linearHeader;
     private SymbolDrawerView symbolInputView;
     private SoraSymbolActionHost symbolActionHost;
@@ -217,11 +262,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     // a worker thread the first time highlighting is requested and then cached per scope.
     private static boolean syntaxGrammarsLoaded = false;
     private static final String[] SYNTAX_LABELS = {
-            "Plain Text", "XML", "AXML", "Java", "C", "C++", "Python", "JavaScript",
+            "Plain Text", "Smali", "XML", "AXML", "Java", "C", "C++", "Python", "JavaScript",
             "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell", "Prop"
     };
     private static final String[] SYNTAX_SCOPES = {
-            null, "text.xml", "text.xml", "source.java", "source.c", "source.cpp", "source.python",
+            null, "source.smali", "text.xml", "text.xml", "source.java", "source.c", "source.cpp", "source.python",
             "source.js", "text.html.basic", "source.css", "text.html.markdown", "source.json",
             "source.rust", "source.shell", "source.prop"
     };
@@ -732,18 +777,44 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private void updateEditorUI() {
         if (isSmali) {
             try {
-                ensureLanguageInitialized(requireContext().getApplicationContext());
-                // Per-editor TextMate registry when the pack ships syntax
-                // categories, so pack colors are enforced without touching
-                // the global registry; per-editor scheme likewise.
-                ThemeRegistry editorRegistry = createEditorThemeRegistry(requireContext());
-                Language language = editorRegistry == null
-                        ? TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), true)
-                        : TextMateLanguage.create("source.smali", GrammarRegistry.getInstance(), editorRegistry, true);
-                editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new CustomAutoComplete(editor, cachedInstructions, language), editor));
-                editor.setColorScheme(createEditorColorScheme(requireContext(), editorRegistry));
-                applyPackEditorColors();
-                recordAppliedThemeSignature();
+                String targetScope = syntaxPolicy.currentGeneration() > 0
+                        ? syntaxPolicy.requestedScope()
+                        : (getContext() != null
+                                && io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager
+                                        .isBuiltInHidden(getContext(), "Smali")
+                                ? null
+                                : "source.smali");
+                if (targetScope == null) {
+                    Language plain = new EmptyLanguage();
+                    editor.setEditorLanguage(plain);
+                    lastTextMateRegistry = null;
+                    applySchemePreference();
+                    recordAppliedThemeSignature();
+                    syntaxPolicy.recordExternalApplied(null, plain);
+                } else {
+                    ensureLanguageInitialized(requireContext().getApplicationContext());
+                    // Per-editor TextMate registry when the pack or active
+                    // custom syntax ships colors, so overrides never mutate
+                    // the global registry; per-editor scheme likewise.
+                    ThemeRegistry editorRegistry = createEditorThemeRegistry(requireContext(), targetScope);
+                    TextMateLanguage customLang = io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager.loadLanguage(
+                            requireContext(), targetScope, editorRegistry);
+                    Language language = customLang != null ? customLang : (editorRegistry == null
+                            ? TextMateLanguage.create(targetScope, GrammarRegistry.getInstance(), true)
+                            : TextMateLanguage.create(targetScope, GrammarRegistry.getInstance(), editorRegistry, true));
+                    Language innerLang = cachedInstructions != null
+                            ? new CustomAutoComplete(editor, cachedInstructions, language)
+                            : language;
+                    ColorPreviewLanguageWrapper wrapper = new ColorPreviewLanguageWrapper(
+                            innerLang, editor, io.github.abdurazaaqmohammed.feature.editor.StructuredCodeFormatter.forScope(targetScope))
+                            .setHighlightSmaliMethods(targetScope.contains("smali"));
+                    editor.setEditorLanguage(wrapper);
+                    lastTextMateRegistry = editorRegistry;
+                    editor.setColorScheme(createEditorColorScheme(requireContext(), editorRegistry));
+                    applyPackEditorColors();
+                    recordAppliedThemeSignature();
+                    syntaxPolicy.recordExternalApplied(targetScope, wrapper);
+                }
             } catch (Exception e) {
                 Log.e("UnifiedEditor", "Error setting smali language", e);
                 editor.setEditorLanguage(new ColorPreviewLanguageWrapper(new EmptyLanguage(), editor));
@@ -882,16 +953,24 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
      * global registry. Null = keep the plain global registry path.
      */
     private static ThemeRegistry createEditorThemeRegistry(Context context) {
+        return createEditorThemeRegistry(context, null);
+    }
+
+    private static ThemeRegistry createEditorThemeRegistry(Context context, @Nullable String scope) {
         try {
-            org.eclipse.tm4e.core.registry.IThemeSource merged =
-                    ThemePackEditorColors.mergedThemeSource(context);
-            if (merged == null) return null;
             String baseName = ThemePackEditorColors.baseThemeAssetName(context);
+            boolean isDark = baseName.startsWith("dark");
+            java.util.Map<String, String> customColors = scope != null
+                    ? io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager.loadThemeColors(context, scope, isDark)
+                    : java.util.Collections.emptyMap();
+            org.eclipse.tm4e.core.registry.IThemeSource merged =
+                    ThemePackEditorColors.mergedThemeSource(context, customColors);
+            if (merged == null) return null;
             io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel model =
                     new io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel(
                             merged, baseName);
             model.load();
-            model.setDark(baseName.startsWith("dark"));
+            model.setDark(isDark);
             ThemeRegistry registry = new ThemeRegistry(); // non-singleton, this editor only
             registry.loadTheme(model);
             registry.setTheme(model);
@@ -1594,26 +1673,281 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         popupMenu.show();
     }
 
+    private static final class SyntaxEntry {
+        final String label;
+        @Nullable final String scope;
+        final boolean custom;
+
+        SyntaxEntry(@NonNull String label, @Nullable String scope, boolean custom) {
+            this.label = label;
+            this.scope = scope;
+            this.custom = custom;
+        }
+    }
+
+    private static final class SyntaxRowHolder {
+        final RadioButton radio;
+        final ImageButton btnExport;
+        final ImageButton btnDelete;
+
+        SyntaxRowHolder(RadioButton radio, ImageButton btnExport, ImageButton btnDelete) {
+            this.radio = radio;
+            this.btnExport = btnExport;
+            this.btnDelete = btnDelete;
+        }
+    }
+
     public void showSyntaxDialog() {
-        new MaterialAlertDialogBuilder(requireContext())
+        Context ctx = requireContext();
+        List<SyntaxEntry> entries = buildVisibleSyntaxEntries(ctx);
+        String activeScope = currentEffectiveScope(ctx);
+        final int[] selectedIndex = { indexOfSyntaxScope(entries, activeScope) };
+        final AlertDialog[] hostDialog = new AlertDialog[1];
+
+        ArrayAdapter<SyntaxEntry> adapter = new ArrayAdapter<SyntaxEntry>(ctx, 0, entries) {
+            @NonNull
+            @Override
+            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                Context itemCtx = parent.getContext();
+                LinearLayout row;
+                SyntaxRowHolder holder;
+                if (convertView instanceof LinearLayout && convertView.getTag() instanceof SyntaxRowHolder) {
+                    row = (LinearLayout) convertView;
+                    holder = (SyntaxRowHolder) convertView.getTag();
+                } else {
+                    row = new LinearLayout(itemCtx);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(Gravity.CENTER_VERTICAL);
+                    row.setPaddingRelative(dpToPx(itemCtx, 16), dpToPx(itemCtx, 4),
+                            dpToPx(itemCtx, 8), dpToPx(itemCtx, 4));
+                    row.setMinimumHeight(dpToPx(itemCtx, 48));
+                    int rowBg = resolveThemeResource(itemCtx, android.R.attr.selectableItemBackground);
+                    if (rowBg != 0) row.setBackgroundResource(rowBg);
+
+                    RadioButton radio = new RadioButton(itemCtx);
+                    radio.setLayoutParams(new LinearLayout.LayoutParams(
+                            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                    radio.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                    radio.setTextColor(resolveThemeColor(itemCtx, android.R.attr.textColorPrimary, 0xFF000000));
+                    radio.setClickable(false);
+                    radio.setFocusable(false);
+                    radio.setFocusableInTouchMode(false);
+                    radio.setBackground(null);
+
+                    int iconColor = resolveThemeColor(itemCtx, android.R.attr.textColorSecondary, 0xFF757575);
+                    int borderlessBg = resolveThemeResource(
+                            itemCtx, android.R.attr.selectableItemBackgroundBorderless);
+                    ImageButton btnExport = createSyntaxActionButton(
+                            itemCtx, R.drawable.save_24px, R.string.syntax_export, iconColor, borderlessBg);
+                    ImageButton btnDelete = createSyntaxActionButton(
+                            itemCtx, R.drawable.baseline_delete_24, R.string.syntax_delete, iconColor, borderlessBg);
+
+                    row.addView(radio);
+                    row.addView(btnExport);
+                    row.addView(btnDelete);
+                    holder = new SyntaxRowHolder(radio, btnExport, btnDelete);
+                    row.setTag(holder);
+                }
+
+                SyntaxEntry entry = getItem(position);
+                if (entry == null) return row;
+
+                holder.radio.setText(entry.label);
+                holder.radio.setChecked(position == selectedIndex[0]);
+                int actionVisibility = entry.scope != null ? View.VISIBLE : View.GONE;
+                holder.btnExport.setVisibility(actionVisibility);
+                holder.btnDelete.setVisibility(actionVisibility);
+
+                row.setOnClickListener(v -> {
+                    selectedIndex[0] = position;
+                    if (hostDialog[0] != null) hostDialog[0].dismiss();
+                    applySyntax(entry.scope);
+                    if (getActivity() != null) {
+                        Extensions.showMessage(requireActivity(),
+                                getString(R.string.syntax_set_to, entry.label));
+                    }
+                });
+                holder.btnExport.setOnClickListener(v -> showExportFormatDialog(entry));
+                holder.btnDelete.setOnClickListener(v ->
+                        confirmDeleteSyntax(entry, entries, selectedIndex, this));
+                return row;
+            }
+        };
+
+        hostDialog[0] = new MaterialAlertDialogBuilder(ctx)
                 .setTitle(R.string.choose_syntax)
-                .setSingleChoiceItems(SYNTAX_LABELS, currentSyntaxIndex(), (dialog, which) -> {
-                    dialog.dismiss();
-                    applySyntax(SYNTAX_SCOPES[which]);
-                    Extensions.showMessage(requireActivity(),
-                            getString(R.string.syntax_set_to, SYNTAX_LABELS[which]));
-                })
+                .setAdapter(adapter, null)
+                .setNegativeButton(R.string.close, null)
                 .show();
     }
 
-    private int currentSyntaxIndex() {
-        String scope = syntaxPolicy.requestedScope();
-        if (scope != null) {
-            for (int i = 0; i < SYNTAX_SCOPES.length; i++) {
-                if (scope.equals(SYNTAX_SCOPES[i])) return i;
+    private ImageButton createSyntaxActionButton(@NonNull Context context, int iconRes,
+            int contentDescRes, int iconColor, int borderlessBgRes) {
+        int size = dpToPx(context, 40);
+        int pad = dpToPx(context, 8);
+        ImageButton button = new ImageButton(context);
+        button.setLayoutParams(new LinearLayout.LayoutParams(size, size));
+        button.setPadding(pad, pad, pad, pad);
+        button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        button.setImageResource(iconRes);
+        button.setColorFilter(iconColor);
+        button.setContentDescription(getString(contentDescRes));
+        button.setFocusable(false);
+        if (borderlessBgRes != 0) button.setBackgroundResource(borderlessBgRes);
+        return button;
+    }
+
+    private void showExportFormatDialog(@NonNull SyntaxEntry entry) {
+        if (entry.scope == null) return;
+        String[] formats = {
+                getString(R.string.syntax_export_format_json),
+                getString(R.string.syntax_export_format_mtsx)
+        };
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.syntax_export_format_title)
+                .setItems(formats, (dialog, which) -> launchSyntaxExport(entry, which == 1))
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void launchSyntaxExport(@NonNull SyntaxEntry entry, boolean asMtsx) {
+        if (entry.scope == null) return;
+        pendingExportSyntaxScope = entry.scope;
+        pendingExportSyntaxLabel = entry.label;
+        pendingExportSyntaxCustom = entry.custom;
+        pendingExportAsMtsx = asMtsx;
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/octet-stream");
+        intent.putExtra(Intent.EXTRA_TITLE,
+                CustomSyntaxManager.suggestedExportFileName(entry.label, asMtsx));
+        try {
+            syntaxExportLauncher.launch(intent);
+        } catch (Exception e) {
+            Log.e("UnifiedEditor", "Failed to launch syntax export picker", e);
+            if (getActivity() != null) {
+                Extensions.showMessage(requireActivity(), getString(R.string.syntax_export_failed));
             }
         }
+    }
+
+    private void confirmDeleteSyntax(@NonNull SyntaxEntry entry, @NonNull List<SyntaxEntry> entries,
+            @NonNull int[] selectedIndex, @NonNull ArrayAdapter<SyntaxEntry> adapter) {
+        if (entry.scope == null) return;
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.syntax_delete)
+                .setMessage(getString(R.string.syntax_delete_confirm, entry.label))
+                .setPositiveButton(R.string.syntax_delete, (dialog, which) ->
+                        performDeleteSyntax(entry, entries, selectedIndex, adapter))
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void performDeleteSyntax(@NonNull SyntaxEntry entry, @NonNull List<SyntaxEntry> entries,
+            @NonNull int[] selectedIndex, @NonNull ArrayAdapter<SyntaxEntry> adapter) {
+        Context ctx = getContext();
+        if (ctx == null || entry.scope == null) return;
+        if (entry.custom) {
+            CustomSyntaxManager.deleteCustomSyntax(ctx, entry.scope);
+        } else {
+            CustomSyntaxManager.hideBuiltInSyntax(ctx, entry.label);
+        }
+        String currentScope = currentEffectiveScope(ctx);
+        boolean deletedWasActive = entry.scope.equals(currentScope);
+        entries.remove(entry);
+        if (deletedWasActive) {
+            String nextScope = hasSyntaxScope(entries, entry.scope)
+                    ? entry.scope
+                    : resolveFallbackScopeAfterDelete(ctx, entry.scope);
+            syntaxPolicy.onViewDestroyed();
+            applySyntax(nextScope);
+            selectedIndex[0] = indexOfSyntaxScope(entries, nextScope);
+        } else {
+            selectedIndex[0] = indexOfSyntaxScope(entries, currentScope);
+        }
+        adapter.notifyDataSetChanged();
+        if (getActivity() != null) {
+            Extensions.showMessage(requireActivity(), getString(R.string.syntax_deleted, entry.label));
+        }
+    }
+
+    @NonNull
+    private static List<SyntaxEntry> buildVisibleSyntaxEntries(@NonNull Context context) {
+        List<SyntaxEntry> entries = new ArrayList<>();
+        entries.add(new SyntaxEntry(SYNTAX_LABELS[0], SYNTAX_SCOPES[0], false));
+        for (int i = 1; i < SYNTAX_LABELS.length; i++) {
+            if (!CustomSyntaxManager.isBuiltInHidden(context, SYNTAX_LABELS[i])) {
+                entries.add(new SyntaxEntry(SYNTAX_LABELS[i], SYNTAX_SCOPES[i], false));
+            }
+        }
+        List<CustomSyntaxManager.CustomSyntaxInfo> customList = CustomSyntaxManager.listCustomSyntaxes(context);
+        for (CustomSyntaxManager.CustomSyntaxInfo info : customList) {
+            entries.add(new SyntaxEntry(info.displayName, info.scopeName, true));
+        }
+        return entries;
+    }
+
+    @Nullable
+    private String currentEffectiveScope(@NonNull Context context) {
+        if (syntaxPolicy.currentGeneration() == 0 && isSmali) {
+            return CustomSyntaxManager.isBuiltInHidden(context, "Smali") ? null : "source.smali";
+        }
+        return syntaxPolicy.requestedScope();
+    }
+
+    private static int indexOfSyntaxScope(@NonNull List<SyntaxEntry> entries, @Nullable String scope) {
+        if (scope == null) return 0;
+        for (int i = 0; i < entries.size(); i++) {
+            if (scope.equals(entries.get(i).scope)) return i;
+        }
         return 0;
+    }
+
+    private static boolean hasSyntaxScope(@NonNull List<SyntaxEntry> entries, @NonNull String scope) {
+        for (SyntaxEntry entry : entries) {
+            if (scope.equals(entry.scope)) return true;
+        }
+        return false;
+    }
+
+    private static boolean isBuiltInScopeVisible(@NonNull Context context, @Nullable String scope) {
+        if (scope == null) return true;
+        for (int i = 1; i < SYNTAX_LABELS.length; i++) {
+            if (scope.equals(SYNTAX_SCOPES[i])
+                    && !CustomSyntaxManager.isBuiltInHidden(context, SYNTAX_LABELS[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Nullable
+    private String resolveFallbackScopeAfterDelete(@NonNull Context context, @NonNull String deletedScope) {
+        if (isSmali) {
+            return CustomSyntaxManager.isBuiltInHidden(context, "Smali") ? null : "source.smali";
+        }
+        String fallback = resolveAutoScope();
+        return deletedScope.equals(fallback) ? null : fallback;
+    }
+
+    private static int dpToPx(@NonNull Context context, int dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
+    }
+
+    private static int resolveThemeResource(@NonNull Context context, int attr) {
+        TypedValue tv = new TypedValue();
+        return context.getTheme().resolveAttribute(attr, tv, true) ? tv.resourceId : 0;
+    }
+
+    private static int resolveThemeColor(@NonNull Context context, int attr, int fallback) {
+        TypedValue tv = new TypedValue();
+        if (context.getTheme().resolveAttribute(attr, tv, true)) {
+            if (tv.resourceId != 0) {
+                return ContextCompat.getColor(context, tv.resourceId);
+            }
+            return tv.data;
+        }
+        return fallback;
     }
 
     /** Sets the real file name used to auto-detect the syntax, then re-applies it. */
@@ -1626,7 +1960,22 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void applyAutoSyntax() {
         if (isSmali) return;
         if (largeFileMode) { applySyntax(null); return; }
-        applySyntax(axml ? "text.xml" : detectScope(fileName != null ? fileName : title));
+        applySyntax(resolveAutoScope());
+    }
+
+    @Nullable
+    private String resolveAutoScope() {
+        Context ctx = getContext();
+        String targetName = fileName != null ? fileName : title;
+        if (axml) {
+            return (ctx == null || isBuiltInScopeVisible(ctx, "text.xml")) ? "text.xml" : null;
+        }
+        String customScope = ctx != null
+                ? CustomSyntaxManager.findScopeForFileName(ctx, targetName)
+                : null;
+        if (customScope != null) return customScope;
+        String builtIn = detectScope(targetName);
+        return (builtIn != null && (ctx == null || isBuiltInScopeVisible(ctx, builtIn))) ? builtIn : null;
     }
 
     private static String detectScope(String name) {
@@ -1809,7 +2158,12 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             // ships syntax categories the language reads colors from a
             // per-editor registry seeded with the merged host theme instead
             // of the global one.
-            ThemeRegistry editorRegistry = createEditorThemeRegistry(context);
+            ThemeRegistry editorRegistry = createEditorThemeRegistry(context, scope);
+            TextMateLanguage custom = io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager.loadLanguage(
+                    context, scope, editorRegistry);
+            if (custom != null) {
+                return new LoadedSyntax(custom, editorRegistry);
+            }
             TextMateLanguage language = editorRegistry == null
                     ? TextMateLanguage.create(scope, GrammarRegistry.getInstance(), false)
                     : TextMateLanguage.create(scope, GrammarRegistry.getInstance(), editorRegistry, false);
@@ -1822,8 +2176,15 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void setTextMateLanguage(TextMateLanguage language, ThemeRegistry sourceRegistry, int generation) {
         if (editor == null || language == null) return;
-        Language wrapper = new ColorPreviewLanguageWrapper(
-                language, editor, io.github.abdurazaaqmohammed.feature.editor.StructuredCodeFormatter.forScope(syntaxPolicy.requestedScope()));
+        String reqScope = syntaxPolicy.requestedScope();
+        Language langToWrap = (isSmali && cachedInstructions != null)
+                ? new CustomAutoComplete(editor, cachedInstructions, language)
+                : language;
+        ColorPreviewLanguageWrapper wrapper = new ColorPreviewLanguageWrapper(
+                langToWrap, editor, io.github.abdurazaaqmohammed.feature.editor.StructuredCodeFormatter.forScope(reqScope));
+        if (isSmali || (reqScope != null && reqScope.contains("smali"))) {
+            wrapper.setHighlightSmaliMethods(true);
+        }
         syncLanguageTabSize(wrapper, editor.getTabWidth());
         editor.setEditorLanguage(wrapper);
         // Record what is actually live on the editor so the next applySyntax call
@@ -2323,9 +2684,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             cachedThemeName = themeName;
             IThemeSource themeSource = null;
             try {
-                themeSource = IThemeSource.fromInputStream(context.getAssets().open( "themes/" + themeName), themeName, null);
-                registry.loadTheme(themeSource);
-                registry.setTheme(themeName);
+                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/" + themeName), themeName, null);
+                io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel model =
+                        new io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel(themeSource, themeName);
+                model.load();
+                model.setDark("dark.json".equals(themeName));
+                registry.loadTheme(model);
+                registry.setTheme(model);
             } catch (Exception e) { Log.e("UnifiedEditor", "Theme load error", e); }
             try {
                 cachedSmaliLanguage = TextMateLanguage.create(
