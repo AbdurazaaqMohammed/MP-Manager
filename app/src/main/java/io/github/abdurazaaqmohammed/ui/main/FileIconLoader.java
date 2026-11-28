@@ -188,6 +188,7 @@ public class FileIconLoader {
     private final Map<String, String> permMemo = new ConcurrentHashMap<>();
     /** Per-listing memo of resolved icons, so classification runs once per path. */
     private final Map<String, Drawable> iconMemo = new ConcurrentHashMap<>();
+    private int loaderThemeVersion;
     private volatile boolean cancelled = false;
 
     private static final class PendingFolderRow {
@@ -283,6 +284,15 @@ public class FileIconLoader {
                 || PrivilegeManager.Root.isRootAvailable(context)
                 || PrivilegeManager.Shizuku.ready();
         ensureCachedIcons(context, context.theme);
+        this.loaderThemeVersion = iconThemeVersion;
+    }
+
+    private void syncThemeIcons() {
+        ensureCachedIcons(context, context.theme);
+        if (loaderThemeVersion != iconThemeVersion) {
+            loaderThemeVersion = iconThemeVersion;
+            iconMemo.clear();
+        }
     }
 
     public static Drawable getCachedApkIcon() {
@@ -291,6 +301,7 @@ public class FileIconLoader {
 
     /** Configures the ".." parent navigation row with its distinct 3D parent folder icon. */
     public void setupUpView(ImageView icon, TextView detail) {
+        syncThemeIcons();
         icon.setTag(null);
         icon.setImageDrawable(cachedUpFolderIcon);
         if (detail != null) {
@@ -303,6 +314,7 @@ public class FileIconLoader {
     /** Listing metadata only: no thumbnails, content sniffing, shell stats or folder walks. */
     public void setupMetadataView(String name, boolean directory, long size, long modified,
                                   boolean up, ImageView icon, TextView detail) {
+        syncThemeIcons();
         icon.setTag(null);
         detail.setTag(null);
         icon.setImageDrawable(up ? cachedUpFolderIcon : (directory ? cachedFolderIcon : resolveNonFolderIcon(name, icon, false)));
@@ -322,6 +334,7 @@ public class FileIconLoader {
 
     public void setupZipEntryView(ZipEntryInfo zipEntry, ImageView fileIconView, TextView fileDateView) {
         if (zipEntry == null) return;
+        syncThemeIcons();
         if (zipEntry.isDirectory() && "..".equals(zipEntry.getName())) {
             fileIconView.setImageDrawable(cachedUpFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
@@ -479,6 +492,7 @@ public class FileIconLoader {
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
+        syncThemeIcons();
         long[] meta = metaOf(file);
         if (meta[0] == 1) {
             fileIconView.setImageDrawable(cachedFolderIcon);
