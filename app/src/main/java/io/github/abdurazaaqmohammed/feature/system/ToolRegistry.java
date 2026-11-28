@@ -68,7 +68,9 @@ public final class ToolRegistry {
             new Definition("color_picker", R.string.color_picker, R.string.tool_color_subtitle,
                     R.drawable.colorize_24px, R.string.cat_media, "plugins", true, false),
             new Definition("free_style", R.string.free_style, R.string.tool_freestyle_subtitle,
-                    R.drawable.image_24px, R.string.cat_media, "plugins", false, false));
+                    R.drawable.image_24px, R.string.cat_media, "plugins", false, false),
+            new Definition("file_crypto", R.string.file_crypto_title, R.string.file_crypto_subtitle,
+                    R.drawable.ic_shield_24, R.string.cat_storage, null, false, false));
 
     private ToolRegistry() {}
 
