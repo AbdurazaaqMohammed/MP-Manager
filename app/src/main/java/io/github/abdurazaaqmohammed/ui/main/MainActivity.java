@@ -86,6 +86,7 @@ import io.github.abdurazaaqmohammed.feature.files.BookmarksController;
 import io.github.abdurazaaqmohammed.feature.files.FileSearchController;
 import io.github.abdurazaaqmohammed.feature.files.FtpController;
 import io.github.abdurazaaqmohammed.feature.files.network.NetworkController;
+import io.github.abdurazaaqmohammed.feature.files.network.SmbClient;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteFile;
 import io.github.abdurazaaqmohammed.feature.files.network.RemoteEntry;
 import io.github.abdurazaaqmohammed.ui.main.RemoteFilesArrayAdapter;
@@ -2053,19 +2054,29 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         final int[] saved = getSavedScrollForLocation(pane1, "file:" + folder.getAbsolutePath());
         listingExecutor.execute(() -> {
             try {
-                List<RemoteEntry> entries = folder.connection.client.list(folder.entry.path);
-                RemoteFile[] files = entries.stream().map(e -> new RemoteFile(folder.connection, e))
+                RemoteFile listedFolder = folder;
+                List<RemoteEntry> entries;
+                try {
+                    entries = listedFolder.connection.client.list(listedFolder.entry.path);
+                } catch (Exception firstFailure) {
+                    if (!(listedFolder.connection.client instanceof SmbClient)
+                            || !NetworkController.isClosedSmbShareFailure(firstFailure)) throw firstFailure;
+                    listedFolder = network.reconnectClosedSmbShare(listedFolder);
+                    entries = listedFolder.connection.client.list(listedFolder.entry.path);
+                }
+                final RemoteFile connectedFolder = listedFolder;
+                RemoteFile[] files = entries.stream().map(e -> new RemoteFile(connectedFolder.connection, e))
                         .filter(this::isNotHidden).toArray(RemoteFile[]::new);
-                sortFiles(files, folder.displayPath());
+                sortFiles(files, connectedFolder.displayPath());
                 handler.post(() -> {
                     if (isFinishing() || isDestroyed() || gen != (pane1 ? paneLoadGen1 : paneLoadGen2)) return;
-                    if (pane1) { pane1Folder = folder; currentPane1Files = files; }
-                    else { pane2Folder = folder; currentPane2Files = files; }
-                    if (addToHistory) pushNavigationHistory(pane1, new NavigationHistoryEntry(folder, false, null));
+                    if (pane1) { pane1Folder = connectedFolder; currentPane1Files = files; }
+                    else { pane2Folder = connectedFolder; currentPane2Files = files; }
+                    if (addToHistory) pushNavigationHistory(pane1, new NavigationHistoryEntry(connectedFolder, false, null));
                     RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-                    pane.setAdapter(new RemoteFilesArrayAdapter(this, folder, files, pane1));
+                    pane.setAdapter(new RemoteFilesArrayAdapter(this, connectedFolder, files, pane1));
                     updatePaneEmptyState(pane1, files.length == 0);
-                    network.refreshSpace(folder.connection);
+                    network.refreshSpace(connectedFolder.connection);
                     UiPrefs.playFolderTransition(pane);
                     if (pane1 == (lastPaneSelected == 1)) {
                         setMultiSelectModeUI(false);

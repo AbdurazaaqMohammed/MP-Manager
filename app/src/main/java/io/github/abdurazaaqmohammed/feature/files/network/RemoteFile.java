@@ -13,17 +13,23 @@ public final class RemoteFile extends File {
         public final String address;
         public final String storageId;
         public final String storageIdentity;
+        public final NetworkProfile profile;
         public Connection(RemoteClient client, String address) {
-            this(client, address, null);
+            this(client, address, null, address, null);
         }
         public Connection(RemoteClient client, String address, String storageId) {
-            this(client, address, storageId, address);
+            this(client, address, storageId, address, null);
         }
         public Connection(RemoteClient client, String address, String storageId, String storageIdentity) {
+            this(client, address, storageId, storageIdentity, null);
+        }
+        public Connection(RemoteClient client, String address, String storageId, String storageIdentity,
+                          NetworkProfile profile) {
             this.client = client;
             this.address = address.endsWith("/") ? address : address + "/";
             this.storageId = storageId;
             this.storageIdentity = storageIdentity;
+            this.profile = profile;
         }
     }
 

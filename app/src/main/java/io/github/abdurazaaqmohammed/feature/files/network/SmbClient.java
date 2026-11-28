@@ -10,10 +10,12 @@ import com.hierynomus.mssmb2.SMB2CreateDisposition;
 import com.hierynomus.mssmb2.SMB2CreateOptions;
 import com.hierynomus.mssmb2.SMB2ShareAccess;
 import com.hierynomus.mssmb2.SMBApiException;
+import com.hierynomus.protocol.commons.Factory;
 import com.hierynomus.protocol.commons.buffer.Buffer;
 import com.hierynomus.smbj.SMBClient;
 import com.hierynomus.smbj.SmbConfig;
 import com.hierynomus.smbj.auth.AuthenticationContext;
+import com.hierynomus.smbj.auth.Authenticator;
 import com.hierynomus.smbj.common.SMBRuntimeException;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
@@ -43,9 +45,7 @@ public final class SmbClient implements RemoteClient {
         RemotePath.validateName(shareName);
         if (host.isEmpty() || host.contains("/") || host.contains("\\") || port < 1 || port > 65535)
             throw new IllegalArgumentException("Invalid SMB host or port");
-        client = new SMBClient(SmbConfig.builder().withTimeout(60, TimeUnit.SECONDS)
-                .withSocketFactory(new TimedSocketFactory(SocketFactory.getDefault(), 20000))
-                .withSoTimeout(20000).build());
+        client = new SMBClient(createConfig());
         try {
             connection = client.connect(host, port);
             session = connection.authenticate(username.isEmpty() ? AuthenticationContext.anonymous()
@@ -60,6 +60,15 @@ public final class SmbClient implements RemoteClient {
             close();
             throw error(e);
         }
+    }
+
+    static SmbConfig createConfig() {
+        SmbConfig base = SmbConfig.builder().withTimeout(60, TimeUnit.SECONDS)
+                .withSocketFactory(new TimedSocketFactory(SocketFactory.getDefault(), 20000))
+                .withSoTimeout(20000).build();
+        List<Factory.Named<Authenticator>> authenticators = base.getSupportedAuthenticators();
+        authenticators.add(0, new AnonymousNtlmAuthenticator.Factory());
+        return SmbConfig.builder(base).withAuthenticators(authenticators).build();
     }
 
     static String smbPath(String path) {

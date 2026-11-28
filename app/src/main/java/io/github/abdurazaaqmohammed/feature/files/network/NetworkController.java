@@ -196,12 +196,55 @@ public final class NetworkController {
                     if (closed) throw new IOException("Connection closed");
                     clients.add(client);
                 }
-                root[0] = RemoteFile.root(new RemoteFile.Connection(client, profile.canonicalAddress(), profile.pinId(), profile.storageIdentity()));
+                root[0] = RemoteFile.root(new RemoteFile.Connection(client, profile.canonicalAddress(), profile.pinId(),
+                        profile.storageIdentity(), profile));
             } catch (Exception e) { client.close(); throw e; }
         }, () -> {
             activity.loadFolderInPane(root[0], pane1, true);
             if (remember) activity.refreshSidebarAsync(activity.getSidebarSectionOrder());
         });
+    }
+
+    /** Reopens an SMB session whose share was closed while the app was backgrounded. */
+    public RemoteFile reconnectClosedSmbShare(RemoteFile stale) throws IOException {
+        NetworkProfile profile = stale.connection.profile;
+        if (closed || profile == null || !"smb".equals(profile.protocol))
+            throw new IOException("SMB connection cannot be restored");
+
+        RemoteClient client = profile.connect();
+        try {
+            RemoteEntry root = client.stat("");
+            if (root == null || !root.directory) throw new IOException("Connection root is not a folder");
+            checkpoint();
+            synchronized (clients) {
+                if (closed) throw new IOException("Connection closed");
+                clients.add(client);
+                clients.remove(stale.connection.client);
+            }
+            RemoteFile.Connection connection = new RemoteFile.Connection(client, stale.connection.address,
+                    stale.connection.storageId, stale.connection.storageIdentity, profile);
+            try {
+                AppExecutors.io().execute(() -> {
+                    try { stale.connection.client.close(); } catch (Exception ignored) {}
+                });
+            } catch (RuntimeException rejected) {
+                try { stale.connection.client.close(); } catch (Exception ignored) {}
+            }
+            return new RemoteFile(connection, stale.entry);
+        } catch (Exception e) {
+            synchronized (clients) { clients.remove(client); }
+            client.close();
+            if (e instanceof IOException) throw (IOException) e;
+            throw new IOException("Could not reconnect to SMB share", e);
+        }
+    }
+
+    public static boolean isClosedSmbShareFailure(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            String message = cause.getMessage();
+            if (message != null && message.contains("DiskShare has already been closed")) return true;
+        }
+        return false;
     }
 
     public RemoteSpace spaceForProfile(NetworkProfile profile) {

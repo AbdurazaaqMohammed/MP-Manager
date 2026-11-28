@@ -168,6 +168,7 @@ dependencies {
     implementation 'commons-net:commons-net:3.11.1'
     // SMB2/3 client; no legacy SMB1 or native binaries.
     implementation 'com.hierynomus:smbj:0.14.0'
+    implementation 'com.hierynomus:asn-one:0.6.0'
     // LSPatch (JingMatrix fork) integrated-mode patcher engine (vendored, see
     // docs/XPOSED_PATCHER.md) — full flavor only — plus the vendored classes it
     // links against: the aXML manifest editor (com.wind.meditor, pxb.android)
