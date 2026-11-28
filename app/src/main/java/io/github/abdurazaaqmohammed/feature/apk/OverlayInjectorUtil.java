@@ -379,7 +379,7 @@ public class OverlayInjectorUtil {
         String nextIdent(int len) {
             for (;;) {
                 String s = randIdent(rng, len) + Integer.toString(seq++, 36);
-                if (used.add(s)) return s;
+                if (!s.contains("mp") && used.add(s)) return s;
             }
         }
 
