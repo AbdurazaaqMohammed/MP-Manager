@@ -162,31 +162,9 @@ public class EditorSettingsActivity extends BaseActivity {
 
         private void importSyntaxFile(Uri uri) {
             try {
-                Context ctx = requireContext();
-                String fileName = "syntax_" + System.currentTimeMillis() + ".tmLanguage.json";
-                android.database.Cursor c = ctx.getContentResolver().query(uri, null, null, null, null);
-                if (c != null) {
-                    int nameIdx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
-                    if (nameIdx >= 0 && c.moveToFirst()) {
-                        String name = c.getString(nameIdx);
-                        if (name != null && !name.isEmpty()) fileName = name;
-                    }
-                    c.close();
-                }
-
-                java.io.File dir = new java.io.File(ctx.getFilesDir(), "syntaxes");
-                if (!dir.exists()) dir.mkdirs();
-                java.io.File dest = new java.io.File(dir, fileName);
-
-                try (java.io.InputStream in = ctx.getContentResolver().openInputStream(uri);
-                     java.io.FileOutputStream out = new java.io.FileOutputStream(dest)) {
-                    byte[] buf = new byte[8192];
-                    int len;
-                    while ((len = in.read(buf)) > 0) {
-                        out.write(buf, 0, len);
-                    }
-                }
-                showSnack("Imported syntax: " + fileName);
+                io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager.CustomSyntaxInfo info =
+                        io.github.abdurazaaqmohammed.feature.editor.CustomSyntaxManager.importSyntax(requireContext(), uri);
+                showSnack("Imported syntax: " + info.displayName);
             } catch (Exception e) {
                 showSnack("Failed to import syntax: " + e.getMessage());
             }

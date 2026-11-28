@@ -548,6 +548,76 @@ public final class ThemePackEditorColors {
         }
     }
 
+    /**
+     * Builds a per-editor {@link IThemeSource} combining the active base theme,
+     * optional pack syntax overrides, and optional custom-syntax scope colors.
+     * Returns null when neither pack syntax nor custom scope colors apply.
+     */
+    public static IThemeSource mergedThemeSource(
+            Context context, Map<String, String> customSyntaxColors) {
+        if (customSyntaxColors == null || customSyntaxColors.isEmpty()) {
+            return mergedThemeSource(context);
+        }
+        if (context == null) return null;
+        try {
+            String baseName = baseThemeAssetName(context);
+            String baseJson = readAssetTheme(context, baseName);
+            if (baseJson == null) return null;
+            String merged = hasEditorSyntax(context)
+                    ? mergeThemeJson(baseJson, ThemeRegistry.editorSyntax(context))
+                    : baseJson;
+            merged = appendScopeColorRules(merged, customSyntaxColors);
+            return IThemeSource.fromString(IThemeSource.ContentType.JSON, merged);
+        } catch (Exception e) {
+            return mergedThemeSource(context);
+        }
+    }
+
+    /**
+     * Appends exact scope-to-foreground rules at the end of a base theme JSON's
+     * {@code tokenColors} or legacy {@code settings} array so custom syntax
+     * palettes override generic rules cleanly.
+     */
+    public static String appendScopeColorRules(String baseJson, Map<String, String> scopeColors) {
+        if (baseJson == null || scopeColors == null || scopeColors.isEmpty()) return baseJson;
+        try {
+            String cleaned = baseJson.startsWith("\uFEFF") ? baseJson.substring(1) : baseJson;
+            JsonElement root = JsonParser.parseString(cleaned);
+            if (root == null || !root.isJsonObject()) return baseJson;
+            JsonObject obj = root.getAsJsonObject();
+
+            String arrayKey = "tokenColors";
+            JsonArray target = null;
+            JsonElement tokenColors = obj.get("tokenColors");
+            if (tokenColors != null && tokenColors.isJsonArray()) {
+                target = tokenColors.getAsJsonArray();
+            } else {
+                JsonElement settings = obj.get("settings");
+                if (settings != null && settings.isJsonArray()) {
+                    arrayKey = "settings";
+                    target = settings.getAsJsonArray();
+                }
+            }
+            if (target == null) target = new JsonArray();
+
+            for (Map.Entry<String, String> entry : scopeColors.entrySet()) {
+                String scope = entry.getKey();
+                String hex = entry.getValue();
+                if (scope == null || scope.isEmpty() || hex == null || hex.isEmpty()) continue;
+                JsonObject rule = new JsonObject();
+                rule.addProperty("scope", scope);
+                JsonObject ruleSettings = new JsonObject();
+                ruleSettings.addProperty("foreground", hex);
+                rule.add("settings", ruleSettings);
+                target.add(rule);
+            }
+            obj.add(arrayKey, target);
+            return obj.toString();
+        } catch (Exception e) {
+            return baseJson;
+        }
+    }
+
     private static String readAssetTheme(Context context, String name) {
         try {
             StringBuilder sb = new StringBuilder();

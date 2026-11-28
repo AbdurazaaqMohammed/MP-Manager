@@ -2623,4 +2623,13 @@
 <string name="app_icon_follow_theme">اتباع السمة</string>
 <string name="with_warning_suffix">\u0020مع تحذير</string>
 <string name="warning_word">تحذير</string>
+    <string name="syntax_export">تصدير النحو</string>
+    <string name="syntax_delete">حذف النحو</string>
+    <string name="syntax_export_format_title">اختر صيغة التصدير</string>
+    <string name="syntax_export_format_json">ملف TextMate JSON (.tmLanguage.json)</string>
+    <string name="syntax_export_format_mtsx">ملف نحو MT Manager (.mtsx)</string>
+    <string name="syntax_exported">تم تصدير %1$s</string>
+    <string name="syntax_export_failed">تعذر تصدير النحو</string>
+    <string name="syntax_delete_confirm">هل تريد حذف \"%1$s\"؟ يمكن استعادة الأنواع المدمجة عند مسح بيانات التطبيق.</string>
+    <string name="syntax_deleted">تم حذف %1$s</string>
 </resources>

@@ -129,6 +129,19 @@ public final class SyntaxApplyPolicy {
     }
 
     /**
+     * Records a language applied outside {@link #onRequest} (e.g. initial Smali
+     * setup in {@code UnifiedEditorFragment#updateEditorUI}) so Choose Syntax
+     * and in-place theme refreshes track both the scope and live language.
+     */
+    public synchronized void recordExternalApplied(String scope, Object language) {
+        generation++;
+        inflightGeneration = -1;
+        requestedScope = scope;
+        appliedScope = scope;
+        appliedLanguage = language;
+    }
+
+    /**
      * A plain fallback was set on the editor because the TextMate load failed.
      * The editor language identity is left unrecorded so the next trigger for
      * the same scope retries the load instead of treating the fallback as a

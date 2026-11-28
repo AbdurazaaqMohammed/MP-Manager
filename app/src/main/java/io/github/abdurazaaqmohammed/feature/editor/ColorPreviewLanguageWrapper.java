@@ -45,6 +45,11 @@ public class ColorPreviewLanguageWrapper extends EmptyLanguage {
         return delegate;
     }
 
+    public ColorPreviewLanguageWrapper setHighlightSmaliMethods(boolean highlightSmaliMethods) {
+        analyzeManager.setHighlightSmaliMethods(highlightSmaliMethods);
+        return this;
+    }
+
     @NonNull
     @Override
     public AnalyzeManager getAnalyzeManager() {

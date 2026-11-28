@@ -2690,4 +2690,13 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="app_icon_follow_theme">Follow theme</string>
     <string name="with_warning_suffix">\u0020with warning</string>
     <string name="warning_word">warning</string>
+    <string name="syntax_export">Export Syntax</string>
+    <string name="syntax_delete">Delete Syntax</string>
+    <string name="syntax_export_format_title">Choose Export Format</string>
+    <string name="syntax_export_format_json">TextMate JSON (.tmLanguage.json)</string>
+    <string name="syntax_export_format_mtsx">MT Manager Syntax (.mtsx)</string>
+    <string name="syntax_exported">Exported %1$s</string>
+    <string name="syntax_export_failed">Failed to export syntax</string>
+    <string name="syntax_delete_confirm">Delete \"%1$s\"? Built-in syntaxes can be restored by clearing app data.</string>
+    <string name="syntax_deleted">Deleted %1$s</string>
 </resources>
