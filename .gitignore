@@ -53,3 +53,5 @@ samples/*/release/
 MP-Manager.zip
 src.zip
 
+# Local emulator screenshots and UI dumps produced by theme verification.
+/outputs/

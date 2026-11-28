@@ -394,6 +394,152 @@ public class ThemePackIngestionTest {
         assertFalse(packDir.exists());
     }
 
+    // ---------- icons: persistence, commit, path safety ----------
+
+    @Test
+    public void iconNames_roundTripAndReadSanitizesInvalidKeys() throws IOException {
+        String pkg = "com.example.themes";
+        ThemePackStore.StoredSnapshot in = snapshot();
+        in.schema = ThemePackStore.SCHEMA_V3;
+        Map<String, String> names = new LinkedHashMap<>();
+        names.put("folder", "icon-folder-123456789");
+        names.put("apk_dark", "icon-apk_dark-987654321");
+        names.put("../evil", "wallpaper-123"); // must be dropped on read
+        names.put("bogus", "icon-bogus-1");     // unknown key -> dropped
+        in.iconNames = names;
+        ThemePackStore.writeSnapshot(filesDir, pkg, in);
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(filesDir, pkg);
+        assertNotNull(out);
+        assertEquals(ThemePackStore.SCHEMA_V3, out.schema.intValue());
+        assertEquals(2, out.iconNames.size());
+        assertEquals("icon-folder-123456789", out.iconNames.get("folder"));
+        assertEquals("icon-apk_dark-987654321", out.iconNames.get("apk_dark"));
+        assertNull(out.iconNames.get("../evil"));
+        assertNull(out.iconNames.get("bogus"));
+    }
+
+    @Test
+    public void iconFile_rejectsNonGeneratedNames() {
+        String pkg = "com.example.themes";
+        assertNull(ThemePackStore.iconFile(filesDir, pkg, "folder", null));
+        assertNull(ThemePackStore.iconFile(filesDir, pkg, "folder", "icon-folder-abc"));
+        assertNull(ThemePackStore.iconFile(filesDir, pkg, "folder", "icon-apk-123"));
+        assertNull(ThemePackStore.iconFile(filesDir, pkg, "../evil", "icon-../evil-123"));
+        assertNull(ThemePackStore.iconFile(filesDir, pkg, "unknown", "icon-unknown-123"));
+        assertNotNull(ThemePackStore.iconFile(filesDir, pkg, "folder", "icon-folder-123"));
+    }
+
+    @Test
+    public void commit_iconsConsumeStageAndCleanupUnreferenced() throws IOException {
+        String pkg = "com.example.themes";
+        File packDir = ThemePackStore.packDir(filesDir, pkg);
+        ThemePackStore.StoredSnapshot first = snapshot();
+        first.schema = ThemePackStore.SCHEMA_V3;
+        File folderIcon = ThemePackStore.stageFile(bytes("FOLDER-PNG"), packDir, 1024);
+        File apkIcon = ThemePackStore.stageFile(bytes("APK-PNG"), packDir, 1024);
+        Map<String, File> staged = new LinkedHashMap<>();
+        staged.put("folder", folderIcon);
+        staged.put("apk_dark", apkIcon);
+        assertTrue(ThemePackStore.commit(filesDir, pkg, first, null, null, staged));
+        ThemePackStore.StoredSnapshot out = ThemePackStore.readSnapshot(filesDir, pkg);
+        assertEquals(2, out.iconNames.size());
+        assertTrue(out.iconNames.get("folder").startsWith("icon-folder-"));
+        assertEquals("FOLDER-PNG", read(ThemePackStore.iconFile(filesDir, pkg,
+                "folder", out.iconNames.get("folder"))));
+        assertFalse(folderIcon.exists());
+        assertFalse(apkIcon.exists());
+
+        // second import without icons drops the old ones
+        ThemePackStore.StoredSnapshot bare = new ThemePackStore.StoredSnapshot();
+        bare.id = "bare";
+        assertTrue(ThemePackStore.commit(filesDir, pkg, bare, null, null));
+        assertNull(ThemePackStore.readSnapshot(filesDir, pkg).iconNames);
+        assertEquals(1, packDir.listFiles().length);
+    }
+
+    @Test
+    public void commit_iconRetentionAndFailure_keepStoredIcons() throws Exception {
+        String pkg = "com.example.themes";
+        File packDir = ThemePackStore.packDir(filesDir, pkg);
+        ThemePackStore.StoredSnapshot first = snapshot();
+        File staged = ThemePackStore.stageFile(bytes("FOLDER-PNG"), packDir, 1024);
+        Map<String, File> stagedMap = new LinkedHashMap<>();
+        stagedMap.put("folder", staged);
+        assertTrue(ThemePackStore.commit(filesDir, pkg, first, null, null, stagedMap));
+        String retained = first.iconNames.get("folder");
+        File retainedFile = ThemePackStore.iconFile(filesDir, pkg, "folder", retained);
+        assertTrue(retainedFile.isFile());
+
+        // byte-identical icon: caller pre-assigns the stored name; staged is
+        // skipped and removed by the store.
+        ThemePackStore.StoredSnapshot changed = snapshot();
+        changed.iconNames = new LinkedHashMap<>();
+        changed.iconNames.put("folder", retained);
+        File again = ThemePackStore.stageFile(bytes("FOLDER-PNG"), packDir, 1024);
+        Map<String, File> againMap = new LinkedHashMap<>();
+        againMap.put("folder", again);
+        assertTrue(ThemePackStore.commit(filesDir, pkg, changed, null, null, againMap));
+        assertEquals("FOLDER-PNG", read(retainedFile));
+        assertFalse(again.exists());
+
+        // failure path must not delete the retained icon
+        File snap = ThemePackStore.snapshotFile(filesDir, pkg);
+        File inside = new File(snap, "blocker");
+        assertTrue(snap.delete());
+        assertTrue(snap.mkdirs());
+        try (FileOutputStream fos = new FileOutputStream(inside)) {
+            fos.write(1);
+        }
+        ThemePackStore.StoredSnapshot replacement = snapshot();
+        replacement.iconNames = new LinkedHashMap<>(changed.iconNames);
+        File doomed = ThemePackStore.stageFile(bytes("NEW-PNG"), packDir, 1024);
+        Map<String, File> doomedMap = new LinkedHashMap<>();
+        doomedMap.put("folder", doomed);
+        assertFalse(ThemePackStore.commit(filesDir, pkg, replacement, null, null, doomedMap));
+        assertEquals("FOLDER-PNG", read(retainedFile));
+        assertFalse(doomed.exists());
+    }
+
+    @Test
+    public void launcherIcon_roundTripAndReadSanitizes() throws IOException {
+        String pkg = "com.example.themes";
+        ThemePackStore.StoredSnapshot in = snapshot();
+        in.schema = ThemePackStore.SCHEMA_V3;
+        in.launcherIcon = "nova.v1";
+        ThemePackStore.writeSnapshot(filesDir, pkg, in);
+        assertEquals("nova.v1", ThemePackStore.readSnapshot(filesDir, pkg).launcherIcon);
+
+        ThemePackStore.StoredSnapshot evil = snapshot();
+        evil.schema = ThemePackStore.SCHEMA_V3;
+        evil.launcherIcon = "a".repeat(ThemePackContracts.MAX_LAUNCHER_ICON_ID_CHARS + 1);
+        ThemePackStore.writeSnapshot(filesDir, pkg, evil);
+        assertNull(ThemePackStore.readSnapshot(filesDir, pkg).launcherIcon);
+    }
+
+    @Test
+    public void localNamespace_packDirsAreJvmAndWindowsSafe() throws Exception {
+        // local.<key> uses no ':' so JVM tests can create the dirs on Windows.
+        String pkg = ThemePacks.LOCAL_PKG_PREFIX + "0123abcd";
+        assertTrue(ThemePacks.isLocalPackage(pkg));
+        assertTrue(ThemePacks.isLocalPackage("local.ffffffffffffffffffffffffffffffff"));
+        assertFalse(ThemePacks.isLocalPackage("local.short"));
+        assertFalse(ThemePacks.isLocalPackage("local.0123ABCD")); // lowercase hex only
+        assertFalse(ThemePacks.isLocalPackage("com.example.themes"));
+        assertEquals(pkg, ThemePacks.localPackage("0123abcd"));
+        assertNull(ThemePacks.localPackage("UPPER"));
+        assertNull(ThemePacks.localPackage("with:colon"));
+
+        File dir = ThemePackStore.packDir(filesDir, pkg);
+        assertTrue(dir.mkdirs());
+        File staged = ThemePackStore.stageFile(bytes("ICON"), dir, 1024);
+        assertNotNull(staged);
+        ThemePackStore.StoredSnapshot s = snapshot();
+        assertTrue(ThemePackStore.commit(filesDir, pkg, s, null, null));
+        assertNotNull(ThemePackStore.readSnapshot(filesDir, pkg));
+        ThemePackStore.deletePack(filesDir, pkg);
+        assertFalse(dir.exists());
+    }
+
     // ---------- label resolution ----------
 
     @Test
@@ -480,6 +626,41 @@ public class ThemePackIngestionTest {
                 "com.other.provider", "Example", Boolean.TRUE, 0xFF6750A4,
                 0x66000000, colors, new LinkedHashMap<>(), null, null, syntax, "all");
         assertFalse(a.sameState(differentPack));
+    }
+
+    @Test
+    public void snapshot_iconFiles_immutableAndPartOfSameState() {
+        Map<String, File> icons = new LinkedHashMap<>();
+        icons.put("folder", new File("icon-folder-1"));
+        icons.put("apk_dark", new File("icon-apk_dark-2"));
+        ThemePacks.Snapshot snap = new ThemePacks.Snapshot("com.example.themes",
+                "Example", Boolean.TRUE, 0xFF6750A4, 0x66000000,
+                new LinkedHashMap<>(), new LinkedHashMap<>(), null, null, null,
+                "files", "id", 5L, icons, "nova.v1");
+        assertNotNull(snap.iconFiles);
+        assertEquals(2, snap.iconFiles.size());
+        assertEquals(new File("icon-folder-1"), snap.iconFiles.get("folder"));
+        assertEquals("nova.v1", snap.launcherIcon);
+        try {
+            snap.iconFiles.put("file", new File("icon-file"));
+            fail("iconFiles must be unmodifiable");
+        } catch (UnsupportedOperationException expected) {
+        }
+        assertTrue(snap.sameState(snap));
+        Map<String, File> changed = new LinkedHashMap<>(icons);
+        changed.put("folder", new File("icon-folder-new"));
+        assertFalse(snap.sameState(new ThemePacks.Snapshot("com.example.themes",
+                "Example", Boolean.TRUE, 0xFF6750A4, 0x66000000,
+                new LinkedHashMap<>(), new LinkedHashMap<>(), null, null, null,
+                "files", "id", 5L, changed, "nova.v1")));
+        // launcher icon is part of the visible state
+        assertFalse(snap.sameState(new ThemePacks.Snapshot("com.example.themes",
+                "Example", Boolean.TRUE, 0xFF6750A4, 0x66000000,
+                new LinkedHashMap<>(), new LinkedHashMap<>(), null, null, null,
+                "files", "id", 5L, icons, "nova.v2")));
+        // legacy constructor exposes an empty, non-null map
+        assertTrue(buildSnapshot(new LinkedHashMap<>(), null, null, null)
+                .iconFiles.isEmpty());
     }
 
     private static String read(File file) {

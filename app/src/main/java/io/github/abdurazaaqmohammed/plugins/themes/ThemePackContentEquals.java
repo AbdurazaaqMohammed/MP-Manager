@@ -28,6 +28,9 @@ import java.util.Map;
  *       {@code keyword.control} vs {@code keyword} or a null-vs-empty payload
  *       cannot fake a change;</li>
  *   <li>{@code wallpaperScope} compares with null/"files" equivalence;</li>
+ *   <li>{@code iconNames} compares by key set only (null/empty equivalent);
+ *       names are deliberately NOT compared because every import generates
+ *       fresh versioned names — callers compare the actual bytes;</li>
  *   <li>image references are deliberately NOT compared by name (every staged
  *       import generates a fresh versioned name) — callers compare the actual
  *       bytes with {@link #sameBytes}, because a provider may change content
@@ -58,7 +61,9 @@ final class ThemePackContentEquals {
                 && canonicalStrings(a.strings).equals(canonicalStrings(b.strings))
                 && canonicalSyntax(a.editorSyntax).equals(canonicalSyntax(b.editorSyntax))
                 && normalizedScope(a.wallpaperScope)
-                        .equals(normalizedScope(b.wallpaperScope));
+                        .equals(normalizedScope(b.wallpaperScope))
+                && eq(a.launcherIcon, b.launcherIcon)
+                && iconKeys(a.iconNames).equals(iconKeys(b.iconNames));
     }
 
     /**
@@ -131,6 +136,16 @@ final class ThemePackContentEquals {
             if (e.getValue() == null) continue;
             String key = ThemePackParser.canonicalSyntaxKey(e.getKey());
             if (key != null) out.put(key, e.getValue());
+        }
+        return out;
+    }
+
+    /** Only allowlisted keys count; a hand-edited store entry cannot fake a change. */
+    private static java.util.Set<String> iconKeys(Map<String, String> in) {
+        if (in == null || in.isEmpty()) return java.util.Collections.emptySet();
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        for (String key : in.keySet()) {
+            if (ThemePackContracts.isIconKey(key)) out.add(key);
         }
         return out;
     }

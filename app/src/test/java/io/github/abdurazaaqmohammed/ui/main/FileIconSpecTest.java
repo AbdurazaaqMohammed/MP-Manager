@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import io.github.abdurazaaqmohammed.plugins.themes.ThemePackContracts;
+
 import org.junit.Test;
 
 import java.util.List;
@@ -46,5 +48,44 @@ public class FileIconSpecTest {
         assertTrue(all.contains(FileIconSpec.PYTHON));
         assertTrue(all.contains(FileIconSpec.SMALI));
         assertTrue(all.contains(FileIconSpec.JS));
+    }
+
+    @Test
+    public void codeSpecsUseTheirOwnSemanticIconKeys() {
+        assertEquals("java", FileIconSpec.JAVA.iconKey());
+        assertEquals("kotlin", FileIconSpec.KOTLIN.iconKey());
+        assertEquals("xml", FileIconSpec.XML.iconKey());
+        assertEquals("json", FileIconSpec.JSON.iconKey());
+        assertEquals("python", FileIconSpec.PYTHON.iconKey());
+        assertEquals("smali", FileIconSpec.SMALI.iconKey());
+        assertEquals("js", FileIconSpec.JS.iconKey());
+        // The generic file spec remains the only intentional "file" key.
+        assertEquals("file", FileIconSpec.FILE.iconKey());
+        assertEquals("folder", FileIconSpec.FOLDER.iconKey());
+    }
+
+    /** Every spec key must be an allowlisted contract icon kind. */
+    @Test
+    public void allIconKeysAreAllowlistedContractKinds() {
+        for (FileIconSpec spec : FileIconSpec.all()) {
+            assertTrue("iconKey not allowlisted: " + spec.iconKey(),
+                    ThemePackContracts.isIconKey(spec.iconKey()));
+        }
+    }
+
+    /** Bidirectional contract coverage: each base kind except parent_folder
+     *  (overridden through parentDrawable) maps to exactly one spec. */
+    @Test
+    public void everyContractKindHasExactlyOneSpec() {
+        List<FileIconSpec> all = FileIconSpec.all();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (FileIconSpec spec : all) {
+            assertTrue("duplicate iconKey: " + spec.iconKey(), seen.add(spec.iconKey()));
+        }
+        for (String kind : ThemePackContracts.ICON_KINDS) {
+            if ("parent_folder".equals(kind)) continue;
+            assertTrue("contract kind has no spec: " + kind, seen.contains(kind));
+        }
+        assertEquals(ThemePackContracts.ICON_KINDS.length - 1, seen.size());
     }
 }

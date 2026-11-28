@@ -52,10 +52,27 @@ final class ThemePackPalette {
             new Slot("colorAccent", R.color.theme_pack_accent, R.style.ThemePackAccent),
     };
 
-    /** Per-Resources ownership state (pure, JVM-tested). */
-    private static final ThemePackPaletteState STATE = new ThemePackPaletteState();
+    /** Per-Resources ownership state (pure, JVM-tested). Package-private so
+     *  instrumented lifecycle tests can assert loader bookkeeping. */
+    static final ThemePackPaletteState STATE = new ThemePackPaletteState();
 
     private ThemePackPalette() {}
+
+    /**
+     * True when {@code colors} (plus the optional pack {@code accent})
+     * would produce at least one slot replacement, i.e. a palette
+     * {@link #apply} would install. Callers use this to fall back to the
+     * user accent path when a pack is active but carries no slot colors
+     * (for example an editor-syntax or chrome-token-only pack) — applying
+     * such a pack must not suppress the user's accent.
+     */
+    static boolean contributes(Map<String, Integer> colors, Integer accent) {
+        if (accent != null) return true;
+        for (Slot slot : SLOTS) {
+            if (colors != null && colors.get(slot.token()) != null) return true;
+        }
+        return false;
+    }
 
     /**
      * Installs (or refreshes) the pack color overrides on the activity and

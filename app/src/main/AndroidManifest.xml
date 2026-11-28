@@ -96,11 +96,95 @@
             android:alwaysRetainTaskState="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="true">
+        </activity>
+        <!--
+            Launcher icon customization: the MAIN/LAUNCHER intent filter lives
+            on activity-aliases so the icon can be switched at runtime with
+            PackageManager#setComponentEnabledSetting (io.github.abdurazaaqmohammed.ui.main.LauncherIcons).
+            MainActivity itself is never enabled/disabled - explicit-component
+            launches (bookmark shortcuts, editor return-to-main, deep links)
+            keep working regardless of which alias is active. The default
+            alias is enabled in the manifest; the helper guarantees at least
+            one alias stays enabled at all times (enable target first, then
+            disable the rest, rolling back on failure). Alias names are
+            RELATIVE: they resolve against the manifest package attribute
+            (io.github.abdurazaaqmohammed.MPManager), which differs from the
+            runtime applicationId in the .editorregression debug build, so
+            LauncherIcons resolves the full alias class names from
+            PackageManager instead of guessing from the applicationId.
+        -->
+        <activity-alias
+            android:name=".LauncherDefault"
+            android:targetActivity="io.github.abdurazaaqmohammed.ui.main.MainActivity"
+            android:label="MP Manager"
+            android:icon="@mipmap/ic_launcher"
+            android:enabled="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherCrimson"
+            android:targetActivity="io.github.abdurazaaqmohammed.ui.main.MainActivity"
+            android:label="MP Manager"
+            android:icon="@mipmap/ic_launcher_crimson"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherEmerald"
+            android:targetActivity="io.github.abdurazaaqmohammed.ui.main.MainActivity"
+            android:label="MP Manager"
+            android:icon="@mipmap/ic_launcher_emerald"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherAmber"
+            android:targetActivity="io.github.abdurazaaqmohammed.ui.main.MainActivity"
+            android:label="MP Manager"
+            android:icon="@mipmap/ic_launcher_amber"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherViolet"
+            android:targetActivity="io.github.abdurazaaqmohammed.ui.main.MainActivity"
+            android:label="MP Manager"
+            android:icon="@mipmap/ic_launcher_violet"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherMono"
+            android:targetActivity="io.github.abdurazaaqmohammed.ui.main.MainActivity"
+            android:label="MP Manager"
+            android:icon="@mipmap/ic_launcher_mono"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
            <activity
                android:theme="@style/Theme.Material3.DayNight.NoActionBar"
                android:name="io.github.abdurazaaqmohammed.feature.apk.APKExtractorActivity"

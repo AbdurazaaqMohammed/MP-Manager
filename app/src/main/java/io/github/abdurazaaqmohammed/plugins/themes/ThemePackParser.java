@@ -283,6 +283,53 @@ public final class ThemePackParser {
     }
 
     /**
+     * icons column (v2): {@code {"folder":"content://auth/icons/folder", ...}}
+     * keyed by an allowlisted {@link ThemePackContracts#ICON_KINDS} base key
+     * (optionally suffixed {@code _light}/{@code _dark}). Values must be
+     * syntactically valid {@code content://} URIs; exact authority/path
+     * matching is enforced later by the Android-side importer against the
+     * discovery authority. Unknown keys, non-string values, malformed URIs
+     * and entries beyond {@link ThemePackContracts#ICON_KINDS} plus variants
+     * are dropped. Malformed JSON or an over-limit payload throws
+     * {@link ParseException}.
+     */
+    public static Map<String, String> parseIcons(String json) {
+        if (json == null || json.trim().isEmpty()) return new LinkedHashMap<>();
+        if (json.length() > ThemePackContracts.MAX_ICONS_JSON_CHARS) {
+            throw new ParseException("icons payload too large");
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        JsonObject obj = object(json, "icons");
+        for (Map.Entry<String, JsonElement> e : obj.entrySet()) {
+            // Unknown keys are ignored for forward compatibility, but a
+            // RECOGNIZED key with a bad value fails the whole import: an
+            // update must never silently erase previously valid artwork.
+            if (!ThemePackContracts.isIconKey(e.getKey())) continue;
+            if (e.getValue() == null || !e.getValue().isJsonPrimitive()) {
+                throw new ParseException("Invalid icon endpoint for " + e.getKey());
+            }
+            JsonPrimitive p;
+            try {
+                p = e.getValue().getAsJsonPrimitive();
+            } catch (Exception ignored) {
+                throw new ParseException("Invalid icon endpoint for " + e.getKey());
+            }
+            if (p.isBoolean() || p.isNumber()) {
+                throw new ParseException("Invalid icon endpoint for " + e.getKey());
+            }
+            String uri = p.getAsString().trim();
+            // Reject obvious non-content URIs here (Android-free); exact
+            // authority/path/no-query/no-fragment checks happen in the host.
+            if (!uri.startsWith("content://") || uri.length() <= "content://".length()
+                    || uri.contains("?") || uri.contains("#")) {
+                throw new ParseException("Invalid icon endpoint for " + e.getKey());
+            }
+            out.put(e.getKey(), uri);
+        }
+        return out;
+    }
+
+    /**
      * wallpaper_scope column (v2): {@code "files"}|{@code "all"}|{@code "none"}
      * exactly; absent/empty means {@code "files"} (v1 default). Any other
      * value raises {@link ParseException} so a typo'd scope fails the import
@@ -294,6 +341,26 @@ public final class ThemePackParser {
         if (value.isEmpty()) return ThemePackContracts.WALLPAPER_SCOPE_FILES;
         if (ThemePackContracts.isWallpaperScope(value)) return value;
         throw new ParseException("Invalid wallpaper_scope");
+    }
+
+    /**
+     * launcher_icon column (v2): a short opaque selector ID
+     * ({@code [A-Za-z0-9._-]{1,64}}) the host stores and passes to launcher
+     * helpers; artwork resolves through the provider's
+     * {@code /launcher_icon} endpoint, never through this column. Null when
+     * absent/empty; a malformed value raises {@link ParseException} so a
+     * corrupted column fails the import instead of silently changing the
+     * launcher.
+     */
+    public static String parseLauncherIconId(Object raw) {
+        if (raw == null) return null;
+        String value = String.valueOf(raw).trim();
+        if (value.isEmpty()) return null;
+        if (value.length() > ThemePackContracts.MAX_LAUNCHER_ICON_ID_CHARS
+                || !value.matches("[A-Za-z0-9._-]+")) {
+            throw new ParseException("Invalid launcher_icon");
+        }
+        return value;
     }
 
     // ---------- helpers ----------

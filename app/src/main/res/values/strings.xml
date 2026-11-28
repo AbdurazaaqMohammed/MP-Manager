@@ -2674,6 +2674,20 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="image_browse_files">Browse Files</string>
     <string name="use_3d_icons_title">3D Icons</string>
     <string name="use_3d_icons_summary">Use adaptive 3D artwork for file and folder icons</string>
+    <!-- Launcher icon customization (activity-alias based; see LauncherIconHelper). -->
+    <string name="app_icon_title">App Icon</string>
+    <string name="app_icon_summary">Choose the launcher icon</string>
+    <string name="app_icon_note">The launcher usually refreshes the icon within a minute; some launchers only pick it up after restarting the app or the device.</string>
+    <string name="app_icon_theme_note">Theme plugins can request one of these bundled icons only. Android cannot use arbitrary plugin images as the launcher icon, so unknown requests fall back to the default icon.</string>
+    <string name="app_icon_applied">App icon changed. It may take a moment to show in your launcher.</string>
+    <string name="app_icon_apply_failed">Could not change the app icon.</string>
+    <string name="app_icon_default">Default</string>
+    <string name="app_icon_crimson">Crimson</string>
+    <string name="app_icon_emerald">Emerald</string>
+    <string name="app_icon_amber">Amber</string>
+    <string name="app_icon_violet">Violet</string>
+    <string name="app_icon_mono">Mono</string>
+    <string name="app_icon_follow_theme">Follow theme</string>
     <string name="with_warning_suffix">\u0020with warning</string>
     <string name="warning_word">warning</string>
 </resources>

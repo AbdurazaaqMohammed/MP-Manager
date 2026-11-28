@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+
+        <!-- Debug-only lifecycle host for ThemePackPalette / ThemeRegistry
+             instrumented coverage. Declared in the debug source set (NOT the
+             androidTest manifest) because androidTest-manifest components
+             merge into the test APK's own package and cannot be resolved or
+             launched from the app process the instrumentation runs in.
+             exported=false; launched only by the in-process test. -->
+        <activity
+            android:name="io.github.abdurazaaqmohammed.ui.common.theme.ThemePackPaletteTestActivity"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

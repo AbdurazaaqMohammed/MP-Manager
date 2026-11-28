@@ -24,10 +24,14 @@ import java.util.Locale;
  * <pre>
  *   /theme     one row: contract (INTEGER =2), id, name (TEXT) and optional
  *              accent, dark, scrim (INTEGER), colors, strings, editor_syntax
- *              (JSON TEXT), wallpaper_scope ("files"|"all"|"none" TEXT) and
- *              wallpaper/preview (TEXT, exact content URIs)
+ *              (JSON TEXT), wallpaper_scope ("files"|"all"|"none" TEXT),
+ *              wallpaper/preview (TEXT, exact content URIs), icons (TEXT,
+ *              JSON allowlisted key -> exact same-authority /icons/<key> URI)
+ *              and launcher_icon (TEXT, short opaque selector ID)
  *   /wallpaper wallpaper PNG (asset)
  *   /preview   preview PNG (asset)
+ *   /icons/<key> allowlisted icon PNG (asset icons/<key>.png)
+ *   /launcher_icon launcher icon PNG (asset)
  * </pre>
  * Accent/scrim are ARGB ints (from the documented #AARRGGBB values). Colors
  * use tokens from the host allowlist (Material 3 names plus app tokens);
@@ -46,6 +50,8 @@ public class ThemeSampleProvider extends ContentProvider {
             Uri.parse("content://" + AUTHORITY + "/wallpaper");
     public static final Uri PREVIEW_URI =
             Uri.parse("content://" + AUTHORITY + "/preview");
+    public static final Uri LAUNCHER_ICON_URI =
+            Uri.parse("content://" + AUTHORITY + "/launcher_icon");
 
     /** Contract version served on the contract column. */
     public static final int CONTRACT_V1 = 1;
@@ -87,6 +93,8 @@ public class ThemeSampleProvider extends ContentProvider {
     private static final int MATCH_THEME = 1;
     private static final int MATCH_WALLPAPER = 2;
     private static final int MATCH_PREVIEW = 3;
+    private static final int MATCH_ICON = 4;
+    private static final int MATCH_LAUNCHER_ICON = 5;
 
     private static final UriMatcher MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -94,12 +102,15 @@ public class ThemeSampleProvider extends ContentProvider {
         MATCHER.addURI(AUTHORITY, "theme", MATCH_THEME);
         MATCHER.addURI(AUTHORITY, "wallpaper", MATCH_WALLPAPER);
         MATCHER.addURI(AUTHORITY, "preview", MATCH_PREVIEW);
+        MATCHER.addURI(AUTHORITY, "icons/*", MATCH_ICON);
+        MATCHER.addURI(AUTHORITY, "launcher_icon", MATCH_LAUNCHER_ICON);
     }
 
     private static final String[] COLUMNS = {
             "contract", "id", "name", "accent", "dark",
             "wallpaper", "scrim", "colors", "strings",
-            "editor_syntax", "wallpaper_scope", "preview"
+            "editor_syntax", "wallpaper_scope", "preview",
+            "icons", "launcher_icon"
     };
 
     @Override
@@ -149,10 +160,39 @@ public class ThemeSampleProvider extends ContentProvider {
                 return WALLPAPER_SCOPE;
             case "preview":
                 return PREVIEW_URI.toString();
+            case "icons":
+                return iconsJson();
+            case "launcher_icon":
+                return LAUNCHER_ICON_ID;
             default:
                 return null;
         }
     }
+
+    /**
+     * v2 icons column: allowlisted semantic keys, each mapped to the exact
+     * same-authority /icons/<key> endpoint the host enforces. Keys may carry
+     * a _light/_dark suffix; the host prefers the variant matching the
+     * resolved theme and falls back to the base key, then built-ins.
+     */
+    private static String iconsJson() {
+        try {
+            JSONObject icons = new JSONObject();
+            icons.put("folder", iconUri("folder"));
+            icons.put("folder_dark", iconUri("folder_dark"));
+            icons.put("apk", iconUri("apk"));
+            return icons.toString();
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    private static Uri iconUri(String key) {
+        return Uri.parse("content://" + AUTHORITY + "/icons/" + key);
+    }
+
+    /** Opaque launcher icon selector; artwork is served at /launcher_icon. */
+    public static final String LAUNCHER_ICON_ID = "nova.launcher.v1";
 
     private static String colorsJson() {
         try {
@@ -246,6 +286,8 @@ public class ThemeSampleProvider extends ContentProvider {
                 return "vnd.android.cursor.item/theme";
             case MATCH_WALLPAPER:
             case MATCH_PREVIEW:
+            case MATCH_ICON:
+            case MATCH_LAUNCHER_ICON:
                 return "image/png";
             default:
                 return null;
@@ -265,6 +307,19 @@ public class ThemeSampleProvider extends ContentProvider {
                 break;
             case MATCH_PREVIEW:
                 asset = "preview.png";
+                break;
+            case MATCH_ICON: {
+                // Serve assets/icons/<key>.png for the exact requested key.
+                String key = uri.getLastPathSegment();
+                if (key == null || !key.matches("[a-z_]+(_light|_dark)?")
+                        || key.contains("..")) {
+                    throw new FileNotFoundException("Unsupported icon key: " + uri);
+                }
+                asset = "icons/" + key + ".png";
+                break;
+            }
+            case MATCH_LAUNCHER_ICON:
+                asset = "launcher_icon.png";
                 break;
             default:
                 throw new FileNotFoundException("Unsupported URI: " + uri);

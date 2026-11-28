@@ -119,6 +119,7 @@ public final class ThemeRegistry {
     /** Application context captured on first use so the ThemePacks listener
      *  can rebuild the composite without a Context parameter. */
     private static volatile Context sAppContext;
+    private static volatile boolean sLauncherIconSynced;
 
     static {
         // Bridge ThemePacks transitions into epoch bumps + UI notifications.
@@ -168,7 +169,36 @@ public final class ThemeRegistry {
             sLastSeen = now;
             bumpEpoch();
         }
+        Context context = sAppContext;
+        if (context != null) syncLauncherIcon(context, now == null ? null : now.pack);
         notifyThemeChanged();
+    }
+
+    /**
+     * Syncs the launcher alias to the pack request. Always runs on the main
+     * thread: ThemePacks notifies from its background refresh executor, and
+     * {@code LauncherIcons.sync} mutates global PackageManager component
+     * state that user-driven settings changes also touch on main — posting
+     * keeps those writes serialized instead of racing.
+     */
+    private static void syncLauncherIcon(Context context, ThemePacks.Snapshot pack) {
+        try {
+            final Context app = context.getApplicationContext();
+            final String icon = pack == null ? null : pack.launcherIcon;
+            final Runnable sync = () -> {
+                try {
+                    io.github.abdurazaaqmohammed.ui.main.LauncherIcons.sync(app, icon);
+                    sLauncherIconSynced = true;
+                } catch (Exception ignored) {
+                }
+            };
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                sync.run();
+            } else {
+                MAIN_HANDLER.post(sync);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private static void onPackState() {
@@ -402,7 +432,10 @@ public final class ThemeRegistry {
     private static int presetArgb(String name) {
         for (String[] preset : ACCENT_PRESETS) {
             if (preset[0].equalsIgnoreCase(name)) {
-                return (int) Long.parseLong(preset[1].substring(2), 16);
+                // "#FFRRGGBB": skip only the '#', keep the FF alpha
+                // (substring(2) dropped the leading F and produced a
+                // transparent, color-shifted ARGB).
+                return (int) Long.parseLong(preset[1].substring(1), 16);
             }
         }
         return 0;
@@ -417,7 +450,7 @@ public final class ThemeRegistry {
         int bestIdx = 0;
         long bestDist = Long.MAX_VALUE;
         for (int i = 0; i < ACCENT_PRESETS.length; i++) {
-            int preset = (int) Long.parseLong(ACCENT_PRESETS[i][1].substring(2), 16);
+            int preset = (int) Long.parseLong(ACCENT_PRESETS[i][1].substring(1), 16);
             int r2 = (preset >> 16) & 0xFF;
             int g2 = (preset >> 8) & 0xFF;
             int b2 = preset & 0xFF;
@@ -480,13 +513,20 @@ public final class ThemeRegistry {
      *  and before super.onCreate() so inflation picks it up.
      *
      *  Paths by platform capability:
-     *  - API 31+ (non-Black): Material DynamicColors with content-based seed.
-     *  - API 30+ (and Black theme): runtime Material ColorRoles injected via
-     *    ThemePackPalette (ResourcesLoader), keeping pure-black surfaces intact.
-     *  - Pre-API 30 (and fallback): closest preset overlay from AccentOverlays. */
+     *  - API 30+: runtime Material ColorRoles injected via ThemePackPalette
+     *    (ResourcesLoader) — preferred on every supported device and the only
+     *    path that keeps pure-black surfaces intact.
+     *  - API 31+ fallback (non-Black, only when the loader cannot be
+     *    installed): Material DynamicColors with content-based seed. Seeded
+     *    DynamicColors must not be the primary path: Material 1.12 crashes
+     *    silently on it when resource names are long (the UTF-8 length of a
+     *    resource name hitting 128 bytes throws inside the library), while
+     *    the host ThemePackPalette loader has no such limit.
+     *  - Pre-API 30 (and final fallback): closest preset overlay from
+     *    AccentOverlays. */
     public static void applyAccent(Activity activity) {
         ThemePacks.Snapshot pack = ThemePacks.active(activity);
-        if (pack != null) {
+        if (pack != null && ThemePackPalette.contributes(pack.colors, pack.accent)) {
             try {
                 if (ThemePackPalette.apply(activity, pack.colors, pack.accent)) return;
             } catch (RuntimeException ignored) {
@@ -497,6 +537,11 @@ public final class ThemeRegistry {
             if (primary != null) applyClosestAccent(activity, primary);
             return;
         }
+        // No pack, or a pack that carries none of the slot colors (e.g. an
+        // editor-syntax-only pack): fall through so the user's accent still
+        // applies. Every branch below removes any stale pack-owned palette
+        // first (clear(), or apply()'s uninstall of the tracked loader).
+
         try {
             int argb = resolveUserAccent(activity);
             if (argb == 0) {
@@ -505,6 +550,15 @@ public final class ThemeRegistry {
             }
 
             boolean blackTheme = BuiltInThemes.BLACK_ID.equals(getCurrentId(activity));
+            // API 30+ prefers the runtime ColorRoles loader; the seeded
+            // DynamicColors branch stays only as a loader-install fallback
+            // (and is still skipped for the Black theme so pure-black
+            // surfaces keep their fallback overlay path).
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    && applyRuntimeAccentRoles(activity, argb)) {
+                return;
+            }
+
             if (!blackTheme && DynamicColors.isDynamicColorAvailable()) {
                 ThemePackPalette.clear(activity);
                 DynamicColors.applyToActivityIfAvailable(
@@ -512,11 +566,6 @@ public final class ThemeRegistry {
                         new DynamicColorsOptions.Builder()
                                 .setContentBasedSource(argb)
                                 .build());
-                return;
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                    && applyRuntimeAccentRoles(activity, argb)) {
                 return;
             }
 
@@ -1052,6 +1101,9 @@ public final class ThemeRegistry {
                 sAppContext = activity.getApplicationContext();
             } catch (Exception ignored) {
             }
+        }
+        if (!sLauncherIconSynced && sAppContext != null) {
+            syncLauncherIcon(sAppContext, ThemePacks.active(sAppContext));
         }
         ensureBuiltIns();
         ThemePlugin plugin = resolvePlugin(activity);

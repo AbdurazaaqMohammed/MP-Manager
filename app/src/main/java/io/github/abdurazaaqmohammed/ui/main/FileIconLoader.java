@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -123,6 +124,12 @@ public class FileIconLoader {
                 cache.put(key, value);
             }
         }
+        /** Drops every entry; used when the theme state changes. */
+        void clear() {
+            synchronized (cache) {
+                cache.evictAll();
+            }
+        }
     }
     private static final Handler badgeHandler = new Handler(Looper.getMainLooper());
 
@@ -136,6 +143,21 @@ public class FileIconLoader {
     private static boolean cachedIconDark;
     private static boolean cachedIcon3d;
     private static int cachedIconBucket = -1;
+    /**
+     * Bumped whenever {@link #ensureCachedIcons} rebuilds the shared theme
+     * icons (theme/epoch/dark/3D/density change). Async tasks capture it at
+     * schedule time and skip cache puts and UI applies resolved against a
+     * superseded theme, so callbacks cannot re-poison the invalidated caches
+     * with stale artwork.
+     */
+    private static volatile int iconThemeVersion;
+    /**
+     * Types whose row art a theme pack explicitly configures ("apk",
+     * "image", "video"): for those, {@link #resolveNonFolderIcon} skips the
+     * real content icon (APK app icon, media thumbnail) so the pack art
+     * wins. Empty when no pack overrides these keys.
+     */
+    private static volatile Set<String> packArtKeys = Collections.emptySet();
 
     private final MainActivity context;
     private final boolean isInZip;
@@ -375,13 +397,16 @@ public class FileIconLoader {
             return;
         }
         fileIconView.setTag(key);
+        int themeAtStart = iconThemeVersion;
         iconLoaderService.execute(() -> {
             if (!key.equals(fileIconView.getTag())) return;
             Drawable result = loadZipEntryDrawable(zip, fullPath);
             if (result == null) result = cachedImageIcon;
             final Drawable finalResult = result;
+            if (iconThemeVersion != themeAtStart) return;
             zipThumbCache.put(key, finalResult);
             AppExecutors.runOnUiIfAlive(context, () -> {
+                if (iconThemeVersion != themeAtStart) return;
                 if (key.equals(fileIconView.getTag())) fileIconView.setImageDrawable(finalResult);
             });
         });
@@ -1562,14 +1587,21 @@ public class FileIconLoader {
                 resolved = cachedArchiveIcon;
             } else {
                 resolved = cachedApkIcon;
-                if (loadContent) loadApkIconAsync(path, fileIconView);
+                // Pack art for the APK type owns the row: no real APK icon load.
+                if (loadContent && !packArtKeys.contains(FileIconSpec.APK.iconKey())) {
+                    loadApkIconAsync(path, fileIconView);
+                }
             }
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
             resolved = cachedImageIcon;
-            if (loadContent) loadThumbnailAsync(path, fileIconView, false);
+            if (loadContent && !packArtKeys.contains(FileIconSpec.IMAGE.iconKey())) {
+                loadThumbnailAsync(path, fileIconView, false);
+            }
         } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             resolved = cachedVideoIcon;
-            if (loadContent) loadThumbnailAsync(path, fileIconView, true);
+            if (loadContent && !packArtKeys.contains(FileIconSpec.VIDEO.iconKey())) {
+                loadThumbnailAsync(path, fileIconView, true);
+            }
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) {
             resolved = cachedMusicIcon;
         } else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) {
@@ -1626,16 +1658,20 @@ public class FileIconLoader {
 
     private void loadMagicOrElfIconAsync(String path, ImageView fileIconView) {
         fileIconView.setTag(path);
+        int themeAtStart = iconThemeVersion;
         iconLoaderService.execute(() -> {
+            if (!path.equals(fileIconView.getTag())) return;
             try {
                 Drawable magicIcon = probeMagicBytes(path);
-                if (magicIcon != null) {
-                    iconMemo.put(path, magicIcon);
-                    iconCache.put(path, magicIcon);
-                    AppExecutors.runOnUiIfAlive(context, () -> {
-                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(magicIcon);
-                    });
-                }
+                // Probed result is theme art; a mid-load theme change must not
+                // re-poison the invalidated cache or the row.
+                if (magicIcon == null || iconThemeVersion != themeAtStart) return;
+                iconMemo.put(path, magicIcon);
+                iconCache.put(path, magicIcon);
+                AppExecutors.runOnUiIfAlive(context, () -> {
+                    if (iconThemeVersion != themeAtStart) return;
+                    if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(magicIcon);
+                });
             } catch (Exception ignored) {}
         });
     }
@@ -1722,13 +1758,15 @@ public class FileIconLoader {
 
     private void loadApkIconAsync(String path, ImageView fileIconView) {
         fileIconView.setTag(path);
+        int themeAtStart = iconThemeVersion;
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             try {
                 Drawable icon = ApkIconHelper.getApkIcon(context, path);
-                if (icon != null) {
+                if (icon != null && iconThemeVersion == themeAtStart) {
                     iconCache.put(path, icon);
                     AppExecutors.runOnUiIfAlive(context, () -> {
+                        if (iconThemeVersion != themeAtStart) return;
                         if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
                     });
                 }
@@ -1738,17 +1776,15 @@ public class FileIconLoader {
 
     private void loadThumbnailAsync(String path, ImageView fileIconView, boolean isVideo) {
         fileIconView.setTag(path);
+        int themeAtStart = iconThemeVersion;
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             Bitmap bitmap = isVideo ? loadVideoThumbnail(path) : loadImageThumbnail(path);
             if (bitmap != null) {
                 if (!path.equals(fileIconView.getTag())) return;
-                Drawable icon = new BitmapDrawable(context.getResources(), bitmap);
-                iconCache.put(path, icon);
-                AppExecutors.runOnUiIfAlive(context, () -> {
-                    if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
-                });
-            } else if (!isVideo) {
+                applyLoadedThumbnail(path, fileIconView,
+                        new BitmapDrawable(context.getResources(), bitmap), themeAtStart);
+            } else if (!isVideo && iconThemeVersion == themeAtStart) {
                 // If an image (like a WhatsApp animated sticker .webp) failed decode,
                 // check if it is actually a zip/lottie container or special package
                 try {
@@ -1756,19 +1792,24 @@ public class FileIconLoader {
                     File f = new File(resolved);
                     if (StickerUtil.isLottieSticker(f)) {
                         Bitmap stickerBm = StickerUtil.renderThumbnailBitmap(f, 160);
-                        Drawable icon = stickerBm != null ? new BitmapDrawable(context.getResources(), stickerBm) : cachedStickerIcon;
-                        iconCache.put(path, icon);
-                        AppExecutors.runOnUiIfAlive(context, () -> {
-                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
-                        });
+                        applyLoadedThumbnail(path, fileIconView, stickerBm != null
+                                ? new BitmapDrawable(context.getResources(), stickerBm)
+                                : cachedStickerIcon, themeAtStart);
                     } else if (isZipFileFormat(path)) {
-                        iconCache.put(path, cachedArchiveIcon);
-                        AppExecutors.runOnUiIfAlive(context, () -> {
-                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(cachedArchiveIcon);
-                        });
+                        applyLoadedThumbnail(path, fileIconView, cachedArchiveIcon, themeAtStart);
                     }
                 } catch (Throwable ignored) {}
             }
+        });
+    }
+
+    /** Caches and applies a loaded row icon unless the theme moved on mid-load. */
+    private void applyLoadedThumbnail(String path, ImageView fileIconView, Drawable icon, int themeAtStart) {
+        if (icon == null || iconThemeVersion != themeAtStart) return;
+        iconCache.put(path, icon);
+        AppExecutors.runOnUiIfAlive(context, () -> {
+            if (iconThemeVersion != themeAtStart) return;
+            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
         });
     }
 
@@ -1804,6 +1845,11 @@ public class FileIconLoader {
         cachedIconDark = dark;
         cachedIcon3d = use3d;
         cachedIconBucket = bucket;
+        // iconCache (magic probe, sticker/zip tiles) and zipThumbCache (image
+        // fallback tile) can hold theme art; drop it so a theme switch never
+        // serves old epoch/dark artwork. Content thumbnails re-derive on demand.
+        iconCache.clear();
+        zipThumbCache.clear();
         cachedUpFolderIcon = FileIconSpec.parentDrawable(context);
         cachedFolderIcon = FileIconSpec.FOLDER.drawable(context);
         cachedApkIcon = FileIconSpec.APK.drawable(context);
@@ -1834,6 +1880,17 @@ public class FileIconLoader {
         cachedBackupIcon = FileIconSpec.BACKUP.drawable(context);
         cachedCertIcon = FileIconSpec.CERTIFICATE.drawable(context);
         cachedFileIcon = FileIconSpec.forPath("", false, theme).drawable(context);
+        // Content-loaded kinds the pack explicitly configures: their pack art
+        // wins and resolveNonFolderIcon skips the content load. Pack changes
+        // bump the theme epoch, so this stays current.
+        Set<String> art = new HashSet<>(3);
+        for (FileIconSpec spec : new FileIconSpec[]{FileIconSpec.APK, FileIconSpec.IMAGE, FileIconSpec.VIDEO}) {
+            if (FileIconSpec.packIconFile(context, spec.iconKey()) != null) art.add(spec.iconKey());
+        }
+        packArtKeys = Collections.unmodifiableSet(art);
+        // Last, so async tasks only see the new version once the rebuilt icon
+        // set is fully in place.
+        iconThemeVersion++;
     }
 
     private static String resolveAccessiblePath(String path) {

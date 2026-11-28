@@ -3,22 +3,35 @@ package io.github.abdurazaaqmohammed.ui.main;
 import io.github.abdurazaaqmohammed.feature.apk.ApkIconHelper;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
+import android.util.LruCache;
 
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.themes.ThemePacks;
 import io.github.abdurazaaqmohammed.ui.common.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.util.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import java.io.File;
 import java.util.List;
 import java.util.Locale;
 
-/** Shared file-type artwork for pane rows and configurable bookmark shortcuts. */
+/**
+ * Shared file-type artwork for pane rows and configurable bookmark shortcuts.
+ *
+ * <p>An active theme pack may replace any icon with a bounded PNG served from
+ * its own process (or a host-side local snapshot); a pack icon wins over the
+ * built-in rendering, and with no pack override the usual behavior applies
+ * (3D artwork when the Appearance toggle is on, flat Material otherwise).
+ */
 public record FileIconSpec(int glyph, int background, int foreground, int label) {
     public static final FileIconSpec FOLDER = new FileIconSpec(R.drawable.ic_folder_mt, 0xFFD4887C, Color.WHITE, R.string.folder);
     public static final FileIconSpec APK = spec(R.drawable.apk_document_24px, 0xFF2E7D32, R.string.shortcut_icon_apk);
@@ -172,11 +185,117 @@ public record FileIconSpec(int glyph, int background, int foreground, int label)
                 || ".sig".equals(ext) || ".idsig".equals(ext) || ".pub".equals(ext) || ".p8".equals(ext) || ".pk8".equals(ext);
     }
 
+    /** Semantic key used by theme packs to override this icon. Every
+     *  {@link #all()} entry resolves to a distinct
+     *  {@link ThemePackContracts#ICON_KINDS} key; only FILE intentionally
+     *  doubles as the generic fallback. */
+    public String iconKey() {
+        if (this == FOLDER) return "folder";
+        if (this == APK) return "apk";
+        if (this == IMAGE) return "image";
+        if (this == VIDEO) return "video";
+        if (this == AUDIO) return "audio";
+        if (this == ARSC) return "arsc";
+        if (this == DEX) return "dex";
+        if (this == ARCHIVE) return "archive";
+        if (this == STICKER) return "sticker";
+        if (this == PDF) return "pdf";
+        if (this == TEXT) return "text";
+        if (this == JAVA) return "java";
+        if (this == KOTLIN) return "kotlin";
+        if (this == XML) return "xml";
+        if (this == JSON) return "json";
+        if (this == PYTHON) return "python";
+        if (this == SMALI) return "smali";
+        if (this == JS) return "js";
+        if (this == ELF) return "elf";
+        if (this == DISK) return "disk";
+        if (this == DATABASE) return "database";
+        if (this == FONT) return "font";
+        if (this == BINARY) return "binary";
+        if (this == PROTO) return "proto";
+        if (this == DOCUMENT) return "document";
+        if (this == SHEET) return "sheet";
+        if (this == SLIDE) return "slide";
+        if (this == SCRIPT) return "script";
+        if (this == BACKUP) return "backup";
+        if (this == CERTIFICATE) return "certificate";
+        return "file";
+    }
+
+    /**
+     * Resolves an optional pack icon for {@code key}, preferring the
+     * current dark/light variant and falling back to the base key. Returns
+     * null when no active pack supplies it (or the file is unusable).
+     */
+    public static File packIconFile(Context context, String key) {
+        if (context == null || key == null) return null;
+        ThemePacks.Snapshot pack = ThemePacks.active(context);
+        if (pack == null || pack.iconFiles == null || pack.iconFiles.isEmpty()) return null;
+        String variant = ThemeRegistry.isDarkTheme(context) ? key + "_dark" : key + "_light";
+        File file = pack.iconFiles.get(variant);
+        if (file == null) file = pack.iconFiles.get(key);
+        return file != null && file.isFile() ? file : null;
+    }
+
+    /** Cached immutable pack bitmaps keyed by absolute path + mtime. Never recycled. */
+    private static final LruCache<String, Bitmap> PACK_BITMAPS = new LruCache<>(24);
+
+    /** Decodes (and caches) an optional pack icon as a shared, immutable Bitmap, or null.
+     *  Public: bookmark-shortcut rendering lives in {@code feature.files}. */
+    public static Bitmap packBitmap(Context context, String key) {
+        File file = packIconFile(context, key);
+        if (file == null) return null;
+        String cacheKey = file.getAbsolutePath() + '@' + file.lastModified();
+        Bitmap cached = PACK_BITMAPS.get(cacheKey);
+        if (cached != null) return cached;
+        try {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+            Bitmap bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+            if (bitmap == null) return null;
+            PACK_BITMAPS.put(cacheKey, bitmap);
+            return bitmap;
+        } catch (Exception | OutOfMemoryError ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Returns a fresh drawable from an active pack for {@code key}, or
+     * {@code fallback} when no pack supplies it. Consumers keep their exact
+     * built-in appearance by default while allowing an optional override.
+     * Each call creates a new drawable so shared bitmap state is never
+     * mutated.
+     */
+    public static Drawable packOverlay(Context context, String key, Drawable fallback) {
+        Bitmap bitmap = packBitmap(context, key);
+        return bitmap != null ? new BitmapDrawable(context.getResources(), bitmap) : fallback;
+    }
+
+    /** Convenience overlay for a resource id fallback, resolved with the current theme. */
+    public static Drawable packOverlay(Context context, String key, int fallbackRes) {
+        Drawable fallback = ResourcesCompat.getDrawable(context.getResources(), fallbackRes, context.getTheme());
+        return packOverlay(context, key, fallback);
+    }
+
+    /** Drawable for this spec: a pack PNG when the active pack overrides this
+     *  key, otherwise the built-in 3D/flat rendering (preference-driven). */
     public Drawable drawable(Context context) {
+        Bitmap pack = packBitmap(context, iconKey());
+        if (pack != null) return new BitmapDrawable(context.getResources(), pack);
         return FileIconArt.drawable(context, this);
     }
 
+    /**
+     * Parent ("..") row icon: a pack may override with the "parent_folder"
+     * key; otherwise the built-in parent folder rendering applies.
+     */
     public static Drawable parentDrawable(Context context) {
+        Bitmap pack = packBitmap(context, "parent_folder");
+        if (pack != null) return new BitmapDrawable(context.getResources(), pack);
         return FileIconArt.parentFolderDrawable(context);
     }
 

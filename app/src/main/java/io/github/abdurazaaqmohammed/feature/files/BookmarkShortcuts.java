@@ -83,6 +83,22 @@ public final class BookmarkShortcuts {
             return bitmap;
         }
         if (foreground == spec.foreground()) {
+            // Theme packs may override this icon with a bounded PNG; draw it
+            // centered and leave the built-in 3D/flat rendering untouched
+            // otherwise (FileIconArt behavior unchanged).
+            Bitmap pack = FileIconSpec.packBitmap(context, spec.iconKey());
+            if (pack != null) {
+                if (withBackground) {
+                    paint.setColor(background);
+                    canvas.drawRoundRect(new RectF(0, 0, size, size), size * .2f, size * .2f, paint);
+                }
+                int inset = withBackground ? Math.round(size * .2f) : 0;
+                int side = Math.min(pack.getWidth(), pack.getHeight());
+                Rect source = new Rect((pack.getWidth() - side) / 2, (pack.getHeight() - side) / 2,
+                        (pack.getWidth() + side) / 2, (pack.getHeight() + side) / 2);
+                canvas.drawBitmap(pack, source, new Rect(inset, inset, size - inset, size - inset), paint);
+                return bitmap;
+            }
             FileIconArt.drawToCanvas(context, canvas, spec, false, size, withBackground, background);
             return bitmap;
         }

@@ -23,10 +23,18 @@ package io.github.abdurazaaqmohammed.plugins.themes;
  * {@code content://<same authority>/wallpaper}. No locale query hint, no
  * other endpoints, no cross-authority URIs.
  *
+ * <p>The optional {@link #COLUMN_ICONS} JSON maps allowlisted {@link #ICON_KINDS}
+ * (plus optional {@code _light}/{@code _dark} variants) to exact
+ * {@code content://<same authority>/icons/<key>} PNG endpoints. A pack without
+ * that column leaves all host icon defaults untouched. The optional
+ * {@link #COLUMN_LAUNCHER_ICON} TEXT column selects a bundled host icon:
+ * {@code default}, {@code crimson}, {@code emerald}, {@code amber},
+ * {@code violet}, or {@code mono}. Unknown values use the default icon.
+ *
  * <p>Contract versions: v1 rows are fully accepted (they simply have no
- * {@link #COLUMN_EDITOR_SYNTAX} / {@link #COLUMN_WALLPAPER_SCOPE} columns);
- * v2 rows add those two optional columns. Unknown columns are ignored by
- * the host parser so future revisions stay wire-compatible.
+ * {@link #COLUMN_EDITOR_SYNTAX} / {@link #COLUMN_WALLPAPER_SCOPE} /
+ * {@link #COLUMN_ICONS} columns); v2 rows add those optional columns. Unknown
+ * columns are ignored by the host parser so future revisions stay wire-compatible.
  */
 public final class ThemePackContracts {
 
@@ -48,6 +56,13 @@ public final class ThemePackContracts {
     public static final String PATH_THEME = "theme";
     public static final String PATH_WALLPAPER = "wallpaper";
     public static final String PATH_PREVIEW = "preview";
+    /** Parent path of every icon endpoint; the full URI is
+     *  {@code content://<authority>/icons/<icon key>}. */
+    public static final String PATH_ICONS = "icons";
+    /** Reserved artwork endpoint for future hosts. This host selects bundled
+     *  launcher icons using {@link #COLUMN_LAUNCHER_ICON} and does not read
+     *  provider artwork from this endpoint. */
+    public static final String PATH_LAUNCHER_ICON = "launcher_icon";
 
     // ---------- /theme row columns ----------
 
@@ -65,6 +80,16 @@ public final class ThemePackContracts {
     public static final String COLUMN_EDITOR_SYNTAX = "editor_syntax";
     /** v2: optional TEXT wallpaper application scope; see {@link #WALLPAPER_SCOPE_FILES}. */
     public static final String COLUMN_WALLPAPER_SCOPE = "wallpaper_scope";
+    /** v2: optional TEXT JSON map of allowlisted icon key to an exact
+     *  {@code content://<same authority>/icons/<key>} PNG endpoint. */
+    public static final String COLUMN_ICONS = "icons";
+    /** v2: optional TEXT launcher icon selector, a short opaque ID the host
+     *  stores and maps to its bundled launcher variants (hosts without
+     *  bundled variants fall back to the default icon). The actual artwork
+     *  endpoint {@link #PATH_LAUNCHER_ICON} is reserved for hosts that can
+     *  consume provider artwork. Bounded by
+     *  {@link #MAX_LAUNCHER_ICON_ID_CHARS}. */
+    public static final String COLUMN_LAUNCHER_ICON = "launcher_icon";
 
     /** Wire version reported in the contract column. */
     public static final int CONTRACT_VERSION_V1 = 1;
@@ -105,6 +130,19 @@ public final class ThemePackContracts {
     public static final long MAX_PREVIEW_BYTES = 256 * 1024;
     public static final int MAX_PREVIEW_DIMENSION_PX = 2048;
     public static final long MAX_PREVIEW_PIXELS = 2048L * 2048L;
+    /** icons JSON payload cap (key -> endpoint URI map). */
+    public static final int MAX_ICONS_JSON_CHARS = 32 * 1024;
+    /** Per-icon PNG byte cap. */
+    public static final long MAX_ICON_BYTES = 256L * 1024;
+    /** Per-icon PNG dimension cap (each side). */
+    public static final int MAX_ICON_DIMENSION_PX = 256;
+    /** Per-icon PNG pixel cap. */
+    public static final long MAX_ICON_PIXELS = 256L * 256L;
+    /** Total icon bytes allowed for one imported snapshot. */
+    public static final long MAX_ICONS_TOTAL_BYTES = 8L * 1024 * 1024;
+    /** launcher_icon column cap: a short opaque selector ID, never image
+     *  data. Artwork resolution goes through {@link #PATH_LAUNCHER_ICON}. */
+    public static final int MAX_LAUNCHER_ICON_ID_CHARS = 64;
     public static final int MAX_TEXT_CHARS = 100;
     public static final int MAX_LOCALES_PER_LABEL = 32;
 
@@ -228,4 +266,37 @@ public final class ThemePackContracts {
             "variable.language=variable",
             "meta.definition.variable=variable",
     };
+
+    /**
+     * Base semantic icon kinds accepted in the {@link #COLUMN_ICONS} JSON.
+     * Providers may ship any subset; a missing key always falls back to the
+     * host's built-in icon. Each base kind may optionally be suffixed with
+     * {@code _light} or {@code _dark} for adaptive variants; the host prefers
+     * the variant matching the resolved theme and falls back to the base key.
+     * Keys are case-sensitive and must match exactly.
+     */
+    public static final String[] ICON_KINDS = {
+            "folder", "parent_folder", "apk", "image", "video", "audio",
+            "arsc", "dex", "archive", "sticker", "pdf", "text",
+            "java", "kotlin", "xml", "json", "python", "smali", "js",
+            "elf", "disk", "database", "font", "binary", "proto", "document",
+            "sheet", "slide", "script", "backup", "certificate", "file",
+    };
+
+    /** Suffix for a light-theme variant of a base icon key. */
+    public static final String ICON_VARIANT_LIGHT = "_light";
+    /** Suffix for a dark-theme variant of a base icon key. */
+    public static final String ICON_VARIANT_DARK = "_dark";
+
+    /** True when {@code raw} is a base {@link #ICON_KINDS} key or one of its
+     *  {@code _light}/{@code _dark} variants (exact spelling). */
+    public static boolean isIconKey(String raw) {
+        if (raw == null || raw.isEmpty()) return false;
+        for (String base : ICON_KINDS) {
+            if (base.equals(raw)) return true;
+            if ((base + ICON_VARIANT_LIGHT).equals(raw)
+                    || (base + ICON_VARIANT_DARK).equals(raw)) return true;
+        }
+        return false;
+    }
 }

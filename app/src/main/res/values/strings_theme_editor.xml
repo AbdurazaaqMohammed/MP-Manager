@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings owned by the in-app theme editor (ThemeEditorDialog +
+     LocalThemes). The My themes entry lives here so the settings page
+     layout (@string/my_themes) compiles without touching shared strings. -->
+<resources>
+    <string name="my_themes">My themes</string>
+
+    <!-- Manager -->
+    <string name="theme_editor_new">New theme</string>
+    <string name="theme_editor_empty">No saved themes yet. Create one from the current theme or a preset.</string>
+    <string name="theme_editor_from_current">From current theme</string>
+    <string name="theme_editor_preset_light">Light preset</string>
+    <string name="theme_editor_preset_dark">Dark preset</string>
+    <string name="theme_editor_import">Import from file\u2026</string>
+    <string name="theme_editor_imported">Theme imported.</string>
+    <string name="theme_editor_import_rejected">This file is not a valid theme (wrong format or over the size limits).</string>
+    <string name="theme_editor_export">Export</string>
+    <string name="theme_editor_exported">Theme exported.</string>
+    <string name="theme_editor_duplicate">Duplicate</string>
+    <string name="theme_editor_copy_suffix">copy</string>
+    <string name="theme_editor_apply">Apply</string>
+    <string name="theme_editor_applied">Theme applied.</string>
+    <string name="theme_editor_edit">Edit</string>
+    <string name="theme_editor_delete">Delete</string>
+    <string name="theme_editor_deleted">Theme deleted.</string>
+    <string name="theme_editor_delete_confirm">Delete %1$s? This cannot be undone.</string>
+    <string name="theme_editor_row_description">%1$s, %2$s. Tap for options.</string>
+    <string name="theme_editor_subtitle_applied">Applied</string>
+    <string name="theme_editor_subtitle_light">Light</string>
+    <string name="theme_editor_subtitle_dark">Dark</string>
+
+    <!-- Editor -->
+    <string name="theme_editor_title">Edit theme</string>
+    <string name="theme_editor_preview_description">Theme preview showing a file list with the selected colors, wallpaper and icons. Updates as you edit.</string>
+    <string name="theme_editor_name_hint">Theme name</string>
+    <string name="theme_editor_name_required">Enter a name first.</string>
+    <string name="theme_editor_default_name">My theme</string>
+    <string name="theme_editor_light">Light</string>
+    <string name="theme_editor_dark">Dark</string>
+    <string name="theme_editor_save">Save</string>
+    <string name="theme_editor_saved">Theme saved.</string>
+    <string name="theme_editor_error">Something went wrong. Your theme was not changed.</string>
+    <string name="theme_editor_apply_note">Apply saves the theme and switches to it immediately. The preview above is editable before you apply.</string>
+
+    <string name="theme_editor_section_colors">Colors</string>
+    <string name="theme_editor_colors_hint">Tap a color chip to edit it. Unset colors use the app defaults.</string>
+    <string name="theme_editor_default">Default</string>
+    <string name="theme_editor_reset">Reset</string>
+    <string name="theme_editor_color_description">%1$s, currently %2$s. Double-tap to edit.</string>
+    <string name="theme_editor_color_nav_bar">Navigation bar</string>
+    <string name="theme_editor_color_status_bar">Status bar</string>
+    <string name="theme_editor_color_list_highlight">List highlight</string>
+    <string name="theme_editor_color_folder_bg">Folder icon tint</string>
+    <string name="theme_editor_color_file_bg">File icon tint</string>
+    <string name="theme_editor_color_scrim">Wallpaper scrim</string>
+    <string name="theme_editor_color_editor_slot">Editor: %1$s</string>
+
+    <string name="theme_editor_section_images">Images</string>
+    <string name="theme_editor_wallpaper">Wallpaper</string>
+    <string name="theme_editor_wallpaper_pick">Pick image</string>
+    <string name="theme_editor_wallpaper_scope">Wallpaper applies to</string>
+    <string name="theme_editor_scope_files">File lists only</string>
+    <string name="theme_editor_scope_all">All screens</string>
+    <string name="theme_editor_scope_none">Nowhere (off)</string>
+    <!-- File type icons: one chooser/editor row per supported contract kind.
+         Row labels reuse the shared localized file-type names (folder, file,
+         shortcut_icon_*); only the parent-folder row needs its own string. -->
+    <string name="theme_editor_file_type_icons">File type icons</string>
+    <string name="theme_editor_icons_summary">%1$d of %2$d file types set</string>
+    <string name="theme_editor_icons_summary_variants">%1$d of %2$d file types set (+%3$d light/dark)</string>
+    <string name="theme_editor_parent_folder">Parent folder</string>
+    <string name="theme_editor_icon_variant_base">Base</string>
+    <string name="theme_editor_icon_variant_light">Light</string>
+    <string name="theme_editor_icon_variant_dark">Dark</string>
+    <string name="theme_editor_icon_variants_hint">The base icon applies everywhere. Optional light and dark variants are used instead when that mode is active; clearing a variant falls back to the base icon.</string>
+    <string name="theme_editor_icon_row_description">%1$s icon, %2$s. Use the buttons to pick or clear.</string>
+    <string name="theme_editor_done">Done</string>
+    <string name="theme_editor_icon_pick">Pick icon</string>
+    <string name="theme_editor_clear">Clear</string>
+    <string name="theme_editor_image_set">Set</string>
+    <string name="theme_editor_image_none">Not set</string>
+    <string name="theme_editor_image_rejected">This image is too large or not a PNG/JPEG file.</string>
+
+    <string name="theme_editor_section_launcher">Launcher icon</string>
+    <string name="theme_editor_launcher">Launcher icon</string>
+    <string name="theme_editor_choose">Choose</string>
+    <string name="theme_editor_launcher_none">None (do not change)</string>
+</resources>

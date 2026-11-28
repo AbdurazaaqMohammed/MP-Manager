@@ -2608,6 +2608,19 @@
 <string name="image_browse_files">استعراض وتصفح</string>
 <string name="use_3d_icons_title">أيقونات ثلاثية الأبعاد (3D)</string>
 <string name="use_3d_icons_summary">استخدام أيقونات ثلاثية الأبعاد للملفات والمجلدات في جميع النوافذ</string>
+<string name="app_icon_title">أيقونة التطبيق</string>
+<string name="app_icon_summary">اختر أيقونة المشغّل</string>
+<string name="app_icon_note">عادةً يُحدِّث المشغّل الأيقونة خلال دقيقة، وبعض المشغّلات لا تطبّقها إلا بعد إعادة تشغيل التطبيق أو الجهاز.</string>
+<string name="app_icon_theme_note">يمكن لسمات الإضافات طلب واحدة من هذه الأيقونات المدمجة فقط؛ لا يسمح أندرويد باستخدام صور عشوائية من الإضافات كأيقونة التطبيق، لذا تعود الطلبات غير المعروفة إلى الأيقونة الافتراضية.</string>
+<string name="app_icon_applied">تم تغيير أيقونة التطبيق، وقد يستغرق ظهورها في المشغّل لحظات.</string>
+<string name="app_icon_apply_failed">تعذّر تغيير أيقونة التطبيق.</string>
+<string name="app_icon_default">الافتراضية</string>
+<string name="app_icon_crimson">قرمزية</string>
+<string name="app_icon_emerald">زمردية</string>
+<string name="app_icon_amber">كهرمانية</string>
+<string name="app_icon_violet">بنفسجية</string>
+<string name="app_icon_mono">أحادية</string>
+<string name="app_icon_follow_theme">اتباع السمة</string>
 <string name="with_warning_suffix">\u0020مع تحذير</string>
 <string name="warning_word">تحذير</string>
 </resources>

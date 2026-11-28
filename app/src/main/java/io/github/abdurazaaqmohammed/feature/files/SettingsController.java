@@ -248,6 +248,19 @@ public class SettingsController {
         ThemePacks.Snapshot activePack = ThemePacks.active(activity);
         updateInstalledThemeButton(installedThemes, activePack);
         installedThemes.setOnClickListener(v -> showInstalledThemes(installedThemes, themeButtons));
+        View myThemes = settingsDialog.findViewById(R.id.myThemesButton);
+        if (myThemes != null) myThemes.setOnClickListener(v ->
+                io.github.abdurazaaqmohammed.ui.common.theme.ThemeEditorDialog.show(
+                        activity, externalSettingLauncher, () -> {
+                            ThemePacks.Snapshot selectedPack = ThemePacks.active(activity);
+                            themeButtons.setSelectionRequired(selectedPack == null);
+                            if (selectedPack != null) themeButtons.clearChecked();
+                            updateInstalledThemeButton(installedThemes, selectedPack);
+                            refreshTheme();
+                        }));
+        View appIcon = settingsDialog.findViewById(R.id.appIconButton);
+        if (appIcon != null) appIcon.setOnClickListener(v ->
+                io.github.abdurazaaqmohammed.ui.main.LauncherIconDialog.show(activity));
         themeButtons.setSelectionRequired(activePack == null);
         if (activePack != null) {
             themeButtons.clearChecked();

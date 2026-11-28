@@ -361,6 +361,120 @@ public class ThemePackParserTest {
         }
     }
 
+    // ---------- icons column (v2) ----------
+
+    @Test
+    public void icons_acceptsBaseAndAdaptiveKeys() {
+        String json = "{\"folder\":\"content://auth.prov/icons/folder\","
+                + "\"folder_dark\":\"content://auth.prov/icons/folder_dark\","
+                + "\"apk_light\":\"content://auth.prov/icons/apk_light\","
+                + "\"java\":\"content://auth.prov/icons/java\","
+                + "\"java_dark\":\"content://auth.prov/icons/java_dark\","
+                + "\"kotlin_light\":\"content://auth.prov/icons/kotlin_light\"}";
+        Map<String, String> icons = ThemePackParser.parseIcons(json);
+        assertEquals(6, icons.size());
+        assertEquals("content://auth.prov/icons/folder_dark", icons.get("folder_dark"));
+        assertEquals("content://auth.prov/icons/java_dark", icons.get("java_dark"));
+        assertTrue(ThemePackContracts.isIconKey("parent_folder"));
+        assertTrue(ThemePackContracts.isIconKey("file_light"));
+        // Per-language code kinds are allowlisted with their variants.
+        assertTrue(ThemePackContracts.isIconKey("java"));
+        assertTrue(ThemePackContracts.isIconKey("java_light"));
+        assertTrue(ThemePackContracts.isIconKey("kotlin"));
+        assertTrue(ThemePackContracts.isIconKey("kotlin_dark"));
+        assertTrue(ThemePackContracts.isIconKey("xml_light"));
+        assertTrue(ThemePackContracts.isIconKey("json"));
+        assertTrue(ThemePackContracts.isIconKey("python_dark"));
+        assertTrue(ThemePackContracts.isIconKey("smali"));
+        assertTrue(ThemePackContracts.isIconKey("js_light"));
+        assertFalse(ThemePackContracts.isIconKey("folder_extra"));
+        assertFalse(ThemePackContracts.isIconKey("FOLDER"));
+        assertFalse(ThemePackContracts.isIconKey("java_extra"));
+        assertEquals(32, ThemePackContracts.ICON_KINDS.length);
+    }
+
+    @Test
+    public void icons_unknownKeysIgnored_forForwardCompatibility() {
+        Map<String, String> icons = ThemePackParser.parseIcons(
+                "{\"future_art\":\"content://auth.prov/icons/future_art\","
+                + "\"folder\":\"content://auth.prov/icons/folder\"}");
+        assertEquals(1, icons.size());
+        assertEquals("content://auth.prov/icons/folder", icons.get("folder"));
+    }
+
+    @Test
+    public void icons_recognizedKeyWithBadValue_failsImport() {
+        String[] bad = {
+                "{\"folder\":123}",
+                "{\"folder\":true}",
+                "{\"folder\":null}",
+                "{\"folder\":{}}",
+                "{\"folder\":\"file:///icons/folder\"}",
+                "{\"folder\":\"content://auth.prov/icons/folder?x=1\"}",
+                "{\"folder\":\"content://auth.prov/icons/folder#frag\"}",
+                "{\"folder\":\"content://\"}",
+        };
+        for (String json : bad) {
+            try {
+                ThemePackParser.parseIcons(json);
+                fail("must reject: " + json);
+            } catch (ThemePackParser.ParseException expected) {
+            }
+        }
+        assertTrue(ThemePackParser.parseIcons(null).isEmpty());
+    }
+
+    @Test
+    public void icons_malformedOrOverLimitJson_failsImport() {
+        try {
+            ThemePackParser.parseIcons("{not json");
+            fail("malformed JSON must fail");
+        } catch (ThemePackParser.ParseException expected) {
+        }
+        StringBuilder sb = new StringBuilder("{\"");
+        for (int i = 0; i < ThemePackContracts.MAX_ICONS_JSON_CHARS + 1; i++) sb.append('x');
+        sb.append("\":\"content://a/icons/folder\"}");
+        try {
+            ThemePackParser.parseIcons(sb.toString());
+            fail("over-limit icons payload must fail");
+        } catch (ThemePackParser.ParseException expected) {
+        }
+    }
+
+    // ---------- launcher_icon column (v2) ----------
+
+    @Test
+    public void launcherIconId_acceptsBoundedIds() {
+        assertNull(ThemePackParser.parseLauncherIconId(null));
+        assertNull(ThemePackParser.parseLauncherIconId(""));
+        assertEquals("nova.v1", ThemePackParser.parseLauncherIconId(" nova.v1 "));
+        assertEquals("A-B_C.09", ThemePackParser.parseLauncherIconId("A-B_C.09"));
+        String max = repeat('a', ThemePackContracts.MAX_LAUNCHER_ICON_ID_CHARS);
+        assertEquals(max, ThemePackParser.parseLauncherIconId(max));
+    }
+
+    @Test
+    public void launcherIconId_rejectsMalformedOrOversized() {
+        String[] bad = {
+                "has space", "image/png;base64,AAAA", "../evil", "a/b",
+                repeat('a', ThemePackContracts.MAX_LAUNCHER_ICON_ID_CHARS + 1),
+                repeat('a', 1024 * 64),
+        };
+        for (String raw : bad) {
+            try {
+                ThemePackParser.parseLauncherIconId(raw);
+                fail("must reject: " + raw);
+            } catch (ThemePackParser.ParseException expected) {
+            }
+        }
+    }
+
+    private static String repeat(char c, int n) {
+        StringBuilder sb = new StringBuilder(n);
+        for (int i = 0; i < n; i++) sb.append(c);
+        return sb.toString();
+    }
+
     // ---------- locale tag sanitation ----------
 
     @Test

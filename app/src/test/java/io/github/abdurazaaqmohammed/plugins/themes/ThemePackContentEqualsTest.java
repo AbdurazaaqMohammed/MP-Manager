@@ -73,6 +73,9 @@ public class ThemePackContentEqualsTest {
         out.editorSyntax = in.editorSyntax == null
                 ? null : new LinkedHashMap<>(in.editorSyntax);
         out.wallpaperScope = in.wallpaperScope;
+        out.iconNames = in.iconNames == null
+                ? null : new LinkedHashMap<>(in.iconNames);
+        out.launcherIcon = in.launcherIcon;
         out.revision = in.revision;
         out.schema = in.schema;
         return out;
@@ -96,6 +99,56 @@ public class ThemePackContentEqualsTest {
     public void identicalMetadata_true() {
         assertTrue(ThemePackContentEquals.sameMetadata(stored(), stored()));
         assertTrue(ThemePackContentEquals.sameMetadata(stored(), copy(stored())));
+    }
+
+    @Test
+    public void icons_sameKeysAndBytes_reuseStoredIcons() throws Exception {
+        ThemePackStore.StoredSnapshot a = stored();
+        a.iconNames = new LinkedHashMap<>();
+        a.iconNames.put("folder", "icon-folder-1");
+        a.iconNames.put("apk_dark", "icon-apk_dark-2");
+        ThemePackStore.StoredSnapshot b = copy(a);
+        // Fresh versioned names for unchanged bytes must NOT count as a change.
+        b.iconNames.put("folder", "icon-folder-999");
+        b.iconNames.put("apk_dark", "icon-apk_dark-888");
+        assertTrue(ThemePackContentEquals.sameMetadata(a, b));
+
+        File staged = writeFile("icon.png", bytes("PNGDATA"));
+        File previous = writeFile("icon-prev.png", bytes("PNGDATA"));
+        assertTrue(ThemePackContentEquals.sameBytes(staged, previous));
+    }
+
+    @Test
+    public void icons_changedKeysOrBytes_false() {
+        ThemePackStore.StoredSnapshot a = stored();
+        a.iconNames = new LinkedHashMap<>();
+        a.iconNames.put("folder", "icon-folder-1");
+        // new/removed key visible even though names are ignored
+        ThemePackStore.StoredSnapshot b = copy(a);
+        b.iconNames.put("file", "icon-file-2");
+        assertFalse(ThemePackContentEquals.sameMetadata(a, b));
+        ThemePackStore.StoredSnapshot c = copy(a);
+        c.iconNames.remove("folder");
+        assertFalse(ThemePackContentEquals.sameMetadata(a, c));
+        // only allowlisted keys count (a tampered unknown key cannot fake a change)
+        ThemePackStore.StoredSnapshot d = copy(a);
+        d.iconNames.put("../evil", "wallpaper-1");
+        assertTrue(ThemePackContentEquals.sameMetadata(a, d));
+    }
+
+    @Test
+    public void launcherIcon_changedId_isAChange_nullMatchesNull() {
+        ThemePackStore.StoredSnapshot a = stored();
+        a.launcherIcon = "nova.v1";
+        ThemePackStore.StoredSnapshot b = copy(a);
+        b.launcherIcon = "nova.v2";
+        assertFalse(ThemePackContentEquals.sameMetadata(a, b));
+        ThemePackStore.StoredSnapshot c = copy(a);
+        c.launcherIcon = null;
+        assertFalse(ThemePackContentEquals.sameMetadata(a, c));
+        ThemePackStore.StoredSnapshot d = stored();
+        ThemePackStore.StoredSnapshot e = copy(d);
+        assertTrue(ThemePackContentEquals.sameMetadata(d, e));
     }
 
     @Test

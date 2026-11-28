@@ -43,6 +43,14 @@ import java.util.Set;
  */
 public final class ThemePacks {
 
+    /** Reserved provider-package namespace prefix for in-app local theme
+     *  snapshots created by the host theme editor. Keys are UUID-shaped and
+     *  the prefix contains no ':' so JVM unit tests can create pack
+     *  directories on Windows too; a real installed package with this exact
+     *  prefix is improbable and never writable through discovery without a
+     *  valid provider row. */
+    public static final String LOCAL_PKG_PREFIX = "local.";
+
     private static final String PREFS_ACTIVE = "theme_packs";
     private static final String ACTIVE_KEY = "active_package";
     private static final String GENERATION_KEY = "selection_generation";
@@ -134,6 +142,20 @@ public final class ThemePacks {
          * activity background) or {@code "none"} (no wallpaper). Never null.
          */
         public final String wallpaperScope;
+        /**
+         * Canonical icon key -> private-store PNG file. Immutable, never null;
+         * empty when the pack ships no {@code icons} column. Keys are the
+         * allowlisted base kinds and their {@code _light}/{@code _dark}
+         * variants. Consumers should try the variant for the resolved theme
+         * first, then fall back to the base key, then to built-in icons.
+         */
+        public final Map<String, File> iconFiles;
+        /**
+         * Opaque bounded launcher icon string (e.g. a base64 PNG produced by
+         * the local theme editor) for host launcher helpers; null = none.
+         * Not a wire column; local snapshots and future revisions only.
+         */
+        public final String launcherIcon;
 
         private final Map<String, Map<String, String>> strings;
 
@@ -143,7 +165,7 @@ public final class ThemePacks {
                  File preview, Map<String, Integer> editorSyntax,
                  String wallpaperScope) {
             this(packageName, name, dark, accent, scrim, colors, strings, wallpaper,
-                    preview, editorSyntax, wallpaperScope, null, 0);
+                    preview, editorSyntax, wallpaperScope, null, 0, null, null);
         }
 
         Snapshot(String packageName, String name, Boolean dark, Integer accent,
@@ -151,6 +173,16 @@ public final class ThemePacks {
                  Map<String, Map<String, String>> strings, File wallpaper,
                  File preview, Map<String, Integer> editorSyntax,
                  String wallpaperScope, String id, long revision) {
+            this(packageName, name, dark, accent, scrim, colors, strings, wallpaper,
+                    preview, editorSyntax, wallpaperScope, id, revision, null, null);
+        }
+
+        Snapshot(String packageName, String name, Boolean dark, Integer accent,
+                 Integer scrim, Map<String, Integer> colors,
+                 Map<String, Map<String, String>> strings, File wallpaper,
+                 File preview, Map<String, Integer> editorSyntax,
+                 String wallpaperScope, String id, long revision,
+                 Map<String, File> iconFiles, String launcherIcon) {
             this.packageName = packageName;
             this.id = id;
             this.revision = revision;
@@ -166,6 +198,10 @@ public final class ThemePacks {
                     ? Collections.<String, Integer>emptyMap() : editorSyntax;
             this.wallpaperScope = ThemePackContracts.isWallpaperScope(wallpaperScope)
                     ? wallpaperScope : ThemePackContracts.WALLPAPER_SCOPE_FILES;
+            this.iconFiles = iconFiles == null
+                    ? Collections.<String, File>emptyMap()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(iconFiles));
+            this.launcherIcon = launcherIcon;
         }
 
         /**
@@ -177,6 +213,12 @@ public final class ThemePacks {
          */
         public boolean sameState(Snapshot other) {
             if (other == null) return false;
+            if (!iconFiles.keySet().equals(other.iconFiles.keySet())) return false;
+            for (Map.Entry<String, File> e : iconFiles.entrySet()) {
+                if (!eq(path(e.getValue()), path(other.iconFiles.get(e.getKey())))) {
+                    return false;
+                }
+            }
             return packageName != null && packageName.equals(other.packageName)
                     && eq(id, other.id)
                     && eq(name, other.name)
@@ -186,6 +228,7 @@ public final class ThemePacks {
                     && eq(colors, other.colors)
                     && eq(editorSyntax, other.editorSyntax)
                     && eq(wallpaperScope, other.wallpaperScope)
+                    && eq(launcherIcon, other.launcherIcon)
                     && eq(path(wallpaper), path(other.wallpaper))
                     && eq(path(preview), path(other.preview))
                     && eq(strings, other.strings);
@@ -362,6 +405,7 @@ public final class ThemePacks {
                                            String expectedId) {
         File stagedWallpaper = null;
         File stagedPreview = null;
+        final Map<String, File> stagedIcons = new LinkedHashMap<>();
         boolean committed = false;
         Snapshot activated = null;
         try {
@@ -372,6 +416,10 @@ public final class ThemePacks {
             context = context.getApplicationContext();
             PackageManager pm = context.getPackageManager();
             String pkg = entry.packageName;
+            // The reserved local namespace is host-only: an installed app
+            // whose package matches it can never import through the provider
+            // flow, so it cannot hijack local selections.
+            if (isLocalPackage(pkg)) return false;
 
             String authority = providerAuthority(pm, pkg);
             if (!ownsProvider(pm, pkg, authority)) return false;
@@ -391,6 +439,8 @@ public final class ThemePacks {
             String wallpaperScope;
             String wallpaperColumn;
             String previewColumn;
+            String launcherIcon;
+            Map<String, String> iconColumns;
             try (Cursor c = context.getContentResolver().query(
                     themeUri, null, null, null, null)) {
                 if (c == null || !c.moveToFirst()) return false;
@@ -423,14 +473,20 @@ public final class ThemePacks {
                         longOrString(c, ThemePackContracts.COLUMN_WALLPAPER_SCOPE));
                 wallpaperColumn = stringColumn(c, ThemePackContracts.COLUMN_WALLPAPER);
                 previewColumn = stringColumn(c, ThemePackContracts.COLUMN_PREVIEW);
+                launcherIcon = ThemePackParser.parseLauncherIconId(
+                        stringColumn(c, ThemePackContracts.COLUMN_LAUNCHER_ICON));
+                iconColumns = ThemePackParser.parseIcons(
+                        stringColumn(c, ThemePackContracts.COLUMN_ICONS));
             } catch (ThemePackParser.ParseException e) {
                 return false;
             }
-            // Accent-only, label-only, color-only or syntax-only rows are all
-            // valid; only a fully empty row is rejected.
+            // Accent-only, label-only, color-only, syntax-only, icon-only or
+            // launcher-icon-only rows are all valid; only a fully empty row
+            // is rejected.
             if (accent == null && dark == null && scrim == null
                     && colors.isEmpty() && strings.isEmpty()
-                    && editorSyntax.isEmpty()
+                    && editorSyntax.isEmpty() && iconColumns.isEmpty()
+                    && launcherIcon == null
                     && empty(wallpaperColumn) && empty(previewColumn)) {
                 return false;
             }
@@ -489,6 +545,22 @@ public final class ThemePacks {
                         context.getFilesDir(), pkg);
                 if (stagedPreview == null) return false;
             }
+            // Icons: each value must be EXACTLY content://<authority>/icons/<key>,
+            // with no query/fragment and the same key as the JSON key. A bad
+            // endpoint aborts the whole import so an update cannot wipe art.
+            long iconBytes = 0;
+            for (Map.Entry<String, String> e : iconColumns.entrySet()) {
+                String key = e.getKey();
+                String expected = "content://" + authority + "/"
+                        + ThemePackContracts.PATH_ICONS + "/" + key;
+                if (!expected.equals(e.getValue())) return false;
+                File staged = stageValidatedIcon(context, Uri.parse(e.getValue()),
+                        context.getFilesDir(), pkg);
+                if (staged == null) return false;
+                stagedIcons.put(key, staged); // own it immediately (finally cleans up)
+                iconBytes += staged.length();
+                if (iconBytes > ThemePackContracts.MAX_ICONS_TOTAL_BYTES) return false;
+            }
 
             ThemePackStore.StoredSnapshot stored = new ThemePackStore.StoredSnapshot();
             stored.id = id;
@@ -501,6 +573,11 @@ public final class ThemePacks {
             stored.editorSyntax = editorSyntax.isEmpty() ? null : editorSyntax;
             stored.wallpaperScope = ThemePackContracts.WALLPAPER_SCOPE_FILES
                     .equals(wallpaperScope) ? null : wallpaperScope;
+            stored.launcherIcon = launcherIcon;
+            // Incoming icon key set participates in metadata equality: a new
+            // or removed key is a visible change even before bytes are read.
+            stored.iconNames = new LinkedHashMap<>();
+            for (String key : iconColumns.keySet()) stored.iconNames.put(key, null);
 
             // No-op preflight, no monitor held: provider IO is finished and
             // both files are bounded (wallpaper <= 8 MiB, preview <= 256 KiB),
@@ -523,6 +600,19 @@ public final class ThemePacks {
                     stagedPreview,
                     ThemePackStore.previewFile(filesDir, pkg,
                             preflightPreviewName));
+            // Icons: compare bytes per key against the previous stored icon
+            // (endpoint strings are not authoritative, content may change
+            // behind the same URI). Key sets that differ force a real commit.
+            Map<String, String> preflightIconNames = preflightPrevious == null
+                    ? null : preflightPrevious.iconNames;
+            Map<String, Boolean> iconBytesSame = new LinkedHashMap<>();
+            for (Map.Entry<String, File> e : stagedIcons.entrySet()) {
+                String previousName = preflightIconNames == null
+                        ? null : preflightIconNames.get(e.getKey());
+                iconBytesSame.put(e.getKey(), ThemePackContentEquals.sameBytes(
+                        e.getValue(), ThemePackStore.iconFile(filesDir, pkg,
+                                e.getKey(), previousName)));
+            }
 
             synchronized (ThemePacks.class) {
                 // Monitor held only for the local commit; no provider IO inside.
@@ -570,13 +660,18 @@ public final class ThemePacks {
                             && previousPreview.isFile()
                         : previous == null || previous.previewName == null;
 
+                Map<String, String> previousIconNames = previous == null
+                        ? null : previous.iconNames;
+                boolean iconsSame = sameIconState(previousIconNames,
+                        preflightIconNames, iconBytesSame, filesDir, pkg);
+
                 // Identical row and identical image bytes on the live
                 // selection: keep store, revision, generation and listeners
                 // exactly as they are (no recreate churn on repeated
                 // package-update refreshes).
                 if (currentlyActive && previous != null
                         && ThemePackContentEquals.sameMetadata(stored, previous)
-                        && wallpaperSame && previewSame) {
+                        && wallpaperSame && previewSame && iconsSame) {
                     sCache = buildSnapshot(context, pkg, previous);
                     return true;
                 }
@@ -594,13 +689,30 @@ public final class ThemePacks {
                     stored.previewName = previous.previewName;
                     commitPreview = null; // staged file removed by finally
                 }
+                // Byte-identical icons keep their stored versioned names;
+                // changed/new ones are staged for a fresh versioned commit.
+                Map<String, String> commitIconNames = new LinkedHashMap<>();
+                if (!stagedIcons.isEmpty() && previousIconNames != null
+                        && previousIconNames.equals(preflightIconNames)) {
+                    for (Map.Entry<String, File> e : stagedIcons.entrySet()) {
+                        String prevName = previousIconNames.get(e.getKey());
+                        if (prevName == null) continue;
+                        File prevFile = ThemePackStore.iconFile(filesDir, pkg,
+                                e.getKey(), prevName);
+                        if (prevFile != null && prevFile.isFile()
+                                && Boolean.TRUE.equals(iconBytesSame.get(e.getKey()))) {
+                            commitIconNames.put(e.getKey(), prevName);
+                        }
+                    }
+                }
+                stored.iconNames = commitIconNames.isEmpty() ? null : commitIconNames;
 
                 stored.signer = signer;
                 stored.schema = ThemePackStore.SCHEMA_LATEST;
                 stored.revision = (previous != null && previous.revision != null
                         ? previous.revision : 0L) + 1L;
                 if (!ThemePackStore.commit(filesDir, pkg, stored,
-                        commitWallpaper, commitPreview)) {
+                        commitWallpaper, commitPreview, stagedIcons)) {
                     return false;
                 }
                 // Staged files that were actually consumed (renamed) are no
@@ -621,8 +733,12 @@ public final class ThemePacks {
         } catch (Exception e) {
             return false;
         } finally {
-            ThemePackStore.deleteQuietly(stagedWallpaper);
-            ThemePackStore.deleteQuietly(stagedPreview);
+            // Only true staged temp files are removed — never stored assets.
+            ThemePackStore.deleteStagedQuietly(stagedWallpaper);
+            ThemePackStore.deleteStagedQuietly(stagedPreview);
+            for (File staged : stagedIcons.values()) {
+                ThemePackStore.deleteStagedQuietly(staged);
+            }
         }
     }
 
@@ -656,7 +772,10 @@ public final class ThemePacks {
         }
     }
 
-    /** Currently active pack, or null. Verifies install + signer pin lazily. */
+    /** Currently active pack, or null. Verifies install + signer pin lazily.
+     *  A selection in the reserved {@code local:} namespace is an in-app
+     *  snapshot with no installed provider: store presence alone decides
+     *  validity and no signer check runs. */
     public static Snapshot active(Context context) {
         Snapshot cached = sCache;
         if (cached != null) return cached;
@@ -670,12 +789,27 @@ public final class ThemePacks {
                 if (pkg == null || pkg.isEmpty()) return null;
                 ThemePackStore.StoredSnapshot stored = ThemePackStore.readSnapshot(
                         context.getFilesDir(), pkg);
-                if (stored == null || stored.signer == null
-                        || !stored.signer.equals(PluginHost.certDigest(context, pkg))) {
-                    // Signer mismatch or corrupted store: deactivate.
+                // Local bypass only for genuine local snapshots: reserved
+                // namespace AND no signer. A real provider package that
+                // somehow matches the prefix still runs the signer checks.
+                boolean localPkg = isLocalPackage(pkg);
+                boolean local = localPkg && stored != null
+                        && stored.signer == null;
+                if (stored == null || (!local
+                        && (stored.signer == null
+                            || !stored.signer.equals(PluginHost.certDigest(context, pkg))))) {
+                    // Signer mismatch, removed local snapshot or corrupted
+                    // store: deactivate. Local snapshots are host-owned user
+                    // data with no provider to re-import from, so the whole
+                    // reserved namespace is never deletePack()ed here — not
+                    // even when the snapshot.json is unreadable (a transient
+                    // IO failure must not wipe the pack dir). The editor/
+                    // LocalThemes manage that directory's lifecycle.
                     activePrefs(context).edit().remove(ACTIVE_KEY).apply();
                     bumpGeneration(context);
-                    ThemePackStore.deletePack(context.getFilesDir(), pkg);
+                    if (!localPkg) {
+                        ThemePackStore.deletePack(context.getFilesDir(), pkg);
+                    }
                     sCache = null;
                     deactivated = true;
                 } else {
@@ -707,10 +841,282 @@ public final class ThemePacks {
         if (hadActive) notifyChanged(null);
     }
 
+    // ---------- local in-app snapshots ----------
+
+    /** True when {@code pkg} selects a host-side local theme snapshot: the
+     *  reserved {@code local.} prefix plus a valid key. A real provider
+     *  package that merely starts with "local." does not qualify. */
+    public static boolean isLocalPackage(String pkg) {
+        if (pkg == null || !pkg.startsWith(LOCAL_PKG_PREFIX)) return false;
+        return pkg.substring(LOCAL_PKG_PREFIX.length())
+                .matches("[0-9a-f]{8,64}");
+    }
+
+    /** Package name for a local snapshot key, or null when the key is invalid
+     *  ({@code [0-9a-f]{8,64}}, lowercase hex — UUID-shaped). The editor uses
+     *  opaque UUID keys, so the resulting namespace can never collide with a
+     *  real provider package in practice. */
+    public static String localPackage(String key) {
+        if (key == null || !key.matches("[0-9a-f]{8,64}")) return null;
+        return LOCAL_PKG_PREFIX + key;
+    }
+
+    /**
+     * Commits a local snapshot into the single private store WITHOUT touching
+     * the selection ("save without apply"). Staged images follow the
+     * {@link ThemePackStore#commit} consume-or-delete contract. Store-level
+     * fields (signer/schema/revision) are normalized here; content validation
+     * is the editor's job. When the saved key IS the currently selected
+     * snapshot the store would otherwise go stale, so the live cache is
+     * rebuilt and listeners notified — that save inherently applies.
+     */
+    public static boolean commitLocal(Context context, String key,
+                                      ThemePackStore.StoredSnapshot snapshot,
+                                      File stagedWallpaper, File stagedPreview,
+                                      Map<String, File> stagedIcons) {
+        return writeLocal(context, key, snapshot, stagedWallpaper,
+                stagedPreview, stagedIcons, false) != null;
+    }
+
+    /** Metadata-only {@link #commitLocal} convenience form. */
+    public static boolean commitLocal(Context context, String key,
+                                      ThemePackStore.StoredSnapshot snapshot) {
+        return commitLocal(context, key, snapshot, null, null, null);
+    }
+
+    /** Requested short form of {@link #activateLocal}: commit + select. */
+    public static String activateLocal(Context context, String key,
+                                       ThemePackStore.StoredSnapshot snapshot) {
+        return activateLocal(context, key, snapshot, null, null, null);
+    }
+
+    /**
+     * Commits a local snapshot and selects it through the same single store
+     * and selection pointer the provider flow uses: atomic commit, ACTIVE_KEY
+     * update, generation bump, listener notification. {@code snapshot} is
+     * mutated/normalized (signer cleared, revision bumped) on success.
+     *
+     * @return the canonical selection id ({@code local.<key>}), or null on
+     *         failure
+     */
+    public static String activateLocal(Context context, String key,
+                                       ThemePackStore.StoredSnapshot snapshot,
+                                       File stagedWallpaper, File stagedPreview,
+                                       Map<String, File> stagedIcons) {
+        return writeLocal(context, key, snapshot, stagedWallpaper,
+                stagedPreview, stagedIcons, true);
+    }
+
+    /**
+     * Selects an already-committed local snapshot without a new store commit
+     * ("select existing"): pointer update, generation bump, listener
+     * notification. False when the key has no stored snapshot.
+     */
+    public static boolean activateExistingLocal(Context context, String key) {
+        Snapshot activated = null;
+        try {
+            if (context == null) return false;
+            String pkg = localPackage(key);
+            if (pkg == null) return false;
+            context = context.getApplicationContext();
+            ThemePackStore.StoredSnapshot stored = ThemePackStore.readSnapshot(
+                    context.getFilesDir(), pkg);
+            if (stored == null) return false;
+            synchronized (ThemePacks.class) {
+                bumpGeneration(context);
+                // Local activation is a user-visible selection, not a cache
+                // hint. Commit it before returning so a process killed
+                // immediately after the editor closes cannot lose it.
+                if (!activePrefs(context).edit().putString(ACTIVE_KEY, pkg).commit()) {
+                    return false;
+                }
+                activated = buildSnapshot(context, pkg, stored);
+                sCache = activated;
+            }
+            notifyChanged(activated);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Shared local commit; returns the canonical id or null. Never touches
+     *  the selection when {@code select} is false unless the key is already
+     *  selected (stale-cache refresh). */
+    private static String writeLocal(Context context, String key,
+                                     ThemePackStore.StoredSnapshot snapshot,
+                                     File stagedWallpaper, File stagedPreview,
+                                     Map<String, File> stagedIcons,
+                                     boolean select) {
+        boolean committed = false;
+        Snapshot activated = null;
+        try {
+            if (context == null || snapshot == null) return null;
+            String pkg = localPackage(key);
+            if (pkg == null) return null;
+            context = context.getApplicationContext();
+            // Local snapshots never carry a signer; unknown scope collapses
+            // to "files" on read.
+            snapshot.signer = null;
+            if (snapshot.wallpaperScope != null
+                    && !ThemePackContracts.isWallpaperScope(snapshot.wallpaperScope)) {
+                snapshot.wallpaperScope = null;
+            }
+            if (snapshot.launcherIcon != null
+                    && (snapshot.launcherIcon.isEmpty()
+                        || snapshot.launcherIcon.length()
+                            > ThemePackContracts.MAX_LAUNCHER_ICON_ID_CHARS)) {
+                snapshot.launcherIcon = null;
+            }
+            File filesDir = context.getFilesDir();
+            ThemePackStore.StoredSnapshot previous =
+                    ThemePackStore.readSnapshot(filesDir, pkg);
+            snapshot.schema = ThemePackStore.SCHEMA_LATEST;
+            snapshot.revision = (previous != null && previous.revision != null
+                    ? previous.revision : 0L) + 1L;
+            synchronized (ThemePacks.class) {
+                if (!ThemePackStore.commit(filesDir, pkg, snapshot,
+                        stagedWallpaper, stagedPreview, stagedIcons)) {
+                    return null;
+                }
+                committed = true;
+                if (select) {
+                    bumpGeneration(context);
+                    // The editor may be followed by an immediate process
+                    // restart. Make the selected local theme durable before
+                    // reporting activation success.
+                    if (!activePrefs(context).edit().putString(ACTIVE_KEY, pkg).commit()) {
+                        return null;
+                    }
+                    activated = buildSnapshot(context, pkg, snapshot);
+                    sCache = activated;
+                } else if (pkg.equals(activePrefs(context)
+                        .getString(ACTIVE_KEY, null))) {
+                    // Saved the currently applied theme: refresh the live
+                    // snapshot so readers never see stale state.
+                    activated = buildSnapshot(context, pkg, snapshot);
+                    sCache = activated;
+                }
+            }
+            if (activated != null) notifyChanged(activated);
+            return committed ? pkg : null;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            // Staged files are consumed (renamed) or deleted by commit on
+            // every path once reached; this only guards earlier returns.
+            // Only true staged temp files are removed — never stored assets.
+            ThemePackStore.deleteStagedQuietly(stagedWallpaper);
+            ThemePackStore.deleteStagedQuietly(stagedPreview);
+            if (stagedIcons != null) {
+                for (File staged : stagedIcons.values()) {
+                    ThemePackStore.deleteStagedQuietly(staged);
+                }
+            }
+        }
+    }
+
+    /** Stored snapshot of a local key, or null. */
+    public static ThemePackStore.StoredSnapshot readLocal(Context context, String key) {
+        String pkg = localPackage(key);
+        if (pkg == null || context == null) return null;
+        try {
+            return ThemePackStore.readSnapshot(
+                    context.getApplicationContext().getFilesDir(), pkg);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Removes a local snapshot; deactivates and notifies when it was the
+     *  active selection. */
+    public static boolean deleteLocal(Context context, String key) {
+        String pkg = localPackage(key);
+        if (pkg == null || context == null) return false;
+        boolean wasActive = false;
+        try {
+            context = context.getApplicationContext();
+            synchronized (ThemePacks.class) {
+                wasActive = pkg.equals(activePrefs(context).getString(ACTIVE_KEY, null));
+                if (wasActive) {
+                    bumpGeneration(context);
+                    activePrefs(context).edit().remove(ACTIVE_KEY).apply();
+                }
+                ThemePackStore.deletePack(context.getFilesDir(), pkg);
+                sCache = null;
+            }
+        } catch (Exception ignored) {
+        }
+        if (wasActive) notifyChanged(null);
+        return true;
+    }
+
+    /** Sorted keys of all local snapshots (store dirs with a snapshot.json). */
+    public static List<String> localKeys(Context context) {
+        List<String> out = new ArrayList<>();
+        try {
+            context = context.getApplicationContext();
+            File[] dirs = ThemePackStore.root(context.getFilesDir()).listFiles();
+            if (dirs != null) {
+                for (File dir : dirs) {
+                    String name = dir.getName();
+                    if (isLocalPackage(name) && ThemePackStore.snapshotFile(
+                            context.getFilesDir(), name).isFile()) {
+                        out.add(name.substring(LOCAL_PKG_PREFIX.length()));
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        Collections.sort(out);
+        return out;
+    }
+
+    /**
+     * Stages and validates a wallpaper/preview-style image for a local
+     * snapshot key with caller-chosen caps; stream is NOT closed. Returns the
+     * staged file or null (no partial state kept). PNG/JPEG decode rules are
+     * the same ones the provider import enforces.
+     */
+    public static File stageValidatedLocalImage(Context context, String key,
+                                                InputStream in, long maxBytes,
+                                                int maxDim, long maxPixels) {
+        if (context == null || in == null) return null;
+        String pkg = localPackage(key);
+        if (pkg == null) return null;
+        try {
+            return stageImageBytes(in, ThemePackStore.packDir(
+                    context.getApplicationContext().getFilesDir(), pkg),
+                    maxBytes, maxDim, maxPixels);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Stages and validates one icon PNG for a local snapshot key; stream is
+     * NOT closed. Returns the staged file or null (no partial state kept).
+     */
+    public static File stageValidatedIconBytes(Context context, String key,
+                                               InputStream in) {
+        if (context == null || in == null) return null;
+        String pkg = localPackage(key);
+        if (pkg == null) return null;
+        try {
+            return stageIconBytes(in, ThemePackStore.packDir(
+                    context.getApplicationContext().getFilesDir(), pkg));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // ---------- receiver hooks ----------
 
-    /** Package uninstalled: drop its ingested copy and pin; clear if active. */
+    /** Package uninstalled: drop its ingested copy and pin; clear if active.
+     *  Reserved {@code local:} namespaces are never installed packages and
+     *  are ignored. */
     public static void onPackageRemoved(Context context, String packageName) {
+        if (isLocalPackage(packageName)) return;
         discovered = null;
         boolean wasActive = false;
         try {
@@ -741,6 +1147,7 @@ public final class ThemePacks {
      * guard). Non-active packs only drop cached discovery data.
      */
     public static void onPackageReplaced(Context context, String packageName) {
+        if (isLocalPackage(packageName)) return;
         discovered = null;
         if (packageName == null || context == null) return;
         try {
@@ -855,37 +1262,21 @@ public final class ThemePacks {
         File preview = ThemePackStore.previewFile(context.getFilesDir(),
                 pkg, stored.previewName);
         if (preview != null && !preview.isFile()) preview = null;
+        Map<String, File> iconFiles = new LinkedHashMap<>();
+        if (stored.iconNames != null) {
+            for (Map.Entry<String, String> e : stored.iconNames.entrySet()) {
+                File icon = ThemePackStore.iconFile(context.getFilesDir(),
+                        pkg, e.getKey(), e.getValue());
+                if (icon != null && icon.isFile()) iconFiles.put(e.getKey(), icon);
+            }
+        }
         return new Snapshot(pkg, stored.name, stored.dark, stored.accent,
                 stored.scrim, colors, Collections.unmodifiableMap(strings),
                 wallpaper, preview,
                 Collections.unmodifiableMap(editorSyntax),
                 stored.wallpaperScope, stored.id,
-                stored.revision == null ? 0 : stored.revision);
-    }
-
-    /**
-     * Copies the image stream to a unique staged file, then validates it by
-     * decoding bounds: must be a real PNG or JPEG within the dimension and
-     * pixel caps. Returns the staged file or null (no partial state kept).
-     */
-    private static File stageValidatedImage(Context context, Uri uri,
-                                            long maxBytes, int maxDim, long maxPixels,
-                                            File filesDir, String pkg) {
-        File staged = null;
-        try (InputStream in = context.getContentResolver().openInputStream(uri)) {
-            if (in == null) return null;
-            staged = ThemePackStore.stageFile(in,
-                    ThemePackStore.packDir(filesDir, pkg), maxBytes);
-        } catch (Exception e) {
-            ThemePackStore.deleteQuietly(staged);
-            return null;
-        }
-        if (staged == null) return null;
-        if (!validateImage(staged, maxDim, maxPixels)) {
-            ThemePackStore.deleteQuietly(staged);
-            return null;
-        }
-        return staged;
+                stored.revision == null ? 0 : stored.revision,
+                iconFiles, stored.launcherIcon);
     }
 
     /** PNG/JPEG decode-bounds validation with dimension and pixel caps. */
@@ -914,6 +1305,133 @@ public final class ThemePacks {
 
     private static boolean empty(String s) {
         return s == null || s.isEmpty();
+    }
+
+    /**
+     * Copies a stream into a unique staged file inside {@code packDir},
+     * enforcing {@code maxBytes}, then validates PNG/JPEG decode rules and
+     * caps. Stream is NOT closed. Returns the staged file or null (no
+     * partial state kept).
+     */
+    private static File stageImageBytes(InputStream in, File packDir,
+                                        long maxBytes, int maxDim, long maxPixels) {
+        if (in == null) return null;
+        File staged = null;
+        try {
+            staged = ThemePackStore.stageFile(in, packDir, maxBytes);
+        } catch (Exception e) {
+            ThemePackStore.deleteQuietly(staged);
+            return null;
+        }
+        if (staged == null || !validateImage(staged, maxDim, maxPixels)) {
+            ThemePackStore.deleteQuietly(staged);
+            return null;
+        }
+        return staged;
+    }
+
+    /**
+     * Stages and validates one icon PNG from an arbitrary stream; shared by
+     * the provider import path and local snapshot saves. The stream is NOT
+     * closed. Returns the staged file or null (no partial state kept).
+     */
+    private static File stageIconBytes(InputStream in, File packDir) {
+        if (in == null) return null;
+        File staged = null;
+        try {
+            staged = ThemePackStore.stageFile(in, packDir,
+                    ThemePackContracts.MAX_ICON_BYTES);
+        } catch (Exception e) {
+            ThemePackStore.deleteQuietly(staged);
+            return null;
+        }
+        if (staged == null || !validateIconPng(staged)) {
+            ThemePackStore.deleteQuietly(staged);
+            return null;
+        }
+        return staged;
+    }
+
+    /** Content-URI form used by the provider wallpaper/preview import path. */
+    private static File stageValidatedImage(Context context, Uri uri,
+                                            long maxBytes, int maxDim, long maxPixels,
+                                            File filesDir, String pkg) {
+        try (InputStream in = context.getContentResolver().openInputStream(uri)) {
+            return stageImageBytes(in, ThemePackStore.packDir(filesDir, pkg),
+                    maxBytes, maxDim, maxPixels);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Content-URI form used by the provider icon import path. */
+    private static File stageValidatedIcon(Context context, Uri uri,
+                                           File filesDir, String pkg) {
+        try (InputStream in = context.getContentResolver().openInputStream(uri)) {
+            return stageIconBytes(in, ThemePackStore.packDir(filesDir, pkg));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** PNG signature + decoded MIME must be PNG; dimension/pixel caps apply. */
+    private static boolean validateIconPng(File file) {
+        try {
+            byte[] sig = new byte[8];
+            try (InputStream in = new java.io.FileInputStream(file)) {
+                if (in.read(sig) != sig.length) return false;
+            }
+            byte[] png = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
+            for (int i = 0; i < png.length; i++) {
+                if (sig[i] != png[i]) return false;
+            }
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false;
+            // Decoded MIME is "image/png" for genuine PNG input.
+            if (!"image/png".equals(bounds.outMimeType)) return false;
+            if (bounds.outWidth > ThemePackContracts.MAX_ICON_DIMENSION_PX
+                    || bounds.outHeight > ThemePackContracts.MAX_ICON_DIMENSION_PX) {
+                return false;
+            }
+            if ((long) bounds.outWidth * bounds.outHeight
+                    > ThemePackContracts.MAX_ICON_PIXELS) return false;
+            // Decode the full bitmap (bounded by the caps above) so a PNG
+            // with a valid header but corrupt pixel data is rejected too.
+            Bitmap decoded = BitmapFactory.decodeFile(file.getAbsolutePath());
+            if (decoded == null || decoded.getWidth() != bounds.outWidth
+                    || decoded.getHeight() != bounds.outHeight) return false;
+            decoded.recycle();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Icons are byte-compared per key against the previous stored PNG. The
+     * key sets must match exactly (a missing/new key is a visible change) and
+     * the previous file names must still be the ones the preflight saw.
+     */
+    private static boolean sameIconState(Map<String, String> previousNames,
+                                         Map<String, String> preflightNames,
+                                         Map<String, Boolean> bytesSame,
+                                         File filesDir, String pkg) {
+        if (previousNames == null || preflightNames == null) {
+            return bytesSame.isEmpty()
+                    && (previousNames == null || previousNames.isEmpty())
+                    && (preflightNames == null || preflightNames.isEmpty());
+        }
+        if (!previousNames.equals(preflightNames)
+                || !bytesSame.keySet().equals(previousNames.keySet())) return false;
+        for (Map.Entry<String, Boolean> e : bytesSame.entrySet()) {
+            if (!Boolean.TRUE.equals(e.getValue())) return false;
+            File previous = ThemePackStore.iconFile(filesDir, pkg,
+                    e.getKey(), previousNames.get(e.getKey()));
+            if (previous == null || !previous.isFile()) return false;
+        }
+        return true;
     }
 
     private static String providerAuthority(PackageManager pm, String pkg) {

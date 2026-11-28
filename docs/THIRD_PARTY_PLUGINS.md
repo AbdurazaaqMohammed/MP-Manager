@@ -311,13 +311,63 @@ may be absent or null.
 | `preview` | TEXT | Exact same-authority `/preview` endpoint, PNG/JPEG only. |
 | `wallpaper_scope` | TEXT, v2 | `files` (default), `all`, or `none`. |
 | `editor_syntax` | TEXT, v2 | JSON mapping accepted syntax categories/scopes to colors. |
+| `icons` | TEXT, v2 | JSON mapping allowlisted icon keys to exact same-authority `/icons/<key>` PNG endpoints; absent leaves built-in icons unchanged. |
+| `launcher_icon` | TEXT, v2 | Short opaque selector ID (≤64 chars, `[A-Za-z0-9._-]`); artwork served from the same-authority `/launcher_icon` PNG endpoint. |
 
 Color and label JSON are each capped at 256 Ki UTF-16 code units; syntax JSON at
-32 Ki. Wallpaper: 8 MiB, 8,192 pixels per side, 16,777,216 total pixels. Preview:
-256 KiB, 2,048 pixels per side. IDs, names, and labels: 100 characters; at most
-32 locale entries per label. Unknown tokens/columns are ignored; malformed
-required data, unsupported scope, wrong authority, or oversized data rejects the
-import atomically.
+32 Ki, icons JSON at 32 Ki. Wallpaper: 8 MiB, 8,192 pixels per side, 16,777,216
+total pixels. Preview: 256 KiB, 2,048 pixels per side. Icons: 256 KiB and 256
+pixels per side per PNG, 8 MiB total per snapshot. IDs, names, and labels: 100
+characters; at most 32 locale entries per label. Unknown tokens/columns are
+ignored; malformed required data, unsupported scope, wrong authority, or
+oversized data rejects the import atomically.
+
+### Optional icon artwork
+
+The `icons` column is a JSON object from an allowlisted semantic key to a
+**PNG** endpoint URI. Each value must be exactly
+`content://<same authority>/icons/<key>` (no query, fragment, cross-authority
+URI, or mismatched key). Unknown keys are ignored for forward compatibility;
+a recognized key with a non-string, malformed, or wrong-endpoint value rejects
+the whole import so an update cannot silently erase previously imported art.
+
+The 32 base keys are `folder`, `parent_folder`, `apk`, `image`, `video`,
+`audio`, `arsc`, `dex`, `archive`, `sticker`, `pdf`, `text`, `java`, `kotlin`,
+`xml`, `json`, `python`, `smali`, `js`, `elf`, `disk`, `database`, `font`,
+`binary`, `proto`, `document`, `sheet`, `slide`, `script`, `backup`,
+`certificate`, and `file`. Any base key may carry a `_light` or
+`_dark` suffix for adaptive variants (96 keys maximum). Consumers prefer the
+variant matching the resolved theme, then the base key, then the host's
+built-in icon. A pack with no `icons` column leaves every icon untouched,
+including the built-in 3D/flat rendering modes.
+
+```json
+{"folder":"content://com.example.mytheme.provider/icons/folder",
+ "folder_dark":"content://com.example.mytheme.provider/icons/folder_dark"}
+```
+
+Icons are ingested into the same private atomic snapshot as colors and
+wallpaper; bytes are validated (PNG signature, decoded PNG MIME, real bitmap
+decode, dimension/pixel caps) and stored as versioned files. Byte-identical
+icons are reused on refresh without file churn.
+
+### Optional launcher icon
+
+The `launcher_icon` column carries a short opaque selector ID (never image
+data). Android cannot switch a launcher icon to an arbitrary runtime bitmap —
+launcher entries must be declared at build time — so the host maps the ID to
+one of its bundled launcher icon variants and enables the matching
+activity-alias. The current host accepts, case-insensitively: `default`,
+`crimson`, `emerald`, `amber`, `violet`, `mono`. Blank values and the
+synonyms `none`/`system`/`original` select the default variant, and any
+unknown ID (for example `nova.launcher.v1`) also falls back to the default
+variant, so a malformed pack can never leave the app unlaunchable. The
+mapping applies only while the user's in-app App Icon preference is
+"follow theme"; an explicit user pick always wins. The optional
+`content://<same authority>/launcher_icon` PNG endpoint (≤256 KiB, ≤256
+pixels per side) is part of the contract for hosts that can consume provider
+artwork; the current host does not ingest it. The ID participates in change
+detection, so updating it is a visible theme change.
 
 ### Colors, editor syntax, and coverage
 
@@ -398,9 +448,11 @@ alongside MP Manager; they need not share its certificate.
 
 This version intentionally does not support arbitrary external XML/RemoteViews,
 per-file dynamic badge IPC, in-process third-party plugins, foreign APK resource
-mapping, or font/icon/layout/motion asset endpoints. Those need separate bounded
-contracts and actual host consumers. Do not advertise those manifest IDs/columns as
-working features. The first-party signer gate is not loosened.
+mapping, or font/layout/motion asset endpoints. Theme icon PNGs are supported
+through the bounded `icons` column described above only; there is no generic
+resource overlay or per-view asset injection. Those other levels need separate
+bounded contracts and actual host consumers. Do not advertise those manifest
+IDs/columns as working features. The first-party signer gate is not loosened.
 
 ## Troubleshooting
 
@@ -412,6 +464,8 @@ working features. The first-party signer gate is not loosened.
 | Events missing | Exported receiver, exact `EVENT` action, supported interests, action trust **and** separate event consent. |
 | Theme rejected | One row, version 1/2, owned authority, exact endpoints, signer unchanged, valid JSON/image limits. |
 | Some colors keep defaults | Missing tokens, older-API Material fallback, or opaque host control surfaces; not a generic resource overlay. |
+| Icons keep defaults | `icons` column absent; key must be an allowlisted base key (optionally `_light`/`_dark`); value must be an exact same-authority `/icons/<key>` PNG within 256 KiB / 256 px. A recognized key with a bad value rejects the whole import. |
+| Launcher icon not applied | The ID maps to bundled launcher variants only (`default`, `crimson`, `emerald`, `amber`, `violet`, `mono`, case-insensitive); unknown IDs fall back to the default variant, and an explicit user App Icon pick overrides the pack. The `/launcher_icon` PNG endpoint is reserved for future hosts and is not consumed by the current one. |
 | Activity helper class missing | Use `implementation` of `plugin-sdk`, not `compileOnly` of the host SDK. |
 
 ## Verification

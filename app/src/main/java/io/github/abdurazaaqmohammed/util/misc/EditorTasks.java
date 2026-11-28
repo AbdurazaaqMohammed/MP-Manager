@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.ui.common.base.BaseActivity;
+import io.github.abdurazaaqmohammed.ui.main.LauncherIcons;
 import io.github.abdurazaaqmohammed.ui.main.MainActivity;
 
 /** Gives each editor its own task without breaking activity-result callers. */
@@ -77,6 +78,10 @@ public final class EditorTasks {
 
     private static boolean isExcludedTransient(String cls) {
         return MainActivity.class.getName().equals(cls)
+                // Tasks started from the launcher record the activity-ALIAS
+                // component in baseIntent (icon switching aliases, see
+                // LauncherIcons), not MainActivity itself.
+                || LauncherIcons.isLauncherAliasClassName(cls)
                 || "io.github.abdurazaaqmohammed.ui.editor.PickFileActivity".equals(cls)
                 || "io.github.abdurazaaqmohammed.ui.viewer.SharedEntryActivity".equals(cls)
                 || "io.github.abdurazaaqmohammed.feature.system.ToolShortcutActivity".equals(cls)
@@ -275,7 +280,9 @@ public final class EditorTasks {
                     ActivityManager.RecentTaskInfo info = task.getTaskInfo();
                     if (info != null && info.baseIntent != null && info.baseIntent.getComponent() != null) {
                         String cls = info.baseIntent.getComponent().getClassName();
-                        if (cls.contains("MainActivity")) {
+                        // Launcher-tapped tasks carry the icon alias, not MainActivity.
+                        if (cls.contains("MainActivity")
+                                || LauncherIcons.isLauncherAliasClassName(cls)) {
                             task.moveToFront();
                             return;
                         }

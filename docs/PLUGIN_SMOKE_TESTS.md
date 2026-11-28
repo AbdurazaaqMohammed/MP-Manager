@@ -81,6 +81,32 @@ just to make a test pass.
 10. On API 23–29 verify the documented closest-accent Material fallback, direct
     app/editor colors, readable system-bar icons, and no resource-loader crash.
 
+## Theme pack icon overrides
+
+1. With the v2 theme sample installed, verify its `icons` column imports: file
+   panes, pickers, bookmarks and the parent (`..`) row show the pack's folder/APK
+   PNGs (light and dark variants where provided), while types without a key keep
+   the built-in icon.
+2. Verify precedence: pack icons win over the built-in rendering; with no pack
+   selected, the Appearance 3D toggle and flat fallback behave exactly as before
+   (toggle off = flat Material, toggle on = 3D artwork).
+3. Update the pack so one icon's PNG bytes change. Verify the new art appears
+   without restarting (epoch-bump cache invalidation) and unchanged icons are
+   not re-staged.
+4. Serve a rejected icon (oversized, non-PNG, wrong key, cross-authority URI,
+   query/fragment) and verify the whole import is rejected atomically: the
+   previous snapshot, including previously imported icons, stays intact.
+5. Deselect/uninstall the pack and verify every icon returns to the built-in
+   rendering immediately.
+6. Local snapshots (in-app editor): save without apply leaves the current theme
+   untouched; selecting a saved local snapshot applies its colors, wallpaper,
+   icons and launcher icon ID; deleting it falls back safely.
+7. In My themes, open File type icons and assign distinct images to APK, archive,
+   PDF and generic file entries. Save/apply and check matching files in the panes.
+   Replace one image, clear another, then save again and verify the changes persist.
+8. Duplicate and export/import that local theme. Verify every configured file-type
+   icon is preserved, including light/dark variants inherited from a plugin.
+
 ## Automated device checks
 
 With the sample installed and the isolated host:
