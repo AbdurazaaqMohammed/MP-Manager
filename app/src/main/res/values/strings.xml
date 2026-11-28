@@ -2699,4 +2699,19 @@ The stub application is replaced with the real one found in the dump and all inj
     <string name="syntax_export_failed">Failed to export syntax</string>
     <string name="syntax_delete_confirm">Delete \"%1$s\"? Built-in syntaxes can be restored by clearing app data.</string>
     <string name="syntax_deleted">Deleted %1$s</string>
+    <string name="dex_browser">DEX Browser</string>
+    <string name="dex_browser_search_hint">Search class or package name…</string>
+    <string name="dex_browser_no_classes">No classes found</string>
+    <string name="dex_browser_detail_error">Failed to load class details.</string>
+    <string name="dex_browser_analyzing">Analyzing %1$s (%2$d/%3$d)…</string>
+    <string name="dex_browser_results">%1$s · Results: %2$d</string>
+    <string name="dex_browser_copy_name">Copy class name</string>
+    <string name="dex_browser_copied">Copied to clipboard.</string>
+    <string name="dex_browser_no_file">No file specified.</string>
+    <string name="dex_browser_item">%1$s  ·  %2$dm / %3$df</string>
+    <string name="dex_browser_detail_dex">DEX: %s</string>
+    <string name="dex_browser_detail_super">Super: %s</string>
+    <string name="dex_browser_detail_interfaces">Interfaces:</string>
+    <string name="dex_browser_detail_methods">Methods (%d):</string>
+    <string name="dex_browser_detail_fields">Fields (%d):</string>
 </resources>

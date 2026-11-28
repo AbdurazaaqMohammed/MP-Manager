@@ -427,6 +427,12 @@
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:windowSoftInputMode="adjustResize|stateHidden"
             android:configChanges="orientation|screenSize|keyboardHidden" />
+        <activity
+            android:name="io.github.abdurazaaqmohammed.feature.dex.DexBrowserActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
            <activity
                android:name="modder.hub.dexeditor.activity.SettingsActivity"
                android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"

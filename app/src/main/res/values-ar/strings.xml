@@ -2632,4 +2632,19 @@
     <string name="syntax_export_failed">تعذر تصدير النحو</string>
     <string name="syntax_delete_confirm">هل تريد حذف \"%1$s\"؟ يمكن استعادة الأنواع المدمجة عند مسح بيانات التطبيق.</string>
     <string name="syntax_deleted">تم حذف %1$s</string>
+    <string name="dex_browser">مستكشف DEX</string>
+    <string name="dex_browser_search_hint">ابحث باسم الفئة أو الحزمة…</string>
+    <string name="dex_browser_no_classes">لم يتم العثور على فئات</string>
+    <string name="dex_browser_detail_error">تعذر قراءة تفاصيل الفئة.</string>
+    <string name="dex_browser_analyzing">تحليل %1$s (%2$d/%3$d)…</string>
+    <string name="dex_browser_results">%1$s · النتائج: %2$d</string>
+    <string name="dex_browser_copy_name">نسخ اسم الفئة</string>
+    <string name="dex_browser_copied">تم النسخ للحافظة.</string>
+    <string name="dex_browser_no_file">لم يتم تحديد ملف.</string>
+    <string name="dex_browser_item">%1$s  ·  %2$d دالة / %3$d حقل</string>
+    <string name="dex_browser_detail_dex">ملف DEX: %s</string>
+    <string name="dex_browser_detail_super">الفئة الأب: %s</string>
+    <string name="dex_browser_detail_interfaces">الواجهات:</string>
+    <string name="dex_browser_detail_methods">الدوال (%d):</string>
+    <string name="dex_browser_detail_fields">الحقول (%d):</string>
 </resources>
