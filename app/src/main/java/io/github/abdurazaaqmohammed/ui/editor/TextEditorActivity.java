@@ -1312,6 +1312,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     }
 
     private void pickSaveCopyDir(EditorTab tab, String text, boolean isExportCopy) {
+        pickSaveCopyDir(tab, text, isExportCopy, false);
+    }
+
+    private void pickSaveCopyDir(EditorTab tab, String text, boolean isExportCopy, boolean plainXml) {
         FilePickerDialog.Properties props =
                 new FilePickerDialog.Properties();
         props.selection_mode = FilePickerDialog.SINGLE_MODE;
@@ -1327,6 +1331,9 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     : (tab.title != null ? tab.title : "untitled.txt");
             if (initialName.endsWith(" (root)")) {
                 initialName = initialName.substring(0, initialName.length() - 7);
+            }
+            if (plainXml && !initialName.toLowerCase(java.util.Locale.ROOT).endsWith(".xml")) {
+                initialName += ".xml";
             }
 
             final String defaultName = initialName;
@@ -1355,14 +1362,25 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                             try {
                                 File dest = FileUtils.getUnusedFile(new File(targetDir, finalName));
                                 try (OutputStream os = FileUtils.getOutputStream(dest)) {
-                                    writeTabPayload(tab, text, os);
+                                    // An explicit plain-XML export must not consult the
+                                    // source's binary format, even after switching tabs.
+                                    if (plainXml) {
+                                        OutputStreamWriter writer = new OutputStreamWriter(os, StandardCharsets.UTF_8);
+                                        writer.write(text);
+                                        writer.flush();
+                                    } else {
+                                        writeTabPayload(tab, text, os);
+                                    }
                                 }
-                                tab.content = text;
-                                if (isExportCopy) {
-                                    tab.exportedCopyPath = dest.getAbsolutePath();
-                                    tab.modified = true;
-                                } else {
-                                    tab.modified = false;
+                                // Exporting plain XML does not save changes to the source.
+                                if (!plainXml) {
+                                    tab.content = text;
+                                    if (isExportCopy) {
+                                        tab.exportedCopyPath = dest.getAbsolutePath();
+                                        tab.modified = true;
+                                    } else {
+                                        tab.modified = false;
+                                    }
                                 }
                                 AppExecutors.runOnUiIfAlive(TextEditorActivity.this, () -> {
                                     updateTabsList();
@@ -1559,9 +1577,16 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     @Override
     public void onToggleAxmlMode() {
         EditorTab t = getCurrentTab();
-        if (t == null) return;
-        t.axml = !t.axml;
+        if (t == null || !t.loaded || t.loading || t.loadFailed) return;
         UnifiedEditorFragment f = getFragment();
+        if (t.axml) {
+            if (f == null || f.getEditor() == null) return;
+            // Capture the decoded editor buffer now, not the archive temp file
+            // or a tab's stale cached content when the picker completes.
+            pickSaveCopyDir(t, f.getEditor().getText().toString(), true, true);
+            return;
+        }
+        t.axml = !t.axml;
         if (f != null) f.setAxml(t.axml);
         axml = t.axml;
         Extensions.showMessage(this, t.axml ? getString(R.string.save_as_axml) : getString(R.string.save_as_plain_xml));

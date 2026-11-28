@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inspector.WindowInspector;
 import android.widget.TextView;
+import android.widget.EditText;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
@@ -37,6 +38,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -46,6 +48,12 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
+import com.apk.axml.aXMLDecoder;
+import com.apk.axml.aXMLEncoder;
+import com.apk.axml.aXMLUtils.StringPoolChunk;
 
 import io.github.abdurazaaqmohammed.feature.dumper.PartitionDumperDialog;
 import io.github.abdurazaaqmohammed.feature.dumper.PartitionItem;
@@ -211,6 +219,100 @@ public class EditorRegressionTest {
         restore(b);
         assertEquals("B:second\rthird\n", second.getCode());
         assertTrue(second.getEditor().canUndo());
+    }
+
+    @Test public void plainXmlExportFromArchiveWritesEditorSnapshotAndKeepsBinarySource() throws Exception {
+        String xml = "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" package=\"test.export\">"
+                + "<uses-permission android:name=\"android.permission.INTERNET\"/>"
+                + "<application android:label=\"Export\"/></manifest>";
+        byte[] binary = new aXMLEncoder().encodeString(xml, application, null, StringPoolChunk.Encoding.UNICODE);
+        File apk = file(".apk", new byte[0]);
+        try (ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(apk))) {
+            zip.putNextEntry(new ZipEntry("AndroidManifest.xml"));
+            zip.write(binary);
+            zip.closeEntry();
+        }
+        File staged = file(".xml", new byte[0]);
+        try (ZipFile zip = new ZipFile(apk);
+             InputStream input = zip.getInputStream(zip.getEntry("AndroidManifest.xml"));
+             FileOutputStream output = new FileOutputStream(staged)) {
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+        }
+        String decoded;
+        try (InputStream input = Files.newInputStream(staged.toPath())) {
+            decoded = new aXMLDecoder(input, null).decodeAsString();
+        }
+        TextEditorActivity activity = (TextEditorActivity) open(TextEditorActivity.class, staged);
+        UnifiedEditorFragment fragment = loaded(activity, decoded);
+        Object tab = ((List<?>) field(activity, "tabs")).get((int) field(activity, "currentIndex"));
+        for (String name : new String[]{"zipFilePath", "zipEntryPath"}) {
+            Field value = tab.getClass().getDeclaredField(name);
+            value.setAccessible(true);
+            value.set(tab, name.equals("zipFilePath") ? apk.getPath() : "AndroidManifest.xml");
+        }
+        String snapshot = decoded + "\n<!-- exported: café 中文 -->\n";
+        instrumentation.runOnMainSync(() -> fragment.getEditor().setText(snapshot));
+        assertTrue(activity.isAxmlMode());
+
+        File destination = new File(application.getExternalCacheDir(), "xml-export-" + UUID.randomUUID());
+        assertTrue(destination.mkdirs());
+        File exported = new File(destination, staged.getName());
+        files.add(exported);
+        files.add(destination);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(application);
+        String previousPath = preferences.getString("custom_picker_last_path", null);
+        preferences.edit().putString("custom_picker_last_path", destination.getPath()).commit();
+        try {
+            // Cancellation must preserve both the source format and its bytes.
+            instrumentation.runOnMainSync(activity::onToggleAxmlMode);
+            instrumentation.runOnMainSync(() -> dialogRootWith(R.id.file_picker_path)
+                    .findViewById(android.R.id.button2).performClick());
+            assertTrue(activity.isAxmlMode());
+            assertArrayEquals(binary, Files.readAllBytes(staged.toPath()));
+            assertFalse(exported.exists());
+
+            instrumentation.runOnMainSync(activity::onToggleAxmlMode);
+            // Destination selection must not change the captured export buffer.
+            instrumentation.runOnMainSync(() -> fragment.getEditor().getText().insert(0, 0, "<!-- later -->\n"));
+            instrumentation.runOnMainSync(() -> dialogRootWith(R.id.file_picker_path)
+                    .findViewById(android.R.id.button1).performClick());
+            instrumentation.runOnMainSync(() -> {
+                for (View root : WindowInspector.getGlobalWindowViews()) {
+                    if (findText(root, staged.getName()) instanceof EditText) {
+                        root.findViewById(android.R.id.button1).performClick();
+                        return;
+                    }
+                }
+                throw new AssertionError("Export filename dialog was not shown");
+            });
+            long deadline = System.currentTimeMillis() + 15000;
+            while (System.currentTimeMillis() < deadline) {
+                if (exported.isFile() && snapshot.equals(Files.readString(exported.toPath(), StandardCharsets.UTF_8))) break;
+                Thread.sleep(20);
+            }
+            assertEquals(snapshot, Files.readString(exported.toPath(), StandardCharsets.UTF_8));
+            assertTrue(snapshot.contains("android.permission.INTERNET"));
+            assertTrue(activity.isAxmlMode());
+            assertTrue((boolean) field(tab, "modified"));
+            assertFalse((boolean) field(tab, "pendingArchiveUpdate"));
+            assertArrayEquals(binary, Files.readAllBytes(staged.toPath()));
+            assertNull(field(tab, "exportedCopyPath"));
+            try (ZipFile zip = new ZipFile(apk); InputStream input = zip.getInputStream(zip.getEntry("AndroidManifest.xml"))) {
+                assertArrayEquals(binary, input.readAllBytes());
+            }
+        } finally {
+            if (previousPath == null) preferences.edit().remove("custom_picker_last_path").commit();
+            else preferences.edit().putString("custom_picker_last_path", previousPath).commit();
+        }
+    }
+
+    private View dialogRootWith(int viewId) {
+        for (View root : WindowInspector.getGlobalWindowViews()) {
+            if (root.findViewById(viewId) != null) return root;
+        }
+        throw new AssertionError("Dialog not shown: " + viewId);
     }
 
     @Test public void lineNumbersFollowEditorPreferencesOnFileOpen() throws Exception {
